@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">Laku Pandai</string>
+
+    <!--    Check Update-->
+    <string name="title_activity_check_update">CheckUpdateActivity</string>
+    <string name="version">Ver %s</string>
+    <string name="debug_version">Debug Ver %s</string>
+    <string name="logo_alt">Laku Pandai NTB Syariah</string>
+
+    <string name="process_check_update">Checking for updates</string>
+    <string name="process_check_menu_version">Checking menu version</string>
+    <string name="process_downloading_update">Downloading updates</string>
+    <string name="process_downloading_menu">Downloading menus</string>
+
+    <string name="status_menu_updated">Menu already has latest version</string>
+
+    <!--    Form-->
+    <string name="invalid_form_id">Form tidak tersedia</string>
+    <!--    Menu-->
+    <string name="invalid_menu_id">Menu tidak tersedia</string>
+
+    <string name="back_to_exit_info">Tekan lagi tombol kembali untuk keluar dari aplikasi</string>
+
+    <!--    Templates-->
+    <string name="footer_text">Laku Pandai - NTB Syariah</string>
+</resources>

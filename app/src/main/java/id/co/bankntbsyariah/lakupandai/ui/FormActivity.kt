@@ -10,6 +10,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
@@ -127,20 +128,64 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 4 -> {
-                    Spinner(this).apply {
-                        val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, listOf("Option 1", "Option 2", "Option 3"))
-                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                        this.adapter = adapter
+                    // Create a container for the label and Spinner
+                    LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+
+                        // Add label
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                        })
+
+                        // Add Spinner
+                        addView(Spinner(this@FormActivity).apply {
+                            val options = component.values.map { it.first }
+                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
+                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                            this.adapter = adapter
+                        })
                     }
                 }
                 5 -> {
-                    CheckBox(this).apply {
-                        text = component.label
+                    // Create a container for the label and CheckBoxes
+                    LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+
+                        // Add label
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                        })
+
+                        // Add CheckBoxes
+                        component.values.forEach { value ->
+                            addView(CheckBox(this@FormActivity).apply {
+                                text = value.first
+                            })
+                        }
                     }
                 }
                 6 -> {
-                    RadioButton(this).apply {
-                        text = component.label
+                    // Create a container for the label and RadioButtons
+                    LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+
+                        // Add label
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                        })
+
+                        // Add RadioButtons
+                        val radioGroup = RadioGroup(this@FormActivity).apply {
+                            orientation = RadioGroup.VERTICAL
+                        }
+
+                        component.values.forEach { value ->
+                            radioGroup.addView(RadioButton(this@FormActivity).apply {
+                                text = value.first
+                            })
+                        }
+
+                        addView(radioGroup)
                     }
                 }
                 7 -> {
@@ -159,4 +204,6 @@ class FormActivity : AppCompatActivity() {
             view?.let { container.addView(it) }
         }
     }
+
+
 }

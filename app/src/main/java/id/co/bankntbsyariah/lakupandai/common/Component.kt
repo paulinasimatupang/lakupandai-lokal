@@ -8,5 +8,6 @@ data class Component(
     var action: String,
     var icon: String,
     var desc: String,
-    var seq: Int
+    var seq: Int,
+    val values: List<Pair<String, String>> = emptyList()
 )

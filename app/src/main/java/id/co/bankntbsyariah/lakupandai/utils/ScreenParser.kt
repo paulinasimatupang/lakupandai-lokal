@@ -14,6 +14,15 @@ class ScreenParser {
             val compArray = ArrayList<Component>()
             for (i in 0 until comps.length()) {
                 val compJson = comps.getJSONObject(i)
+                val valuesArray = ArrayList<Pair<String, String>>()
+                if (compJson.has("comp_values")) {
+                    val valuesJson = compJson.getJSONObject("comp_values")
+                    val values = valuesJson.getJSONArray("comp_value")
+                    for (j in 0 until values.length()) {
+                        val valueJson = values.getJSONObject(j)
+                        valuesArray.add(Pair(valueJson.getString("print"), valueJson.getString("value")))
+                    }
+                }
                 compArray.add(
                     Component(
                         compJson.getBoolean("visible"),
@@ -23,7 +32,8 @@ class ScreenParser {
                         compJson.optString("comp_act", ""),
                         compJson.optString("comp_icon", ""),
                         compJson.optString("comp_desc", ""),
-                        compJson.getInt("seq")
+                        compJson.getInt("seq"),
+                        valuesArray
                     )
                 )
             }

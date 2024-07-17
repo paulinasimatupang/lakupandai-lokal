@@ -128,16 +128,13 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 4 -> {
-                    // Create a container for the label and Spinner
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        // Add label
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
                         })
 
-                        // Add Spinner
                         addView(Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
                             val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
@@ -147,16 +144,13 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 5 -> {
-                    // Create a container for the label and CheckBoxes
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        // Add label
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
                         })
 
-                        // Add CheckBoxes
                         component.values.forEach { value ->
                             addView(CheckBox(this@FormActivity).apply {
                                 text = value.first
@@ -165,16 +159,13 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 6 -> {
-                    // Create a container for the label and RadioButtons
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        // Add label
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
                         })
 
-                        // Add RadioButtons
                         val radioGroup = RadioGroup(this@FormActivity).apply {
                             orientation = RadioGroup.VERTICAL
                         }
@@ -192,7 +183,7 @@ class FormActivity : AppCompatActivity() {
                     Button(this).apply {
                         text = component.label
                         setOnClickListener {
-                            // Handle button click
+
                         }
                     }
                 }

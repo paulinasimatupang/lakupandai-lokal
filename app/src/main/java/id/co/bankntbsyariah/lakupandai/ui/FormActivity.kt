@@ -111,6 +111,21 @@ class FormActivity : AppCompatActivity() {
 
         for (component in screen.comp) {
             val view = when (component.type) {
+                0 -> {
+                    val inflater = layoutInflater
+                    val view = inflater.inflate(R.layout.recycler_view_menu_item, null)
+
+                    val title = view.findViewById<TextView>(R.id.title)
+                    val subhead = view.findViewById<TextView>(R.id.subhead)
+                    val body = view.findViewById<TextView>(R.id.body)
+
+                    title.text = component.label
+
+                    subhead.visibility = View.GONE
+                    body.visibility = View.GONE
+
+                    view
+                }
                 1 -> {
                     TextView(this).apply {
                         text = component.label

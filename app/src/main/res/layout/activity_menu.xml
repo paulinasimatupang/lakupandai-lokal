@@ -73,6 +73,13 @@
             android:textColor="@color/white"
             />
 
+        <Button
+            android:id="@+id/show_popup_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Show Pop-up"
+            android:onClick="onShowPopupotpClick"
+            android:layout_marginTop="16dp"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

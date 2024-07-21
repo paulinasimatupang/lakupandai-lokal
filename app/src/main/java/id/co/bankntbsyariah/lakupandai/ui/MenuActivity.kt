@@ -28,6 +28,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
+import androidx.appcompat.app.AlertDialog
+import android.widget.Button
+import android.view.LayoutInflater
 
 class MenuActivity : AppCompatActivity() {
 
@@ -147,5 +150,27 @@ class MenuActivity : AppCompatActivity() {
                 .putExtra(Constants.KEY_MENU_ID, menuList[position].value)
         )
     }
+
+    fun onShowPopupotpClick(view: View) {
+        // Membuat builder untuk AlertDialog
+        val builder = AlertDialog.Builder(this)
+
+        // Meng-inflate layout untuk pop-up
+        val popupView = LayoutInflater.from(this).inflate(R.layout.pop_up_otp, null)
+
+        // Mengatur tampilan untuk AlertDialog
+        builder.setView(popupView)
+
+        // Membuat AlertDialog
+        val alertDialog = builder.create()
+
+        // Menemukan tombol di dalam layout pop-up dan mengatur onClickListener
+        popupView.findViewById<Button>(R.id.verifyButton).setOnClickListener {
+            alertDialog.dismiss()
+        }
+        // Menampilkan AlertDialog
+        alertDialog.show()
+    }
+
 
 }

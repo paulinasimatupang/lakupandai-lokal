@@ -6,7 +6,7 @@
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_500">#FF02BECD</color>
     <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
+<!--    <color name="black">#FF000000</color>-->
     <color name="white">#FFFFFFFF</color>
     <color name="broken_white">#99FFFFFF</color>
     <color name="light_blue_600">#FF039BE5</color>
@@ -14,4 +14,5 @@
     <color name="light_blue_A200">#FF40C4FF</color>
     <color name="light_blue_A400">#FF00B0FF</color>
     <color name="black_overlay">#66000000</color>
+    <color name="black">#000000</color>
 </resources>

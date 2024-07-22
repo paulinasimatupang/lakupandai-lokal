@@ -51,6 +51,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Laku Pandai"
+                android:visibility="gone"
                 android:textColor="@color/broken_white"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -63,6 +64,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Membuka rekening baru untuk calon nasabah Bank NTB Syariah"
                 android:textColor="@color/broken_white"
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/subhead" />

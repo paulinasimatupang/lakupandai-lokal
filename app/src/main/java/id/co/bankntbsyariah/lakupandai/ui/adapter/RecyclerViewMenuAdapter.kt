@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
+import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.ui.MenuActivity
@@ -23,29 +24,35 @@ class RecyclerViewMenuAdapter(
     private val context: Context
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
 
+    private val okHttpClient = OkHttpClient() // Reuse OkHttpClient instance
+    private var formId = Constants.DEFAULT_ROOT_ID
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuViewHolder {
-        val itemView = LayoutInflater.from(parent.context).inflate(
-            R.layout.recycler_view_menu_item,
+        val layoutInflater = LayoutInflater.from(parent.context)
+        val itemView = layoutInflater.inflate(
+            if (formId == "HMB0000") {
+                R.layout.recycler_list_menu
+            } else {
+                R.layout.recycler_view_menu_item
+            },
             parent, false
         )
-
         return MenuViewHolder(itemView)
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
+        // Ensure that this is within an activity/fragment with lifecycleScope
         (context as MenuActivity).lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                val imgBitmap = ArrestCallerImpl(OkHttpClient()).fetchImage(menuList[position].image) ?:
-                BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
-                withContext(Dispatchers.Main) {
-                    holder.menuImage.setImageBitmap(imgBitmap)
-                    holder.menuTitle.text = menuList[position].title
-                    holder.menuSubtitle.text = menuList[position].subtitle
-                    holder.menuDescription.text = menuList[position].description
-                    holder.itemView.setOnClickListener {
-                        (context as MenuActivity).onMenuItemClick(position)
-                    }
-                }
+            val imgBitmap = withContext(Dispatchers.IO) {
+                ArrestCallerImpl(okHttpClient).fetchImage(menuList[position].image)
+                    ?: BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
+            }
+            holder.menuImage.setImageBitmap(imgBitmap)
+            holder.menuTitle.text = menuList[position].title
+            holder.menuSubtitle.text = menuList[position].subtitle
+            holder.menuDescription.text = menuList[position].description
+            holder.itemView.setOnClickListener {
+                (context as MenuActivity).onMenuItemClick(position)
             }
         }
     }

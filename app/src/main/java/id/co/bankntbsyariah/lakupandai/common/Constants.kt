@@ -5,8 +5,8 @@ class Constants {
     companion object {
         const val BASE_API= "http://108.137.154.8:8080/ARRest/"
 
-        const val DEFAULT_VERSION = 1
-        const val DEFAULT_ROOT_ID = "MN00000"
+        const val DEFAULT_VERSION = 0
+        const val DEFAULT_ROOT_ID = "HMB0000"
 
         const val SP_APPS = "ntbs storage"
         const val SP_VERSION = "stored version"

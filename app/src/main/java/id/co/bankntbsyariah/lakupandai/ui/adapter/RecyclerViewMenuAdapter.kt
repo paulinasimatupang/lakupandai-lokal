@@ -25,7 +25,7 @@ class RecyclerViewMenuAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuViewHolder {
         val itemView = LayoutInflater.from(parent.context).inflate(
-            R.layout.recycler_view_menu_item,
+            R.layout.recycler_list_menu,
             parent, false
         )
 

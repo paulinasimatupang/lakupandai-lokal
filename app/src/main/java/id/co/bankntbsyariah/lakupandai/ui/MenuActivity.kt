@@ -29,8 +29,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 import androidx.appcompat.app.AlertDialog
-import android.widget.Button
 import android.view.LayoutInflater
+import android.widget.Button
 
 class MenuActivity : AppCompatActivity() {
 
@@ -38,28 +38,43 @@ class MenuActivity : AppCompatActivity() {
     private val menuList = ArrayList<MenuItem>()
     private var backToExit = false
 
+    private var formId = Constants.DEFAULT_ROOT_ID
+    private var isForm = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_menu)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        if (formId.equals("HMB0000")) {
+            setContentView(R.layout.hamburger)
+        } else {
+            setContentView(R.layout.activity_menu)
         }
+
+        val mainView: View? = findViewById(R.id.main)
+        if (mainView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+                insets
+            }
+        } else {
+            Log.e("MenuActivity", "Main view is null")
+        }
+
         intent.extras?.getString(Constants.KEY_MENU_ID).let {
             menuId = it ?: Constants.DEFAULT_ROOT_ID
         }
+
         lifecycleScope.launch {
             var menuValue = StorageImpl(applicationContext).fetchMenu(menuId)
             if (menuValue == null || menuValue == "") {
                 withContext(Dispatchers.IO) {
-                    val mv = ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                        menuId
-                    )
+                    val mv = ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
                     menuValue = mv
                 }
             }
+
             if (menuValue == null || menuValue == "") {
                 findViewById<TextView>(R.id.error_message).visibility = View.VISIBLE
                 findViewById<RecyclerView>(R.id.menu_container).visibility = View.GONE
@@ -67,35 +82,34 @@ class MenuActivity : AppCompatActivity() {
                 val screenJson = JSONObject(menuValue)
                 val screen: Screen = ScreenParser.parseJSON(screenJson)
                 val sType = screen.type
+
                 when (sType) {
                     Constants.SCREEN_TYPE_FORM -> {
                         finish()
                         startActivity(
                             Intent(this@MenuActivity, FormActivity::class.java)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                .addFlags( Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
                                 .putExtra(Constants.KEY_FORM_ID, menuId)
                         )
                     }
-                    Constants.SCREEN_TYPE_POPUP_GAGAL -> {
-                        //show popup
-                    }
-                    Constants.SCREEN_TYPE_POPUP_SUKSES -> {
-                        //show popup
-                    }
+                    Constants.SCREEN_TYPE_POPUP_GAGAL,
+                    Constants.SCREEN_TYPE_POPUP_SUKSES,
                     Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
-                        //show popup
+                        // Show popup
                     }
                     else -> {
-                        //pass menu
+                        // Pass menu
                     }
                 }
+
                 val menuContainer = findViewById<RecyclerView>(R.id.menu_container)
                 val x = (resources.displayMetrics.density * 8).toInt()
                 menuContainer.addItemDecoration(SpacingItemDecorator(x))
                 menuList.clear()
                 val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity)
                 menuContainer.adapter = menuAdapter
+
                 for (i in 0 until screen.comp.size) {
                     val comp = screen.comp[i]
                     menuList.add(
@@ -132,12 +146,11 @@ class MenuActivity : AppCompatActivity() {
                         startActivity(
                             Intent(this@MenuActivity, MenuActivity::class.java)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                .addFlags( Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         )
                     }
                 }
             }
-
         })
     }
 
@@ -146,7 +159,7 @@ class MenuActivity : AppCompatActivity() {
         startActivity(
             Intent(this, MenuActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags( Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 .putExtra(Constants.KEY_MENU_ID, menuList[position].value)
         )
     }
@@ -168,9 +181,8 @@ class MenuActivity : AppCompatActivity() {
         popupView.findViewById<Button>(R.id.verifyButton).setOnClickListener {
             alertDialog.dismiss()
         }
+
         // Menampilkan AlertDialog
         alertDialog.show()
     }
-
-
 }

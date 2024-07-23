@@ -4,11 +4,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -28,19 +31,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
-import androidx.appcompat.app.AlertDialog
-import android.widget.Button
-import android.view.LayoutInflater
-
 
 class MenuActivity : AppCompatActivity() {
 
     private var menuId = Constants.DEFAULT_ROOT_ID
     private val menuList = ArrayList<MenuItem>()
     private var backToExit = false
-
-    private var formId = Constants.DEFAULT_ROOT_ID
-    private var isForm = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,26 +65,6 @@ class MenuActivity : AppCompatActivity() {
             }
         } else {
             Log.e("MenuActivity", "Main view is null")
-
-        if (formId.equals("HMB0000")) {
-            setContentView(R.layout.hamburger)
-        } else {
-            setContentView(R.layout.activity_menu)
-        }
-
-        val mainView: View? = findViewById(R.id.main)
-        if (mainView != null) {
-            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
-                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-                insets
-            }
-        } else {
-            Log.e("MenuActivity", "Main view is null")
-        }
-
-        intent.extras?.getString(Constants.KEY_MENU_ID).let {
-            menuId = it ?: Constants.DEFAULT_ROOT_ID
         }
 
         lifecycleScope.launch {
@@ -118,11 +94,13 @@ class MenuActivity : AppCompatActivity() {
                                 .putExtra(Constants.KEY_FORM_ID, menuId)
                         )
                     }
+
                     Constants.SCREEN_TYPE_POPUP_GAGAL,
                     Constants.SCREEN_TYPE_POPUP_SUKSES,
                     Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                         // Show popup
                     }
+
                     else -> {
                         // Pass menu
                     }
@@ -151,7 +129,8 @@ class MenuActivity : AppCompatActivity() {
             }
         }
 
-        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+        // Handle back press
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (backToExit) {
                     finish()
@@ -176,8 +155,22 @@ class MenuActivity : AppCompatActivity() {
                     }
                 }
             }
-
         })
+
+        // Set up the hamburger button
+        findViewById<View>(R.id.hamburger_button)?.setOnClickListener {
+            showHamburgerMenu()
+        }
+    }
+
+    private fun showHamburgerMenu() {
+        // Start the MenuActivity with the screen ID for the hamburger menu
+        startActivity(
+            Intent(this, MenuActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                .putExtra(Constants.KEY_MENU_ID, "HMB0000")
+        )
     }
 
     fun onMenuItemClick(position: Int) {

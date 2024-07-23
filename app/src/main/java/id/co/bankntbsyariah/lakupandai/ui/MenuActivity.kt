@@ -41,15 +41,32 @@ class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_menu)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        // Ambil menuId dari Intent sebelum menentukan layout
+        intent.extras?.getString(Constants.KEY_MENU_ID)?.let {
+            menuId = it
+        } ?: run {
+            menuId = Constants.DEFAULT_ROOT_ID
         }
-        intent.extras?.getString(Constants.KEY_MENU_ID).let {
-            menuId = it ?: Constants.DEFAULT_ROOT_ID
+
+        // Tentukan layout berdasarkan menuId
+        if (menuId == Constants.DEFAULT_ROOT_ID) {
+            setContentView(R.layout.dashboard_layout)
+        } else {
+            setContentView(R.layout.activity_menu)
         }
+
+        val mainView: View? = findViewById(R.id.main)
+        if (mainView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+                insets
+            }
+        } else {
+            Log.e("MenuActivity", "Main view is null")
+        }
+
         lifecycleScope.launch {
             var menuValue = StorageImpl(applicationContext).fetchMenu(menuId)
             if (menuValue == null || menuValue == "") {

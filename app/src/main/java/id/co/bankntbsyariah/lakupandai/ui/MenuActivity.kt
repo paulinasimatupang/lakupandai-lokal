@@ -50,7 +50,9 @@ class MenuActivity : AppCompatActivity() {
         }
 
         // Tentukan layout berdasarkan menuId
-        if (menuId == Constants.DEFAULT_ROOT_ID) {
+        if (menuId == "HMB0000") {
+            setContentView(R.layout.hamburger)
+        } else if (menuId == Constants.DEFAULT_ROOT_ID) {
             setContentView(R.layout.dashboard_layout)
         } else {
             setContentView(R.layout.activity_menu)

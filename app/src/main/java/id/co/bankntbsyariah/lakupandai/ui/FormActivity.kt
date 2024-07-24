@@ -47,6 +47,10 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_form_login)
                 Log.d("FormActivity", "Displaying activity_form_login")
             }
+            "REG001" , "LS00001" -> {
+                setContentView(R.layout.activity_form_regis_lupa_sandi)
+                Log.d("FormActivity", "Displaying activity_form_registrasi")
+            }
             else -> {
                 setContentView(R.layout.activity_form)
                 Log.d("FormActivity", "Displaying activity_form")

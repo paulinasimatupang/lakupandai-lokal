@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
+import android.graphics.Typeface
 
 class FormActivity : AppCompatActivity() {
 
@@ -46,10 +47,6 @@ class FormActivity : AppCompatActivity() {
             "AU00001" -> {
                 setContentView(R.layout.activity_form_login)
                 Log.d("FormActivity", "Displaying activity_form_login")
-            }
-            "REG001" , "LS00001" -> {
-                setContentView(R.layout.activity_form_regis_lupa_sandi)
-                Log.d("FormActivity", "Displaying activity_form_registrasi")
             }
             else -> {
                 setContentView(R.layout.activity_form)
@@ -103,7 +100,30 @@ class FormActivity : AppCompatActivity() {
                         // Pass form
                     }
                 }
+                handleScreenTitle(screen.title)
                 setupForm(screen)
+            }
+        }
+    }
+
+    private fun handleScreenTitle(screenTitle: String) {
+        when {
+            screenTitle.contains("Form", ignoreCase = true) -> {
+                setContentView(R.layout.activity_form2)
+                Log.d("FormActivity", "Displaying activity_form2")
+            }
+            screenTitle.contains("Review", ignoreCase = true) -> {
+                setContentView(R.layout.activity_review)
+                Log.d("FormActivity", "Displaying activity_review")
+            }
+            screenTitle.contains("Bayar", ignoreCase = true) -> {
+                setContentView(R.layout.activity_bayar)
+                Log.d("FormActivity", "Displaying activity_bayar")
+            }
+            else -> {
+                // Optionally handle the case where none of the keywords match
+                setContentView(R.layout.activity_form)
+                Log.d("FormActivity", "Displaying activity_form")
             }
         }
     }
@@ -123,26 +143,51 @@ class FormActivity : AppCompatActivity() {
                     val body = view.findViewById<TextView>(R.id.body)
 
                     title.text = component.label
-
+                    title.setTextColor(getColor(R.color.black))
                     subhead.visibility = View.GONE
                     body.visibility = View.GONE
 
                     view
                 }
                 1 -> {
-                    TextView(this).apply {
-                        text = component.label
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            setTypeface(null, Typeface.BOLD)
+                        })
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.action
+                            textSize=18f
+                            background = getDrawable(R.drawable.text_view_background)
+                        })
                     }
                 }
                 2 -> {
-                    EditText(this).apply {
-                        hint = component.label
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            setTypeface(null, Typeface.BOLD)
+                        })
+                        addView(EditText(this@FormActivity).apply {
+                            hint = component.label
+                            background = getDrawable(R.drawable.edit_text_background)
+                        })
                     }
                 }
                 3 -> {
-                    EditText(this).apply {
-                        hint = component.label
-                        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            setTypeface(null, Typeface.BOLD)
+                        })
+                        addView(EditText(this@FormActivity).apply {
+                            hint = component.label
+                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                            background = getDrawable(R.drawable.edit_text_background)
+                        })
                     }
                 }
                 4 -> {
@@ -151,6 +196,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            setTypeface(null, Typeface.BOLD)
                         })
 
                         addView(Spinner(this@FormActivity).apply {
@@ -158,6 +204,10 @@ class FormActivity : AppCompatActivity() {
                             val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             this.adapter = adapter
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
                         })
                     }
                 }
@@ -200,6 +250,9 @@ class FormActivity : AppCompatActivity() {
                 7 -> {
                     Button(this).apply {
                         text = component.label
+                        setTextColor(getColor(R.color.white))
+                        textSize = 18f
+                        background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
                             // Handle button click
                         }
@@ -210,7 +263,16 @@ class FormActivity : AppCompatActivity() {
                 }
             }
 
-            view?.let { container.addView(it) }
+            view?.let {
+                // Optionally set layout parameters like margins
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(20, 20, 20, 20)
+                it.layoutParams = params
+                container.addView(it)
+            }
         }
     }
 }

@@ -18,8 +18,9 @@
         android:src="@drawable/hamburger_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="8dp"
+
         android:layout_marginTop="8dp"
+        android:layout_marginStart="8dp"
         tools:ignore="MissingConstraints" />
 
     <!-- Card 2 -->

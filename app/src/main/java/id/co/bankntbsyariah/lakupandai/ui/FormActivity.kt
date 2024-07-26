@@ -130,7 +130,9 @@ class FormActivity : AppCompatActivity() {
 
     private fun setupForm(screen: Screen) {
         val container = findViewById<LinearLayout>(R.id.menu_container)
+        val buttonContainer = findViewById<LinearLayout>(R.id.button_type_7_container)
         container.removeAllViews()
+        buttonContainer.removeAllViews()
 
         for (component in screen.comp) {
             val view = when (component.type) {
@@ -158,7 +160,7 @@ class FormActivity : AppCompatActivity() {
                         })
                         addView(TextView(this@FormActivity).apply {
                             text = component.action
-                            textSize=18f
+                            textSize = 18f
                             background = getDrawable(R.drawable.text_view_background)
                         })
                     }
@@ -254,7 +256,6 @@ class FormActivity : AppCompatActivity() {
                         textSize = 18f
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
-                            // Handle button click
                         }
                     }
                 }
@@ -264,14 +265,18 @@ class FormActivity : AppCompatActivity() {
             }
 
             view?.let {
-                // Optionally set layout parameters like margins
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 params.setMargins(20, 20, 20, 20)
                 it.layoutParams = params
-                container.addView(it)
+
+                if (component.type == 7) {
+                    buttonContainer.addView(it)
+                } else {
+                    container.addView(it)
+                }
             }
         }
     }

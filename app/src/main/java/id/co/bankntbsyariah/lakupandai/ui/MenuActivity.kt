@@ -42,14 +42,12 @@ class MenuActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Ambil menuId dari Intent sebelum menentukan layout
         intent.extras?.getString(Constants.KEY_MENU_ID)?.let {
             menuId = it
         } ?: run {
             menuId = Constants.DEFAULT_ROOT_ID
         }
 
-        // Tentukan layout berdasarkan menuId
         if (menuId == "HMB0000") {
             setContentView(R.layout.hamburger)
         } else if (menuId == Constants.DEFAULT_ROOT_ID) {
@@ -59,26 +57,23 @@ class MenuActivity : AppCompatActivity() {
         }
 
         val mainView: View? = findViewById(R.id.main)
-        if (mainView != null) {
-            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+        mainView?.let {
+            ViewCompat.setOnApplyWindowInsetsListener(it) { v, insets ->
                 val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                 v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
                 insets
             }
-        } else {
-            Log.e("MenuActivity", "Main view is null")
-        }
+        } ?: Log.e("MenuActivity", "Main view is null")
 
         lifecycleScope.launch {
             var menuValue = StorageImpl(applicationContext).fetchMenu(menuId)
-            if (menuValue == null || menuValue == "") {
+            if (menuValue.isNullOrEmpty()) {
                 withContext(Dispatchers.IO) {
-                    val mv = ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
-                    menuValue = mv
+                    menuValue = ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
                 }
             }
 
-            if (menuValue == null || menuValue == "") {
+            if (menuValue.isNullOrEmpty()) {
                 findViewById<TextView>(R.id.error_message).visibility = View.VISIBLE
                 findViewById<RecyclerView>(R.id.menu_container).visibility = View.GONE
             } else {
@@ -89,49 +84,33 @@ class MenuActivity : AppCompatActivity() {
                 when (sType) {
                     Constants.SCREEN_TYPE_FORM -> {
                         finish()
-                        startActivity(
-                            Intent(this@MenuActivity, FormActivity::class.java)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                .putExtra(Constants.KEY_FORM_ID, menuId)
-                        )
+                        startActivity(Intent(this@MenuActivity, FormActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            putExtra(Constants.KEY_FORM_ID, menuId)
+                        })
                     }
-
                     Constants.SCREEN_TYPE_POPUP_GAGAL,
                     Constants.SCREEN_TYPE_POPUP_SUKSES,
                     Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
-                        // Show popup
                     }
-
                     else -> {
-                        // Pass menu
                     }
                 }
 
                 val menuContainer = findViewById<RecyclerView>(R.id.menu_container)
-                val x = (resources.displayMetrics.density * 8).toInt()
-                menuContainer.addItemDecoration(SpacingItemDecorator(x))
+                val spacing = (resources.displayMetrics.density * 8).toInt()
+                menuContainer.addItemDecoration(SpacingItemDecorator(spacing))
                 menuList.clear()
-                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity)
+                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000")
                 menuContainer.adapter = menuAdapter
 
-                for (i in 0 until screen.comp.size) {
-                    val comp = screen.comp[i]
-                    menuList.add(
-                        MenuItem(
-                            comp.icon,
-                            comp.label,
-                            comp.label,
-                            comp.desc,
-                            comp.action
-                        )
-                    )
+                screen.comp.forEach { comp ->
+                    menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
                 }
-                menuAdapter.notifyItemInserted(0)
+                menuAdapter.notifyDataSetChanged()
             }
         }
 
-        // Handle back press
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (backToExit) {
@@ -139,71 +118,47 @@ class MenuActivity : AppCompatActivity() {
                 } else {
                     if (menuId == Constants.DEFAULT_ROOT_ID) {
                         backToExit = true
-                        Handler(mainLooper).postDelayed({
-                            backToExit = false
-                        }, 2000)
-                        Toast.makeText(
-                            this@MenuActivity,
-                            getString(R.string.back_to_exit_info),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Handler(mainLooper).postDelayed({ backToExit = false }, 2000)
+                        Toast.makeText(this@MenuActivity, getString(R.string.back_to_exit_info), Toast.LENGTH_SHORT).show()
                     } else {
                         finish()
-                        startActivity(
-                            Intent(this@MenuActivity, MenuActivity::class.java)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        )
+                        startActivity(Intent(this@MenuActivity, MenuActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        })
                     }
                 }
             }
         })
 
-        // Set up the hamburger button
         findViewById<View>(R.id.hamburger_button)?.setOnClickListener {
             showHamburgerMenu()
         }
     }
 
     private fun showHamburgerMenu() {
-        // Start the MenuActivity with the screen ID for the hamburger menu
-        startActivity(
-            Intent(this, MenuActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                .putExtra(Constants.KEY_MENU_ID, "HMB0000")
-        )
+        startActivity(Intent(this, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "HMB0000")
+        })
     }
 
     fun onMenuItemClick(position: Int) {
         finish()
-        startActivity(
-            Intent(this, MenuActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                .putExtra(Constants.KEY_MENU_ID, menuList[position].value)
-        )
+        startActivity(Intent(this, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, menuList[position].value)
+        })
     }
 
     fun onShowPopupotpClick(view: View) {
-        // Membuat builder untuk AlertDialog
         val builder = AlertDialog.Builder(this)
-
-        // Meng-inflate layout untuk pop-up
         val popupView = LayoutInflater.from(this).inflate(R.layout.pop_up_otp, null)
-
-        // Mengatur tampilan untuk AlertDialog
         builder.setView(popupView)
-
-        // Membuat AlertDialog
         val alertDialog = builder.create()
-
-        // Menemukan tombol di dalam layout pop-up dan mengatur onClickListener
         popupView.findViewById<Button>(R.id.verifyButton).setOnClickListener {
             alertDialog.dismiss()
         }
-
-        // Menampilkan AlertDialog
         alertDialog.show()
     }
 }
+

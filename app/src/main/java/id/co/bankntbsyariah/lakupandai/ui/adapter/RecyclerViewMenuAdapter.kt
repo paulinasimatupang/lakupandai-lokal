@@ -21,16 +21,16 @@ import okhttp3.OkHttpClient
 
 class RecyclerViewMenuAdapter(
     private val menuList: ArrayList<MenuItem>,
-    private val context: Context
+    private val context: Context,
+    private val isHamburger: Boolean
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
 
-    private val okHttpClient = OkHttpClient() // Reuse OkHttpClient instance
-    private var formId = Constants.DEFAULT_ROOT_ID
+    private val okHttpClient = OkHttpClient()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuViewHolder {
         val layoutInflater = LayoutInflater.from(parent.context)
         val itemView = layoutInflater.inflate(
-            if (formId == "HMB0000") {
+            if (isHamburger) {
                 R.layout.recycler_list_menu
             } else {
                 R.layout.recycler_view_menu_item
@@ -41,7 +41,6 @@ class RecyclerViewMenuAdapter(
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
-        // Ensure that this is within an activity/fragment with lifecycleScope
         (context as MenuActivity).lifecycleScope.launch {
             val imgBitmap = withContext(Dispatchers.IO) {
                 ArrestCallerImpl(okHttpClient).fetchImage(menuList[position].image)
@@ -52,7 +51,7 @@ class RecyclerViewMenuAdapter(
             holder.menuSubtitle.text = menuList[position].subtitle
             holder.menuDescription.text = menuList[position].description
             holder.itemView.setOnClickListener {
-                (context as MenuActivity).onMenuItemClick(position)
+                context.onMenuItemClick(position)
             }
         }
     }
@@ -68,3 +67,4 @@ class RecyclerViewMenuAdapter(
         val menuDescription: TextView = itemView.findViewById(R.id.body)
     }
 }
+

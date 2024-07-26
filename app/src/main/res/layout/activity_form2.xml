@@ -28,7 +28,6 @@
             android:textColor="#FFFFFF"
             android:layout_weight="1"
             android:layout_margin="5dp" />
-        "/>
 
         <Button
             android:id="@+id/button2"
@@ -49,10 +48,8 @@
             android:textColor="#0A6E44"
             android:layout_weight="1"
             android:layout_margin="5dp"/>
-
     </LinearLayout>
 
-    <!-- Existing components -->
     <LinearLayout
         android:id="@+id/menu_container"
         android:layout_width="match_parent"
@@ -64,9 +61,7 @@
         app:layout_constraintTop_toBottomOf="@id/button_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/footer_container"
-        >
-
+        app:layout_constraintBottom_toTopOf="@id/footer_container">
 
     </LinearLayout>
 
@@ -80,27 +75,25 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/footer_container"
         android:visibility="gone"
-        android:text="@string/invalid_form_id"
-        />
+        android:text="@string/invalid_form_id" />
 
     <LinearLayout
         android:id="@+id/footer_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
+        android:orientation="vertical"
+        android:padding="38dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:background="@color/black_overlay"
-        >
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/button_type_7_container"
+            android:layout_marginLeft="-20dp"
+            android:layout_width="380dp"
             android:layout_height="wrap_content"
-            android:text="@string/footer_text"
-            android:textColor="@color/white"
-            />
-    </LinearLayout>
+            android:orientation="vertical"
+            android:padding="30dp"></LinearLayout>
 
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

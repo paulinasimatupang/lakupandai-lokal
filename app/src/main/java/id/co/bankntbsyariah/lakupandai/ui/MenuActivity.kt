@@ -127,7 +127,7 @@ class MenuActivity : AppCompatActivity() {
                         )
                     )
                 }
-                menuAdapter.notifyItemInserted(0)
+                menuAdapter.notifyDataSetChanged()
             }
         }
 

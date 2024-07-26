@@ -1,8 +1,105 @@
 package id.co.bankntbsyariah.lakupandai.iface
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Log
 import id.co.bankntbsyariah.lakupandai.api.ArrestCaller
 import okhttp3.OkHttpClient
+import id.co.bankntbsyariah.lakupandai.common.Constants
+import okhttp3.Request
+import okhttp3.ResponseBody
 
 class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : ArrestCaller {
 
+    private val TAG = "ArrestCallerImpl"
+
+    override fun fetchVersion(): ResponseBody? {
+        val request = Request.Builder()
+            .url("${Constants.BASE_API}ver")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use {
+                if (!it.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch version: ${it.message}")
+                    null
+                } else it.body
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while fetching version", e)
+            null
+        }
+    }
+
+    override fun fetchRootMenuId(): ResponseBody? {
+        val request = Request.Builder()
+            .url("${Constants.BASE_API}menu")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use {
+                if (!it.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch root menu ID: ${it.message}")
+                    null
+                } else it.body
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while fetching root menu ID", e)
+            null
+        }
+    }
+
+    override fun fetchScreen(id: String): String? {
+        val request = Request.Builder()
+            .url("${Constants.BASE_API}screen?id=$id")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use {
+                if (!it.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch screen for ID $id: ${it.message}")
+                    null
+                } else it.body?.string()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while fetching screen for ID $id", e)
+            null
+        }
+    }
+
+    override fun fetchImage(id: String): Bitmap? {
+        Log.i(TAG, "Fetching image with ID: $id")
+        val request = Request.Builder()
+            .url("http://108.137.154.8:8081/ARRest/static/$id")
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch: ${response.message} (Code: ${response.code})")
+                    null
+                } else {
+                    Log.e(TAG, "Success to fetch: ${response.message} (Code: ${response.code})")
+                    response.body?.byteStream()?.use { inputStream ->
+                        BitmapFactory.decodeStream(inputStream)?.also {
+                            Log.i(TAG, "Image fetched and decoded successfully")
+                        } ?: run {
+                            Log.e(TAG, "Failed to decode bitmap")
+                            null
+                        }
+                    } ?: run {
+                        Log.e(TAG, "InputStream is null")
+                        null
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while fetching image", e)
+            null
+        }
+    }
+
+    override fun requestPost() {
+        // Implement if needed
+    }
 }

@@ -11,8 +11,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
-import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.api.ArrestCaller
+import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl

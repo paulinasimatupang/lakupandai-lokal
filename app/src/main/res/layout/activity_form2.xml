@@ -17,7 +17,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp">
+        android:layout_marginTop="35dp">
 
         <Button
             android:id="@+id/button1"
@@ -89,9 +89,9 @@
 
         <LinearLayout
             android:id="@+id/button_type_7_container"
-            android:layout_marginLeft="-20dp"
-            android:layout_width="380dp"
+            android:layout_width="360dp"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="-40dp"
             android:orientation="vertical"
             android:padding="30dp"></LinearLayout>
 

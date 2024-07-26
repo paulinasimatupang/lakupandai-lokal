@@ -24,8 +24,8 @@ import okhttp3.OkHttpClient
 
 class RecyclerViewMenuAdapter(
     private val menuList: ArrayList<MenuItem>,
-    private val context: Context
-
+    private val context: Context,
+    private val isHamburger: Boolean
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
     val TAG: String  // Define a tag for logging
         get() = "ImageFetcher"
@@ -35,7 +35,7 @@ class RecyclerViewMenuAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuViewHolder {
         val layoutInflater = LayoutInflater.from(parent.context)
         val itemView = layoutInflater.inflate(
-            if (formId == "HMB0000") {
+            if (isHamburger) {
                 R.layout.recycler_list_menu
             } else {
                 R.layout.recycler_view_menu_item

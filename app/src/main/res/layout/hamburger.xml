@@ -7,10 +7,6 @@
     android:background="@color/white"
     tools:context=".ui.MenuActivity">
 
-    <!-- Profile section (Commented out for now) -->
-    <!-- Add your ImageView and TextView for profile here -->
-
-    <!-- Logo section -->
     <ImageView
         android:id="@+id/logo"
         android:layout_width="150dp"
@@ -21,20 +17,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Menu container section -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/menu_container"
-        android:layout_width="151dp"
-        android:layout_height="767dp"
+        android:layout_width="386dp"
+        android:layout_height="631dp"
         android:padding="8dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginBottom="30dp"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.126"
+        app:layout_constraintHorizontal_bias="0.266"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/logo"
-        app:layout_constraintVertical_bias="0.275"
+        app:layout_constraintVertical_bias="0.0"
         tools:listitem="@layout/recycler_list_menu" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

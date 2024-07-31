@@ -24,11 +24,13 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 import android.graphics.Typeface
+import androidx.core.widget.addTextChangedListener
 
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
     private var isForm = false
+    private val inputValues = mutableMapOf<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -172,10 +174,16 @@ class FormActivity : AppCompatActivity() {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
                         })
-                        addView(EditText(this@FormActivity).apply {
+                        val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             background = getDrawable(R.drawable.edit_text_background)
-                        })
+                            id = View.generateViewId()
+                        }
+                        inputValues[component.id] = ""
+                        editText.addTextChangedListener {
+                            inputValues[component.id] = it.toString()
+                        }
+                        addView(editText)
                     }
                 }
                 3 -> {
@@ -185,11 +193,17 @@ class FormActivity : AppCompatActivity() {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
                         })
-                        addView(EditText(this@FormActivity).apply {
+                        val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.edit_text_background)
-                        })
+                            id = View.generateViewId()
+                        }
+                        inputValues[component.id] = ""
+                        editText.addTextChangedListener {
+                            inputValues[component.id] = it.toString()
+                        }
+                        addView(editText)
                     }
                 }
                 4 -> {
@@ -256,6 +270,13 @@ class FormActivity : AppCompatActivity() {
                         textSize = 18f
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
+                            val messageBody = createMessageBody(screen)
+                            if (messageBody != null) {
+                                Log.d("FormActivity", "Message Body: $messageBody")
+                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody)
+                            } else {
+                                Log.e("FormActivity", "Failed to create message body, request not sent")
+                            }
                         }
                     }
                 }
@@ -278,6 +299,39 @@ class FormActivity : AppCompatActivity() {
                     container.addView(it)
                 }
             }
+
         }
     }
+
+    private fun createMessageBody(screen: Screen): JSONObject? {
+        return try {
+            val msg = JSONObject()
+            val msgId = "353471045058692200995"
+            val msgUi = "353471045058692"
+            val msgSi = "N00001"
+            val msgDt = screen.comp.filter { it.type != 7 }
+                .joinToString("|") { inputValues[it.id] ?: "" }
+
+            val msgObject = JSONObject()
+            msgObject.put("msg_id", msgId)
+            msgObject.put("msg_ui", msgUi)
+            msgObject.put("msg_si", msgSi)
+            msgObject.put("msg_dt", msgDt)
+
+            msg.put("msg", msgObject)
+
+            // Logging the JSON message details
+            Log.d("FormActivity", "Message ID: $msgId")
+            Log.d("FormActivity", "Message UI: $msgUi")
+            Log.d("FormActivity", "Message SI: $msgSi")
+            Log.d("FormActivity", "Message DT: $msgDt")
+            Log.d("FormActivity", "Message JSON: ${msg.toString()}")
+
+            msg
+        } catch (e: Exception) {
+            Log.e("FormActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
 }

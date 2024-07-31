@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
+import org.json.JSONObject
 
 interface ArrestCaller {
     val client: OkHttpClient
@@ -12,5 +13,5 @@ interface ArrestCaller {
     fun fetchRootMenuId(): ResponseBody?
     fun fetchScreen(id: String): String?
     fun fetchImage(id: String): Bitmap?
-    fun requestPost()
+    fun requestPost(msg: JSONObject)
 }

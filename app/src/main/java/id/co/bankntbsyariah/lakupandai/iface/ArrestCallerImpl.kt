@@ -6,8 +6,16 @@ import android.util.Log
 import id.co.bankntbsyariah.lakupandai.api.ArrestCaller
 import okhttp3.OkHttpClient
 import id.co.bankntbsyariah.lakupandai.common.Constants
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.Response
 import okhttp3.ResponseBody
+import org.json.JSONObject
+import java.io.IOException
 
 class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : ArrestCaller {
 
@@ -99,7 +107,31 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
         }
     }
 
-    override fun requestPost() {
-        // Implement if needed
+    override fun requestPost(msg: JSONObject) {
+        val requestBody = RequestBody.create("charset=utf-8".toMediaTypeOrNull(), msg.toString())
+        val request = Request.Builder()
+            .url("http://108.137.154.8:8080/ARRest/api/")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "Failed to post message", e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to post message: ${response.message}")
+                    Log.e(TAG, "Response code: ${response.code}")
+                    val responseBody = response.body?.string()
+                    Log.e(TAG, "Response body: $responseBody")
+                } else {
+                    Log.i(TAG, "Message posted successfully")
+                    val responseBody = response.body?.string()
+                    Log.i(TAG, "Response body: $responseBody")
+                }
+            }
+        })
     }
+
 }

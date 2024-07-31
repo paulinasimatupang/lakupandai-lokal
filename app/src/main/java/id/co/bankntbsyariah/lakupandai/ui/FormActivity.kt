@@ -1,6 +1,8 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -10,6 +12,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
+import android.provider.Settings
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
@@ -23,8 +27,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
-import android.graphics.Typeface
-import androidx.core.widget.addTextChangedListener
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 
 class FormActivity : AppCompatActivity() {
 
@@ -46,10 +52,12 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_awal)
                 Log.d("FormActivity", "Displaying activity_awal")
             }
+
             "AU00001" -> {
                 setContentView(R.layout.activity_form_login)
                 Log.d("FormActivity", "Displaying activity_form_login")
             }
+
             else -> {
                 setContentView(R.layout.activity_form)
                 Log.d("FormActivity", "Displaying activity_form")
@@ -93,11 +101,13 @@ class FormActivity : AppCompatActivity() {
                     Constants.SCREEN_TYPE_MENU -> {
                         // Move to menu
                     }
+
                     Constants.SCREEN_TYPE_POPUP_GAGAL,
                     Constants.SCREEN_TYPE_POPUP_SUKSES,
                     Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                         // Show popup
                     }
+
                     else -> {
                         // Pass form
                     }
@@ -114,14 +124,17 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_form2)
                 Log.d("FormActivity", "Displaying activity_form2")
             }
+
             screenTitle.contains("Review", ignoreCase = true) -> {
                 setContentView(R.layout.activity_review)
                 Log.d("FormActivity", "Displaying activity_review")
             }
+
             screenTitle.contains("Bayar", ignoreCase = true) -> {
                 setContentView(R.layout.activity_bayar)
                 Log.d("FormActivity", "Displaying activity_bayar")
             }
+
             else -> {
                 // Optionally handle the case where none of the keywords match
                 setContentView(R.layout.activity_form)
@@ -153,6 +166,7 @@ class FormActivity : AppCompatActivity() {
 
                     view
                 }
+
                 1 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -167,6 +181,7 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
+
                 2 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -186,6 +201,7 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
+
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -195,7 +211,8 @@ class FormActivity : AppCompatActivity() {
                         })
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
-                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                            inputType =
+                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                         }
@@ -206,6 +223,7 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
+
                 4 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -217,7 +235,11 @@ class FormActivity : AppCompatActivity() {
 
                         addView(Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
-                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
+                            val adapter = ArrayAdapter(
+                                this@FormActivity,
+                                android.R.layout.simple_spinner_item,
+                                options
+                            )
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             this.adapter = adapter
                             layoutParams = LinearLayout.LayoutParams(
@@ -227,6 +249,7 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
+
                 5 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -242,6 +265,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
+
                 6 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -263,6 +287,7 @@ class FormActivity : AppCompatActivity() {
                         addView(radioGroup)
                     }
                 }
+
                 7 -> {
                     Button(this).apply {
                         text = component.label
@@ -275,11 +300,15 @@ class FormActivity : AppCompatActivity() {
                                 Log.d("FormActivity", "Message Body: $messageBody")
                                 ArrestCallerImpl(OkHttpClient()).requestPost(messageBody)
                             } else {
-                                Log.e("FormActivity", "Failed to create message body, request not sent")
+                                Log.e(
+                                    "FormActivity",
+                                    "Failed to create message body, request not sent"
+                                )
                             }
                         }
                     }
                 }
+
                 else -> {
                     null
                 }
@@ -306,17 +335,28 @@ class FormActivity : AppCompatActivity() {
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
-            val msgId = "353471045058692200995"
-            val msgUi = "353471045058692"
-            val msgSi = "N00001"
+
+            // Get device Android ID
+            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+
+            // Generate timestamp in the required format
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+
+            // Concatenate msg_ui with timestamp to generate msg_id
+            val msgId = msgUi + timestamp
+
+            // Use actionUrl from screen; if null, msg_si will be null
+            val msgSi = screen.actionUrl
+
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { inputValues[it.id] ?: "" }
 
-            val msgObject = JSONObject()
-            msgObject.put("msg_id", msgId)
-            msgObject.put("msg_ui", msgUi)
-            msgObject.put("msg_si", msgSi)
-            msgObject.put("msg_dt", msgDt)
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi) // This may be null if actionUrl is not provided
+                put("msg_dt", msgDt)
+            }
 
             msg.put("msg", msgObject)
 
@@ -333,5 +373,4 @@ class FormActivity : AppCompatActivity() {
             null
         }
     }
-
 }

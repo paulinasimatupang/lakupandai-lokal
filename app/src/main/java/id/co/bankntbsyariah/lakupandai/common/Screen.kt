@@ -5,5 +5,6 @@ data class Screen(
     var title: String,
     var id: String,
     var ver: String,
-    var comp: ArrayList<Component>
+    var comp: ArrayList<Component>,
+    var actionUrl: String? = null // Add this field
 )

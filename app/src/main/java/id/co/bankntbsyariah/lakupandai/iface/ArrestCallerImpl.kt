@@ -67,7 +67,16 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
                 if (!it.isSuccessful) {
                     Log.e(TAG, "Failed to fetch screen for ID $id: ${it.message}")
                     null
-                } else it.body?.string()
+                } else {
+                    val responseBody = it.body?.string()
+                    responseBody?.let { body ->
+                        Log.i(TAG, "Screen Response Body: $body") // Log the full response body
+                        val jsonObject = JSONObject(body)
+                        val actionUrl = jsonObject.optJSONObject("screen")?.optString("action_url")
+                        Log.i(TAG, "Action URL for screen ID $id: $actionUrl")
+                    }
+                    responseBody
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception occurred while fetching screen for ID $id", e)

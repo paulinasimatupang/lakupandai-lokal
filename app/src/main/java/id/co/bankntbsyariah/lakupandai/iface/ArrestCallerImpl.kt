@@ -138,6 +138,29 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
                     Log.i(TAG, "Message posted successfully")
                     val responseBody = response.body?.string()
                     Log.i(TAG, "Response body: $responseBody")
+
+                    responseBody?.let {
+                        try {
+                            val jsonResponse = JSONObject(it)
+                            val screen = jsonResponse.optJSONObject("screen")
+                            val id = screen?.optString("id", null)
+                            id?.let { screenId ->
+                                Log.i(TAG, "Fetched ID: $screenId")
+                                val screenContent = fetchScreen(screenId)
+                                screenContent?.let { content ->
+                                    Log.i(TAG, "Fetched screen content: $content")
+                                } ?: run {
+                                    Log.e(TAG, "Failed to fetch screen content")
+                                }
+                            } ?: run {
+                                Log.e(TAG, "ID not found in response")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to parse JSON response", e)
+                        }
+                    } ?: run {
+                        Log.e(TAG, "Response body is null")
+                    }
                 }
             }
         })

@@ -53,6 +53,7 @@ class ScreenParser {
                 screen.optString("title", ""),
                 screen.optString("id", ""),
                 screen.optString("ver", ""),
+                screen.optString("action_url", ""),
                 compArray
             )
         }

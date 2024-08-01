@@ -13,5 +13,5 @@ interface ArrestCaller {
     fun fetchRootMenuId(): ResponseBody?
     fun fetchScreen(id: String): String?
     fun fetchImage(id: String): Bitmap?
-    fun requestPost(msg: JSONObject)
+    fun requestPost(msg: JSONObject, callback: (String?) -> Unit)
 }

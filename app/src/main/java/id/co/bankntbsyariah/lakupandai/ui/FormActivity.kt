@@ -115,7 +115,7 @@ class FormActivity : AppCompatActivity() {
                 Log.d("FormActivity", "Displaying activity_form2")
             }
             screenTitle.contains("Review", ignoreCase = true) -> {
-                setContentView(R.layout.activity_review)
+                setContentView(R.layout.activity_form2)
                 Log.d("FormActivity", "Displaying activity_review")
             }
             screenTitle.contains("Bayar", ignoreCase = true) -> {
@@ -131,12 +131,21 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun setupForm(screen: Screen) {
+        Log.d("FormActivity", "Screen components: ${screen.comp}")
         val container = findViewById<LinearLayout>(R.id.menu_container)
         val buttonContainer = findViewById<LinearLayout>(R.id.button_type_7_container)
+        if (container == null || buttonContainer == null) {
+            Log.e("FormActivity", "One of the containers is null. container: $container, buttonContainer: $buttonContainer")
+            return
+        }
+
         container.removeAllViews()
         buttonContainer.removeAllViews()
 
+        Log.d("FormActivity", "Screen components: ${screen.comp}")
+
         for (component in screen.comp) {
+            Log.d("FormActivity", "Component: $component")
             val view = when (component.type) {
                 0 -> {
                     val inflater = layoutInflater
@@ -273,7 +282,15 @@ class FormActivity : AppCompatActivity() {
                             val messageBody = createMessageBody(screen)
                             if (messageBody != null) {
                                 Log.d("FormActivity", "Message Body: $messageBody")
-                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody)
+                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { screenId ->
+                                    screenId?.let { id ->
+                                        runOnUiThread {
+                                            navigateToScreen(id)
+                                        }
+                                    } ?: run {
+                                        Log.e("FormActivity", "Failed to fetch screen ID")
+                                    }
+                                }
                             } else {
                                 Log.e("FormActivity", "Failed to create message body, request not sent")
                             }
@@ -332,6 +349,14 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Failed to create message body", e)
             null
         }
+    }
+
+    private fun navigateToScreen(screenId: String) {
+        val intent = Intent(this, FormActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_FORM_ID, screenId)
+        }
+        startActivity(intent)
     }
 
 }

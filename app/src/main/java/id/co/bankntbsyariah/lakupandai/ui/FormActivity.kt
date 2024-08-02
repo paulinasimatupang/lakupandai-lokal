@@ -101,13 +101,11 @@ class FormActivity : AppCompatActivity() {
                     Constants.SCREEN_TYPE_MENU -> {
                         // Move to menu
                     }
-
                     Constants.SCREEN_TYPE_POPUP_GAGAL,
                     Constants.SCREEN_TYPE_POPUP_SUKSES,
                     Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                         // Show popup
                     }
-
                     else -> {
                         // Pass form
                     }
@@ -124,17 +122,14 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_form2)
                 Log.d("FormActivity", "Displaying activity_form2")
             }
-
             screenTitle.contains("Review", ignoreCase = true) -> {
-                setContentView(R.layout.activity_review)
+                setContentView(R.layout.activity_form2)
                 Log.d("FormActivity", "Displaying activity_review")
             }
-
             screenTitle.contains("Bayar", ignoreCase = true) -> {
                 setContentView(R.layout.activity_bayar)
                 Log.d("FormActivity", "Displaying activity_bayar")
             }
-
             else -> {
                 // Optionally handle the case where none of the keywords match
                 setContentView(R.layout.activity_form)
@@ -144,12 +139,21 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun setupForm(screen: Screen) {
+        Log.d("FormActivity", "Screen components: ${screen.comp}")
         val container = findViewById<LinearLayout>(R.id.menu_container)
         val buttonContainer = findViewById<LinearLayout>(R.id.button_type_7_container)
+        if (container == null || buttonContainer == null) {
+            Log.e("FormActivity", "One of the containers is null. container: $container, buttonContainer: $buttonContainer")
+            return
+        }
+
         container.removeAllViews()
         buttonContainer.removeAllViews()
 
+        Log.d("FormActivity", "Screen components: ${screen.comp}")
+
         for (component in screen.comp) {
+            Log.d("FormActivity", "Component: $component")
             val view = when (component.type) {
                 0 -> {
                     val inflater = layoutInflater
@@ -166,7 +170,6 @@ class FormActivity : AppCompatActivity() {
 
                     view
                 }
-
                 1 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -181,7 +184,6 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
-
                 2 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -201,7 +203,6 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
-
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -211,8 +212,7 @@ class FormActivity : AppCompatActivity() {
                         })
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
-                            inputType =
-                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                         }
@@ -223,7 +223,6 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
-
                 4 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -235,11 +234,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
-                            val adapter = ArrayAdapter(
-                                this@FormActivity,
-                                android.R.layout.simple_spinner_item,
-                                options
-                            )
+                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             this.adapter = adapter
                             layoutParams = LinearLayout.LayoutParams(
@@ -249,7 +244,6 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
-
                 5 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -265,7 +259,6 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 6 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -287,7 +280,6 @@ class FormActivity : AppCompatActivity() {
                         addView(radioGroup)
                     }
                 }
-
                 7 -> {
                     Button(this).apply {
                         text = component.label
@@ -298,7 +290,15 @@ class FormActivity : AppCompatActivity() {
                             val messageBody = createMessageBody(screen)
                             if (messageBody != null) {
                                 Log.d("FormActivity", "Message Body: $messageBody")
-                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody)
+                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { screenId ->
+                                    screenId?.let { id ->
+                                        runOnUiThread {
+                                            navigateToScreen(id)
+                                        }
+                                    } ?: run {
+                                        Log.e("FormActivity", "Failed to fetch screen ID")
+                                    }
+                                }
                             } else {
                                 Log.e(
                                     "FormActivity",
@@ -308,7 +308,6 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 else -> {
                     null
                 }
@@ -378,4 +377,13 @@ class FormActivity : AppCompatActivity() {
             null
         }
     }
+
+    private fun navigateToScreen(screenId: String) {
+        val intent = Intent(this, FormActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_FORM_ID, screenId)
+        }
+        startActivity(intent)
+    }
+
 }

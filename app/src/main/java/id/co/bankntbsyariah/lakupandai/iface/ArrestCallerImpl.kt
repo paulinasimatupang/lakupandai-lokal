@@ -117,7 +117,7 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
         }
     }
 
-    override fun requestPost(msg: JSONObject) {
+    override fun requestPost(msg: JSONObject, callback: (String?) -> Unit) {
         val requestBody = RequestBody.create("charset=utf-8".toMediaTypeOrNull(), msg.toString())
         val request = Request.Builder()
             .url("http://108.137.154.8:8080/ARRest/api/")
@@ -127,6 +127,7 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Failed to post message", e)
+                callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -145,26 +146,17 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
                             val jsonResponse = JSONObject(it)
                             val screen = jsonResponse.optJSONObject("screen")
                             val id = screen?.optString("id", null)
-                            id?.let { screenId ->
-                                Log.i(TAG, "Fetched ID: $screenId")
-                                val screenContent = fetchScreen(screenId)
-                                screenContent?.let { content ->
-                                    Log.i(TAG, "Fetched screen content: $content")
-                                } ?: run {
-                                    Log.e(TAG, "Failed to fetch screen content")
-                                }
-                            } ?: run {
-                                Log.e(TAG, "ID not found in response")
-                            }
+                            callback(id)
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to parse JSON response", e)
+                            callback(null)
                         }
                     } ?: run {
                         Log.e(TAG, "Response body is null")
+                        callback(null)
                     }
                 }
             }
         })
     }
-
 }

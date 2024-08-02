@@ -49,6 +49,8 @@ class MenuActivity : AppCompatActivity() {
         // Get the menu ID from the Intent or use the default
         menuId = intent.getStringExtra(Constants.KEY_MENU_ID) ?: Constants.DEFAULT_ROOT_ID
 
+        Log.d("MenuActivity", "Received menuId: $menuId")
+
         // Directly check if we need to navigate to form activity
         if (menuId == "FORM") {
             navigateToFormActivity()
@@ -59,7 +61,7 @@ class MenuActivity : AppCompatActivity() {
         setContentView(
             when (menuId) {
                 "HMB0000" -> R.layout.hamburger
-                Constants.DEFAULT_ROOT_ID -> R.layout.dashboard_layout
+                Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
             }
         )
@@ -80,18 +82,20 @@ class MenuActivity : AppCompatActivity() {
         val menuContainer = findViewById<RecyclerView>(R.id.menu_container)
         menuContainer?.visibility = View.GONE
 
-        // Launch a coroutine to fetch and handle the menu data
         lifecycleScope.launch {
             try {
                 var menuValue: String? = StorageImpl(applicationContext).fetchMenu(menuId)
+                Log.d("MenuActivity", "Fetched menu value from storage: $menuValue")
+
                 if (menuValue.isNullOrEmpty()) {
                     menuValue = withContext(Dispatchers.IO) {
                         ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
                     }
+                    Log.d("MenuActivity", "Fetched menu value from server: $menuValue")
                 }
 
                 if (menuValue.isNullOrEmpty()) {
-                    showError("Menu value is null or empty.")
+                    showError("Menu value is null or empty for menuId: $menuId")
                 } else {
                     val screenJson = JSONObject(menuValue)
                     val screen: Screen = ScreenParser.parseJSON(screenJson)
@@ -104,7 +108,7 @@ class MenuActivity : AppCompatActivity() {
                 Log.e("MenuActivity", "Error fetching menu: ${e.message}", e)
                 showError("Error fetching menu.")
             } finally {
-                menuContainer?.visibility = View.VISIBLE
+                findViewById<RecyclerView>(R.id.menu_container)?.visibility = View.VISIBLE
             }
         }
 
@@ -169,7 +173,10 @@ class MenuActivity : AppCompatActivity() {
         screen.comp.forEach { comp ->
             menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
         }
+        Log.d("MenuActivity", "Menu item count: ${menuList.size}")
         menuAdapter.notifyDataSetChanged()
+
+        Log.d("MenuActivity", "Loaded ${menuList.size} menu items into RecyclerView")
     }
 
     private fun showHamburgerMenu() {

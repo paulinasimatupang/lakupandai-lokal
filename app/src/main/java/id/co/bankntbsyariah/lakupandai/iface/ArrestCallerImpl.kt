@@ -63,19 +63,19 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
             .build()
 
         return try {
-            client.newCall(request).execute().use {
-                if (!it.isSuccessful) {
-                    Log.e(TAG, "Failed to fetch screen for ID $id: ${it.message}")
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch screen for ID $id: ${response.message}")
                     null
                 } else {
-                    val responseBody = it.body?.string()
+                    val responseBody = response.body?.string()
                     responseBody?.let { body ->
                         Log.i(TAG, "Screen Response Body: $body") // Log the full response body
                         val jsonObject = JSONObject(body)
                         val actionUrl = jsonObject.optJSONObject("screen")?.optString("action_url")
                         Log.i(TAG, "Action URL for screen ID $id: $actionUrl")
                     }
-                    responseBody
+                    return responseBody
                 }
             }
         } catch (e: Exception) {
@@ -83,6 +83,7 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
             null
         }
     }
+
 
     override fun fetchImage(id: String): Bitmap? {
         Log.i(TAG, "Fetching image with ID: $id")

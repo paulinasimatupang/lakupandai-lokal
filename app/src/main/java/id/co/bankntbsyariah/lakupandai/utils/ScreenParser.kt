@@ -6,7 +6,6 @@ import id.co.bankntbsyariah.lakupandai.common.Screen
 import org.json.JSONObject
 
 class ScreenParser {
-
     companion object {
         fun parseJSON(data: JSONObject): Screen {
             val screen = data.optJSONObject("screen")

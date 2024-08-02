@@ -337,16 +337,21 @@ class FormActivity : AppCompatActivity() {
             val msg = JSONObject()
 
             // Get device Android ID
-            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//
+//            // Generate timestamp in the required format
+//            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+//
+//            // Concatenate msg_ui with timestamp to generate msg_id
+//            val msgId = msgUi + timestamp
+//
+//            // Use actionUrl from screen; if null, msg_si will be null
+//            val msgSi = screen.actionUrl
 
-            // Generate timestamp in the required format
-            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = "353471045058692200995"
+            val msgUi = "353471045058692"
+            val msgSi = "N00001"
 
-            // Concatenate msg_ui with timestamp to generate msg_id
-            val msgId = msgUi + timestamp
-
-            // Use actionUrl from screen; if null, msg_si will be null
-            val msgSi = screen.actionUrl
 
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { inputValues[it.id] ?: "" }

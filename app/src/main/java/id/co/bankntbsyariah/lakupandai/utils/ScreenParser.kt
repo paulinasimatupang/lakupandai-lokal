@@ -1,5 +1,7 @@
 package id.co.bankntbsyariah.lakupandai.utils
 
+
+import android.util.Log
 import id.co.bankntbsyariah.lakupandai.common.CompValues
 import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.ComponentValue
@@ -7,7 +9,6 @@ import id.co.bankntbsyariah.lakupandai.common.Screen
 import org.json.JSONObject
 
 class ScreenParser {
-
     companion object {
         fun parseJSON(data: JSONObject): Screen {
             val screen = data.optJSONObject("screen")
@@ -73,13 +74,18 @@ class ScreenParser {
                     )
                 )
             }
+
+            // Extract and log action_url
+            val actionUrl = screen.optString("action_url")
+            Log.i("ScreenParser", "Action URL: $actionUrl")
+
             return Screen(
                 screen.optInt("type", -1),
                 screen.optString("title", ""),
                 screen.optString("id", ""),
                 screen.optString("ver", ""),
-                screen.optString("action_url", ""),
-                compArray
+                compArray,
+                actionUrl // Set actionUrl
             )
         }
     }

@@ -1,6 +1,8 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -10,9 +12,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
+import android.provider.Settings
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
+import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
@@ -23,8 +28,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
-import android.graphics.Typeface
-import androidx.core.widget.addTextChangedListener
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 
 class FormActivity : AppCompatActivity() {
 
@@ -46,10 +53,12 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_awal)
                 Log.d("FormActivity", "Displaying activity_awal")
             }
+
             "AU00001" -> {
                 setContentView(R.layout.activity_form_login)
                 Log.d("FormActivity", "Displaying activity_form_login")
             }
+
             else -> {
                 setContentView(R.layout.activity_form)
                 Log.d("FormActivity", "Displaying activity_form")
@@ -228,7 +237,11 @@ class FormActivity : AppCompatActivity() {
 
                         val spinner = Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
-                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
+                            val adapter = ArrayAdapter(
+                                this@FormActivity,
+                                android.R.layout.simple_spinner_item,
+                                options
+                            )
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             this.adapter = adapter
                             layoutParams = LinearLayout.LayoutParams(
@@ -250,6 +263,7 @@ class FormActivity : AppCompatActivity() {
                         addView(spinner)
                     }
                 }
+
                 5 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -274,6 +288,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
+
                 6 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -302,35 +317,11 @@ class FormActivity : AppCompatActivity() {
                         addView(radioGroup)
                     }
                 }
-                7 -> {
-                    Button(this).apply {
-                        text = component.label
-                        setTextColor(getColor(R.color.white))
-                        textSize = 18f
-                        background = getDrawable(R.drawable.button_yellow)
-                        setOnClickListener {
-                            val messageBody = createMessageBody(screen)
-                            if (messageBody != null) {
-                                Log.d("FormActivity", "Message Body: $messageBody")
-                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                    responseBody?.let { body ->
-                                        lifecycleScope.launch {
-                                            val screenJson = JSONObject(body)
-                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                            handleScreenTitle(screen.title)
-                                            setupForm(screen)
-                                        }
-                                    } ?: run {
-                                        Log.e("FormActivity", "Failed to fetch response body")
-                                    }
-                                }
-                            } else {
-                                Log.e("FormActivity", "Failed to create message body, request not sent")
-                            }
-                        }
 
-                    }
+                7 -> {
+                    createButtonForComponent(component, screen)
                 }
+
                 else -> {
                     null
                 }
@@ -350,23 +341,77 @@ class FormActivity : AppCompatActivity() {
                     container.addView(it)
                 }
             }
+        }
+    }
 
+    private fun createButtonForComponent(component: Component, screen: Screen): Button {
+        return Button(this).apply {
+            text = component.label
+            setTextColor(getColor(R.color.white))
+            textSize = 18f
+            background = getDrawable(R.drawable.button_yellow)
+            setOnClickListener {
+                onButtonClick(screen)
+            }
+        }
+    }
+
+    private fun onButtonClick(screen: Screen) {
+        if (screen.actionUrl.isNullOrEmpty()) {
+            Log.e("FormActivity", "Action URL is null, navigating back to default root.")
+            navigateToScreen(Constants.DEFAULT_ROOT_ID)
+            return
+        }
+
+        val messageBody = createMessageBody(screen)
+        if (messageBody != null) {
+            Log.d("FormActivity", "Message Body: $messageBody")
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let { body ->
+                    lifecycleScope.launch {
+                        val screenJson = JSONObject(body)
+                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                        handleScreenTitle(newScreen.title)
+                        setupForm(newScreen)
+                    }
+                } ?: run {
+                    Log.e("FormActivity", "Failed to fetch response body")
+                }
+            }
+        } else {
+            Log.e("FormActivity", "Failed to create message body, request not sent")
         }
     }
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
+
+            // Get device Android ID
+//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//
+//            // Generate timestamp in the required format
+//            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+//
+//            // Concatenate msg_ui with timestamp to generate msg_id
+//            val msgId = msgUi + timestamp
+//
+//            // Use actionUrl from screen; if null, msg_si will be null
+//            val msgSi = screen.actionUrl
+
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
             val msgSi = "N00001"
+
+
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { inputValues[it.id] ?: "" }
 
-            val msgObject = JSONObject()
-            msgObject.put("msg_id", msgId)
-            msgObject.put("msg_ui", msgUi)
-            msgObject.put("msg_si", msgSi)
-            msgObject.put("msg_dt", msgDt)
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi) // This may be null if actionUrl is not provided
+                put("msg_dt", msgDt)
+            }
 
             msg.put("msg", msgObject)
 

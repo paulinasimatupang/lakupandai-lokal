@@ -17,6 +17,7 @@ import android.provider.Settings
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
+import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
@@ -234,7 +235,11 @@ class FormActivity : AppCompatActivity() {
 
                         addView(Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
-                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
+                            val adapter = ArrayAdapter(
+                                this@FormActivity,
+                                android.R.layout.simple_spinner_item,
+                                options
+                            )
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             this.adapter = adapter
                             layoutParams = LinearLayout.LayoutParams(
@@ -244,6 +249,7 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
+
                 5 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -259,6 +265,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
+
                 6 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -280,38 +287,11 @@ class FormActivity : AppCompatActivity() {
                         addView(radioGroup)
                     }
                 }
-                7 -> {
-                    Button(this).apply {
-                        text = component.label
-                        setTextColor(getColor(R.color.white))
-                        textSize = 18f
-                        background = getDrawable(R.drawable.button_yellow)
-                        setOnClickListener {
-                            val messageBody = createMessageBody(screen)
-                            if (messageBody != null) {
-                                Log.d("FormActivity", "Message Body: $messageBody")
-                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                    responseBody?.let { body ->
-                                        lifecycleScope.launch {
-                                            val screenJson = JSONObject(body)
-                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                            handleScreenTitle(screen.title)
-                                            setupForm(screen)
-                                        }
-                                    } ?: run {
-                                        Log.e("FormActivity", "Failed to fetch response body")
-                                    }
-                                }
-                            } else {
-                                Log.e(
-                                    "FormActivity",
-                                    "Failed to create message body, request not sent"
-                                )
-                            }
-                        }
 
-                    }
+                7 -> {
+                    createButtonForComponent(component, screen)
                 }
+
                 else -> {
                     null
                 }
@@ -331,7 +311,45 @@ class FormActivity : AppCompatActivity() {
                     container.addView(it)
                 }
             }
+        }
+    }
 
+    private fun createButtonForComponent(component: Component, screen: Screen): Button {
+        return Button(this).apply {
+            text = component.label
+            setTextColor(getColor(R.color.white))
+            textSize = 18f
+            background = getDrawable(R.drawable.button_yellow)
+            setOnClickListener {
+                onButtonClick(screen)
+            }
+        }
+    }
+
+    private fun onButtonClick(screen: Screen) {
+        if (screen.actionUrl.isNullOrEmpty()) {
+            Log.e("FormActivity", "Action URL is null, navigating back to default root.")
+            navigateToScreen(Constants.DEFAULT_ROOT_ID)
+            return
+        }
+
+        val messageBody = createMessageBody(screen)
+        if (messageBody != null) {
+            Log.d("FormActivity", "Message Body: $messageBody")
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let { body ->
+                    lifecycleScope.launch {
+                        val screenJson = JSONObject(body)
+                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                        handleScreenTitle(newScreen.title)
+                        setupForm(newScreen)
+                    }
+                } ?: run {
+                    Log.e("FormActivity", "Failed to fetch response body")
+                }
+            }
+        } else {
+            Log.e("FormActivity", "Failed to create message body, request not sent")
         }
     }
 

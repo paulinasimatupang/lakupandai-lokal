@@ -1,10 +1,8 @@
 package id.co.bankntbsyariah.lakupandai.utils
 
-<<<<<<< HEAD
+
 import android.util.Log
-=======
 import id.co.bankntbsyariah.lakupandai.common.CompValues
->>>>>>> a9f141f34cdc15614cf46a71589d65e72f6afa07
 import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.ComponentValue
 import id.co.bankntbsyariah.lakupandai.common.Screen

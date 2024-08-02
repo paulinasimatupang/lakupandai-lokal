@@ -9,5 +9,15 @@ data class Component(
     var icon: String,
     var desc: String,
     var seq: Int,
-    val values: List<Pair<String, String>> = emptyList()
+    val values: List<Pair<String, String>> = emptyList(),
+    val compValues: CompValues? = null
+)
+
+data class ComponentValue(
+    val print: String?,
+    val value: String?
+)
+
+data class CompValues(
+    val compValue: List<ComponentValue>
 )

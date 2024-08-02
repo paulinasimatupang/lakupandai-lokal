@@ -1,7 +1,12 @@
 package id.co.bankntbsyariah.lakupandai.utils
 
+<<<<<<< HEAD
 import android.util.Log
+=======
+import id.co.bankntbsyariah.lakupandai.common.CompValues
+>>>>>>> a9f141f34cdc15614cf46a71589d65e72f6afa07
 import id.co.bankntbsyariah.lakupandai.common.Component
+import id.co.bankntbsyariah.lakupandai.common.ComponentValue
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import org.json.JSONObject
 
@@ -34,6 +39,28 @@ class ScreenParser {
                         valuesArray.add(Pair(valueJson.optString("print", ""), valueJson.optString("value", "")))
                     }
                 }
+
+                val compValuesJson = compJson.optJSONObject("comp_values")
+                val compValues = if (compValuesJson != null) {
+                    val compValueArray = compValuesJson.optJSONArray("comp_value")
+                    val compValueList = mutableListOf<ComponentValue>()
+
+                    if (compValueArray != null) {
+                        for (j in 0 until compValueArray.length()) {
+                            val compValueJson = compValueArray.getJSONObject(j)
+                            compValueList.add(
+                                ComponentValue(
+                                    compValueJson.optString("print"),
+                                    compValueJson.optString("value")
+                                )
+                            )
+                        }
+                    }
+                    CompValues(compValueList)
+                } else {
+                    null
+                }
+
                 compArray.add(
                     Component(
                         compJson.optBoolean("visible", false),
@@ -44,7 +71,8 @@ class ScreenParser {
                         compJson.optString("comp_icon", ""),
                         compJson.optString("comp_desc", ""),
                         compJson.optInt("seq", 0),
-                        valuesArray
+                        valuesArray,
+                        compValues
                     )
                 )
             }

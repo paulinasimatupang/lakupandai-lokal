@@ -178,7 +178,7 @@ class FormActivity : AppCompatActivity() {
                             setTypeface(null, Typeface.BOLD)
                         })
                         addView(TextView(this@FormActivity).apply {
-                            text = component.action
+                            text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             textSize = 18f
                             background = getDrawable(R.drawable.text_view_background)
                         })
@@ -290,13 +290,16 @@ class FormActivity : AppCompatActivity() {
                             val messageBody = createMessageBody(screen)
                             if (messageBody != null) {
                                 Log.d("FormActivity", "Message Body: $messageBody")
-                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { screenId ->
-                                    screenId?.let { id ->
-                                        runOnUiThread {
-                                            navigateToScreen(id)
+                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                    responseBody?.let { body ->
+                                        lifecycleScope.launch {
+                                            val screenJson = JSONObject(body)
+                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
+                                            handleScreenTitle(screen.title)
+                                            setupForm(screen)
                                         }
                                     } ?: run {
-                                        Log.e("FormActivity", "Failed to fetch screen ID")
+                                        Log.e("FormActivity", "Failed to fetch response body")
                                     }
                                 }
                             } else {
@@ -306,6 +309,7 @@ class FormActivity : AppCompatActivity() {
                                 )
                             }
                         }
+
                     }
                 }
                 else -> {

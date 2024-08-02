@@ -140,23 +140,10 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
                     Log.i(TAG, "Message posted successfully")
                     val responseBody = response.body?.string()
                     Log.i(TAG, "Response body: $responseBody")
-
-                    responseBody?.let {
-                        try {
-                            val jsonResponse = JSONObject(it)
-                            val screen = jsonResponse.optJSONObject("screen")
-                            val id = screen?.optString("id", null)
-                            callback(id)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to parse JSON response", e)
-                            callback(null)
-                        }
-                    } ?: run {
-                        Log.e(TAG, "Response body is null")
-                        callback(null)
-                    }
+                    callback(responseBody)
                 }
             }
         })
     }
+
 }

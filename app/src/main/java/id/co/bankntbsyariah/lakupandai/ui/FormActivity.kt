@@ -115,7 +115,7 @@ class FormActivity : AppCompatActivity() {
                 Log.d("FormActivity", "Displaying activity_form2")
             }
             screenTitle.contains("Review", ignoreCase = true) -> {
-                setContentView(R.layout.activity_form2)
+                setContentView(R.layout.activity_review)
                 Log.d("FormActivity", "Displaying activity_review")
             }
             screenTitle.contains("Bayar", ignoreCase = true) -> {
@@ -167,13 +167,15 @@ class FormActivity : AppCompatActivity() {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 20f
                             setTypeface(null, Typeface.BOLD)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
                         })
                         addView(TextView(this@FormActivity).apply {
                             text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             textSize = 18f
-                            background = getDrawable(R.drawable.text_view_background)
                         })
+                        background = getDrawable(R.drawable.text_view_background)
                     }
                 }
                 2 -> {
@@ -224,7 +226,7 @@ class FormActivity : AppCompatActivity() {
                             setTypeface(null, Typeface.BOLD)
                         })
 
-                        addView(Spinner(this@FormActivity).apply {
+                        val spinner = Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
                             val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -233,7 +235,19 @@ class FormActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.MATCH_PARENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                        })
+                        }
+
+                        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+                                inputValues[component.id] = component.values[position].first
+                            }
+
+                            override fun onNothingSelected(parent: AdapterView<*>) {
+                                // Do nothing
+                            }
+                        }
+
+                        addView(spinner)
                     }
                 }
                 5 -> {
@@ -242,12 +256,21 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            setTypeface(null, Typeface.BOLD)
                         })
 
                         component.values.forEach { value ->
-                            addView(CheckBox(this@FormActivity).apply {
+                            val checkBox = CheckBox(this@FormActivity).apply {
                                 text = value.first
-                            })
+                            }
+                            checkBox.setOnCheckedChangeListener { _, isChecked ->
+                                if (isChecked) {
+                                    inputValues[component.id] = value.first
+                                } else {
+                                    inputValues.remove(component.id)
+                                }
+                            }
+                            addView(checkBox)
                         }
                     }
                 }
@@ -257,6 +280,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            setTypeface(null, Typeface.BOLD)
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {
@@ -264,9 +288,15 @@ class FormActivity : AppCompatActivity() {
                         }
 
                         component.values.forEach { value ->
-                            radioGroup.addView(RadioButton(this@FormActivity).apply {
+                            val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
-                            })
+                            }
+                            radioButton.setOnCheckedChangeListener { _, isChecked ->
+                                if (isChecked) {
+                                    inputValues[component.id] = value.first
+                                }
+                            }
+                            radioGroup.addView(radioButton)
                         }
 
                         addView(radioGroup)
@@ -323,7 +353,6 @@ class FormActivity : AppCompatActivity() {
 
         }
     }
-
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()

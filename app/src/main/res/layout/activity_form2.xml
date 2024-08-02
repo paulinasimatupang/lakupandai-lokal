@@ -85,15 +85,18 @@
         android:padding="38dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center">
 
         <LinearLayout
             android:id="@+id/button_type_7_container"
             android:layout_width="360dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="-40dp"
             android:orientation="vertical"
-            android:padding="30dp"></LinearLayout>
+            android:padding="30dp"
+            android:layout_gravity="center_horizontal">
+
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

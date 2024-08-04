@@ -36,25 +36,10 @@ class FormActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Retrieve formId from intent extras
         formId = intent.extras?.getString(Constants.KEY_FORM_ID) ?: Constants.DEFAULT_ROOT_ID
         Log.d("FormActivity", "formId: $formId")
 
-        // Set the appropriate layout based on the formId
-        when (formId) {
-            "AWL0000" -> {
-                setContentView(R.layout.activity_awal)
-                Log.d("FormActivity", "Displaying activity_awal")
-            }
-            "AU00001" -> {
-                setContentView(R.layout.activity_form_login)
-                Log.d("FormActivity", "Displaying activity_form_login")
-            }
-            else -> {
-                setContentView(R.layout.activity_form)
-                Log.d("FormActivity", "Displaying activity_form")
-            }
-        }
+        setInitialLayout()
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -108,25 +93,33 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleScreenTitle(screenTitle: String) {
-        when {
-            screenTitle.contains("Form", ignoreCase = true) -> {
-                setContentView(R.layout.activity_form2)
-                Log.d("FormActivity", "Displaying activity_form2")
+    private fun setInitialLayout() {
+        when (formId) {
+            "AWL0000" -> {
+                setContentView(R.layout.activity_awal)
+                Log.d("FormActivity", "Displaying activity_awal")
             }
-            screenTitle.contains("Review", ignoreCase = true) -> {
-                setContentView(R.layout.activity_review)
-                Log.d("FormActivity", "Displaying activity_review")
-            }
-            screenTitle.contains("Bayar", ignoreCase = true) -> {
-                setContentView(R.layout.activity_bayar)
-                Log.d("FormActivity", "Displaying activity_bayar")
+            "AU00001" -> {
+                setContentView(R.layout.activity_form_login)
+                Log.d("FormActivity", "Displaying activity_form_login")
             }
             else -> {
-                // Optionally handle the case where none of the keywords match
                 setContentView(R.layout.activity_form)
                 Log.d("FormActivity", "Displaying activity_form")
             }
+        }
+    }
+
+    private fun handleScreenTitle(screenTitle: String) {
+        val layoutId = when {
+            screenTitle.contains("Form", ignoreCase = true) -> R.layout.activity_form2
+            screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
+            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
+            else -> R.layout.activity_form
+        }
+        if (layoutId != R.layout.activity_form) {
+            setContentView(layoutId)
+            Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
     }
 

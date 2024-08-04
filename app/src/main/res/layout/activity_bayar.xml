@@ -50,19 +50,25 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/menu_container"
-        android:layout_width="match_parent"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:orientation="vertical"
-        android:padding="8dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="24dp"
         app:layout_constraintTop_toBottomOf="@id/button_container"
+        app:layout_constraintBottom_toTopOf="@id/footer_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/footer_container"
-        />
+        tools:ignore="SpeakableTextPresentCheck">
+
+        <LinearLayout
+            android:id="@+id/menu_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="15dp"
+            android:orientation="vertical"
+            android:padding="8dp" />
+    </androidx.core.widget.NestedScrollView>
 
     <TextView
         android:id="@+id/error_message"
@@ -74,36 +80,28 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/footer_container"
         android:visibility="gone"
-        android:text="@string/invalid_form_id"
-        />
+        android:text="@string/invalid_form_id" />
 
     <LinearLayout
         android:id="@+id/footer_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="38dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:gravity="center">
-        >
+        android:gravity="center"
+        android:elevation="10dp">
 
-<!--        <TextView-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="@string/footer_text"-->
-<!--            android:textColor="@color/white"-->
-<!--            />-->
         <LinearLayout
             android:id="@+id/button_type_7_container"
-            android:layout_width="360dp"
+            android:layout_width="400dp"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:background="@android:color/transparent"
             android:orientation="vertical"
-            android:padding="30dp"
-            android:layout_gravity="center_horizontal">
-
-        </LinearLayout>
+            android:padding="30dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

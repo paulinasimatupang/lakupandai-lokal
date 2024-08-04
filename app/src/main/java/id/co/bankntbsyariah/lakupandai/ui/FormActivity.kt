@@ -156,19 +156,23 @@ class FormActivity : AppCompatActivity() {
                     view
                 }
                 1 -> {
-                    LinearLayout(this@FormActivity).apply {
-                        orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
-                            text = component.label
-                            textSize = 20f
-                            setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
-                        })
-                        addView(TextView(this@FormActivity).apply {
-                            text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                            textSize = 18f
-                        })
-                        background = getDrawable(R.drawable.text_view_background)
+                    if (component.visible != false) {
+                        LinearLayout(this@FormActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            addView(TextView(this@FormActivity).apply {
+                                text = component.label
+                                textSize = 20f
+                                setTypeface(null, Typeface.BOLD)
+                                setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
+                            })
+                            addView(TextView(this@FormActivity).apply {
+                                text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                                textSize = 18f
+                            })
+                            background = getDrawable(R.drawable.text_view_background)
+                        }
+                    } else{
+                        continue
                     }
                 }
                 2 -> {
@@ -353,7 +357,12 @@ class FormActivity : AppCompatActivity() {
             val msgUi = "353471045058692"
             val msgSi = "N00001"
             val msgDt = screen.comp.filter { it.type != 7 }
-                .joinToString("|") { inputValues[it.id] ?: "" }
+                .joinToString("|") { component ->
+                    when (component.type) {
+                        1 -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                        else -> inputValues[component.id] ?: ""
+                    }
+                }
 
             val msgObject = JSONObject()
             msgObject.put("msg_id", msgId)

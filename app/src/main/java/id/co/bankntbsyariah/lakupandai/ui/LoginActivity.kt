@@ -2,6 +2,7 @@ package id.co.bankntbsyariah.lakupandai.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -12,12 +13,31 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import org.json.JSONObject
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var usernameEditText: EditText
     private lateinit var passwordEditText: EditText
     private lateinit var loginButton: Button
+
+    // Set client with extended timeout
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    companion object {
+        private const val TAG = "LoginActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,13 +58,8 @@ class LoginActivity : AppCompatActivity() {
             val username = usernameEditText.text.toString()
             val password = passwordEditText.text.toString()
 
-            // Implementasi autentikasi statis
-            if (username == "user" && password == "password") {
-                Toast.makeText(this, "Login berhasil", Toast.LENGTH_SHORT).show()
-                navigateToMenuActivity()
-            } else {
-                Toast.makeText(this, "Username atau password salah", Toast.LENGTH_SHORT).show()
-            }
+            Log.d(TAG, "Login button clicked with username: $username")
+            loginUser(username, password)
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -52,6 +67,54 @@ class LoginActivity : AppCompatActivity() {
                 finish()
             }
         })
+    }
+
+    private fun loginUser(username: String, password: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val formBody = FormBody.Builder()
+                .add("username", username)
+                .add("password", password)
+                .build()
+
+            val request = Request.Builder()
+                .url("http://api.selada.id/api/auth/login") // menggunakan HTTP
+                .post(formBody)
+                .build()
+
+            Log.d(TAG, "Sending login request to server...")
+
+            try {
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+
+                Log.d(TAG, "Received response from server. Response code: ${response.code}, Response body: $responseData")
+
+                if (response.isSuccessful && responseData != null) {
+                    val jsonResponse = JSONObject(responseData)
+                    val token = jsonResponse.optString("token")
+
+                    if (token.isNotEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@LoginActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                            navigateToMenuActivity()
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@LoginActivity, "Token tidak ditemukan", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@LoginActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception occurred while logging in", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@LoginActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun navigateToMenuActivity() {
@@ -62,5 +125,4 @@ class LoginActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
-
 }

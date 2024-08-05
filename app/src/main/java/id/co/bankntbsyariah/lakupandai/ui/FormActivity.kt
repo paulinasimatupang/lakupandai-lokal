@@ -372,11 +372,11 @@ class FormActivity : AppCompatActivity() {
 //            val msgId = msgUi + timestamp
 //
 //            // Use actionUrl from screen; if null, msg_si will be null
-//            val msgSi = screen.actionUrl
+            val msgSi = screen.actionUrl
 
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
-            val msgSi = "N00001"
+//            val msgSi = "N00001"
 
 
             val msgDt = screen.comp.filter { it.type != 7 }

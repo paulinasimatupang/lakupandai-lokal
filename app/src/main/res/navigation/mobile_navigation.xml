@@ -7,16 +7,13 @@
 
     <fragment
         android:id="@+id/navigation_home"
-        android:name="id.co.bankntbsyariah.lakupandai.ui.HomeFragment"
         tools:layout="@layout/fragment_home" />
 
     <fragment
         android:id="@+id/navigation_dashboard"
-        android:name="id.co.bankntbsyariah.lakupandai.ui.DashboardFragment"
         tools:layout="@layout/dashboard_layout" />
 
     <fragment
         android:id="@+id/navigation_notifications"
-        android:name="id.co.bankntbsyariah.lakupandai.ui.NotificationsFragment"
         tools:layout="@layout/fragment_notifications" />
 </navigation>

@@ -146,16 +146,15 @@ class MenuActivity : AppCompatActivity() {
             checkSaldo()
         }
 
-        // Set up BottomNavigationView
-//        val navView: BottomNavigationView = findViewById(R.id.nav_view)
-//        val navController = findNavController(R.id.nav_host_fragment_activity_menu)
-//        val appBarConfiguration = AppBarConfiguration(
-//            setOf(
-//                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications
-//            )
-//        )
-//        setupActionBarWithNavController(navController, appBarConfiguration)
-//        navView.setupWithNavController(navController)
+        val navView: BottomNavigationView = findViewById(R.id.nav_view)
+        val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications
+            )
+        )
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        navView.setupWithNavController(navController)
     }
 
     private fun showError(message: String) {
@@ -273,10 +272,10 @@ class MenuActivity : AppCompatActivity() {
         })
     }
 
-//    override fun onSupportNavigateUp(): Boolean {
-//        val navController = findNavController(R.id.nav_host_fragment_activity_menu)
-//        return navController.navigateUp() || super.onSupportNavigateUp()
-//    }
+    override fun onSupportNavigateUp(): Boolean {
+        val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        return navController.navigateUp() || super.onSupportNavigateUp()
+    }
 
     private fun createMessageBody(): JSONObject? {
         return try {

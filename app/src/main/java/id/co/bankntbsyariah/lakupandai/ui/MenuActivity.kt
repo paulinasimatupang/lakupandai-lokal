@@ -61,6 +61,7 @@ class MenuActivity : AppCompatActivity() {
         setContentView(
             when (menuId) {
                 "HMB0000" -> R.layout.hamburger
+                "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
             }
@@ -154,7 +155,14 @@ class MenuActivity : AppCompatActivity() {
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                 // Handle popups or alerts
             }
-            else -> setupMenuRecyclerView(screen)
+            else -> {
+                setupMenuRecyclerView(screen)
+                val titleTextView: TextView? = findViewById(R.id.title)
+                titleTextView?.let {
+                    it.text = screen.title
+                    it.visibility = View.VISIBLE
+                }
+            }
         }
     }
 

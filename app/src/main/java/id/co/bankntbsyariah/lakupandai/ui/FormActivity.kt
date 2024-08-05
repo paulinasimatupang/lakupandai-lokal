@@ -365,6 +365,9 @@ class FormActivity : AppCompatActivity() {
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val savedUsername = sharedPreferences.getString("username", "") ?: ""
+            Log.e("FormActivity", "Saved Username: $savedUsername")
 
             // Get device Android ID
 //            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -382,12 +385,29 @@ class FormActivity : AppCompatActivity() {
             val msgUi = "353471045058692"
             val msgSi = "N00001"
 
+            val componentValues = mutableMapOf<String, String>()
+            screen.comp.filter { it.type != 7 }.forEach { component ->
+                Log.d("FormActivity", "Component: $component")
+
+                when {
+                    component.type == 1 && component.label == "Username" -> {
+                        componentValues[component.id] = savedUsername
+                        Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
+                    }
+                    component.type == 1 -> {
+                        val value = (component.values.firstOrNull() as? String) ?: ""
+                        componentValues[component.id] = value
+                        Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
+                    }
+                    else -> {
+                        componentValues[component.id] = inputValues[component.id] ?: ""
+                    }
+                }
+            }
+
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { component ->
-                    when (component.type) {
-                        1 -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                        else -> inputValues[component.id] ?: ""
-                    }
+                    componentValues[component.id] ?: ""
                 }
 
             val msgObject = JSONObject().apply {

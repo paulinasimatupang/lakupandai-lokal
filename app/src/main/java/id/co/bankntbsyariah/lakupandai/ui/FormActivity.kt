@@ -410,12 +410,4 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun navigateToScreen(screenId: String) {
-        val intent = Intent(this, FormActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            putExtra(Constants.KEY_FORM_ID, screenId)
-        }
-        startActivity(intent)
-    }
-
 }

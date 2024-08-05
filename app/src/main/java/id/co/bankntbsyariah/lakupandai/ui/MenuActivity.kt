@@ -181,7 +181,10 @@ class MenuActivity : AppCompatActivity() {
 
     private fun showHamburgerMenu() {
         // Navigate to the hamburger layout
-        setContentView(R.layout.hamburger)
+        startActivity(Intent(this, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "HMB0000")
+        })
     }
 
     fun onMenuItemClick(position: Int) {

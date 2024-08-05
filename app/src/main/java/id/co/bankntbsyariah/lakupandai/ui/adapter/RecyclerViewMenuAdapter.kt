@@ -11,6 +11,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import id.co.bankntbsyariah.lakupandai.api.ArrestCaller
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
@@ -49,28 +51,35 @@ class RecyclerViewMenuAdapter(
         Log.d(TAG, "Binding view holder for position $position")
 
         (context as MenuActivity).lifecycleScope.launch {
-            val iconName = "${menuList[position].image}.png"
-            Log.i(TAG, "Fetching Icon image with ID: $iconName")
-            val imgBitmap: Bitmap = try {
-                withContext(Dispatchers.IO) {
-                    Log.d(TAG, "Fetching image for component with comp_icon: $iconName")
+//            val iconName = "${menuList[position].image}.png"
+//            Log.i(TAG, "Fetching Icon image with ID: $iconName")
+//            val imgBitmap: Bitmap = try {
+//                withContext(Dispatchers.IO) {
+//                    Log.d(TAG, "Fetching image for component with comp_icon: $iconName")
+//
+//                    val fetchedBitmap = ArrestCallerImpl(okHttpClient).fetchImage(iconName)
+//
+//                    if (fetchedBitmap != null && isIconNameInCompIcon(iconName)) {
+//                        Log.d(TAG, "Image for component with comp_icon: $iconName fetched successfully")
+//                        fetchedBitmap
+//                    } else {
+//                        Log.d(TAG, "Image for component with comp_icon: $iconName not found on server")
+//                        BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                Log.e(TAG, "Exception occurred while fetching image for component with comp_icon: $iconName", e)
+//                BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
+//            }
 
-                    val fetchedBitmap = ArrestCallerImpl(okHttpClient).fetchImage(iconName)
+            val menuItem = menuList[position]
+            val iconName = "${menuItem.image}.png"
 
-                    if (fetchedBitmap != null && isIconNameInCompIcon(iconName)) {
-                        Log.d(TAG, "Image for component with comp_icon: $iconName fetched successfully")
-                        fetchedBitmap
-                    } else {
-                        Log.d(TAG, "Image for component with comp_icon: $iconName not found on server")
-                        BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception occurred while fetching image for component with comp_icon: $iconName", e)
-                BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
-            }
+            Glide.with(context)
+                .load("http://108.137.154.8:8081/ARRest/static/$iconName")
+                .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))
+                .into(holder.menuImage)
 
-            holder.menuImage.setImageBitmap(imgBitmap)
             holder.menuTitle.text = menuList[position].title
             holder.menuSubtitle.text = menuList[position].subtitle
             holder.menuDescription.text = menuList[position].description

@@ -186,16 +186,49 @@ class MenuActivity : AppCompatActivity() {
 
     private fun showHamburgerMenu() {
         // Navigate to the hamburger layout
-        setContentView(R.layout.hamburger)
+        startActivity(Intent(this, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "HMB0000")
+        })
     }
 
     fun onMenuItemClick(position: Int) {
+        val targetScreenId = menuList[position].value
+        if (targetScreenId.isNullOrEmpty()) {
+            return
+        }
         finish()
-        startActivity(Intent(this, MenuActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            putExtra(Constants.KEY_MENU_ID, menuList[position].value)
-        })
+        navigateToScreen(targetScreenId)
     }
+
+    private fun navigateToScreen(screenId: String) {
+        lifecycleScope.launch {
+            val screenJson = withContext(Dispatchers.IO) {
+                ArrestCallerImpl(OkHttpClient()).fetchScreen(screenId)
+            }
+            if (screenJson.isNullOrEmpty()) {
+                Toast.makeText(this@MenuActivity, "Error loading screen", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val screen = ScreenParser.parseJSON(JSONObject(screenJson))
+            when (screen.type) {
+                Constants.SCREEN_TYPE_FORM -> {
+                    startActivity(Intent(this@MenuActivity, FormActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        putExtra(Constants.KEY_FORM_ID, screenId)
+                    })
+                }
+                else -> {
+                    // Assume default navigation to MenuActivity for other types
+                    startActivity(Intent(this@MenuActivity, MenuActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        putExtra(Constants.KEY_MENU_ID, screenId)
+                    })
+                }
+            }
+        }
+    }
+
 
     fun onShowPopupotpClick(view: View) {
         val builder = AlertDialog.Builder(this)

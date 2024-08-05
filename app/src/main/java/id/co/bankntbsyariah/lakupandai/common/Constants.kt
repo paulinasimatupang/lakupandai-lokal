@@ -23,7 +23,6 @@ class Constants {
         const val SCREEN_TYPE_POPUP_SUKSES = 2
         const val SCREEN_TYPE_POPUP_GAGAL = 3
         const val SCREEN_TYPE_POPUP_LOGOUT = 4
-
         const val ELE_TYPE_TEXT = 0
 
     }

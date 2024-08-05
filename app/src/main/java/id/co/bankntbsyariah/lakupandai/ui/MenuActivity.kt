@@ -3,6 +3,7 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -258,11 +259,13 @@ class MenuActivity : AppCompatActivity() {
 
     private fun createMessageBody(): JSONObject? {
         return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val savedUsername = sharedPreferences.getString("username", "") ?: ""
             val msg = JSONObject()
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
             val msgSi = "N00001"
-            val username = "admin"
+            val username = savedUsername
             val accountNumber = "0010200512271"
             val msgDt = "$username|$accountNumber"
 

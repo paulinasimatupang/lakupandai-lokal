@@ -148,6 +148,9 @@ class FormActivity : AppCompatActivity() {
 
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
+            if (component.visible == false) {
+                continue
+            }
             val view = when (component.type) {
                 0 -> {
                     val inflater = layoutInflater
@@ -165,23 +168,19 @@ class FormActivity : AppCompatActivity() {
                     view
                 }
                 1 -> {
-                    if (component.visible != false) {
-                        LinearLayout(this@FormActivity).apply {
-                            orientation = LinearLayout.VERTICAL
-                            addView(TextView(this@FormActivity).apply {
-                                text = component.label
-                                textSize = 20f
-                                setTypeface(null, Typeface.BOLD)
-                                setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
-                            })
-                            addView(TextView(this@FormActivity).apply {
-                                text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                                textSize = 18f
-                            })
-                            background = getDrawable(R.drawable.text_view_background)
-                        }
-                    } else{
-                        continue
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            textSize = 20f
+                            setTypeface(null, Typeface.BOLD)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
+                        })
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            textSize = 18f
+                        })
+                        background = getDrawable(R.drawable.text_view_background)
                     }
                 }
                 2 -> {

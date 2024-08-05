@@ -1,4 +1,4 @@
-package id.co.bankntbsyariah.lakupandai.ui.theme
+package id.co.bankntbsyariah.lakupandai.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -12,7 +12,6 @@ import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.databinding.ActivityCheckUpdateBinding
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
-import id.co.bankntbsyariah.lakupandai.ui.MenuActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,7 +31,6 @@ class CheckUpdateActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         nextProcessStage()
-
     }
 
     private fun nextProcessStage() {
@@ -45,21 +43,19 @@ class CheckUpdateActivity : AppCompatActivity() {
 
     private fun displayProcessStage(stage: Int) {
         when (stage) {
-            0-> {
-                // checking app update
+            0 -> {
                 binding.versionText.text = getString(R.string.process_check_update)
-                processStage+=1
+                processStage += 1
             }
-            1-> {
-                // checking menu update
+            1 -> {
                 binding.versionText.text = getString(R.string.process_check_menu_version)
                 lifecycleScope.launch {
                     val menuVer = StorageImpl(applicationContext).fetchVersion()
                     val serverVer =
                         withContext(Dispatchers.IO) {
-                            ArrestCallerImpl(OkHttpClient()).fetchVersion()?.toString()?.toIntOrNull() ?:0
+                            ArrestCallerImpl(OkHttpClient()).fetchVersion()?.toString()?.toIntOrNull() ?: 0
                         }
-                    processStage += if (menuVer<serverVer) {
+                    processStage += if (menuVer < serverVer) {
                         StorageImpl(applicationContext).updateVersion(serverVer)
                         1
                     } else {
@@ -67,8 +63,7 @@ class CheckUpdateActivity : AppCompatActivity() {
                     }
                 }
             }
-            2-> {
-                // download menu update
+            2 -> {
                 binding.versionText.text = getString(R.string.process_downloading_menu)
                 lifecycleScope.launch {
                     val rootMenuId =
@@ -76,41 +71,33 @@ class CheckUpdateActivity : AppCompatActivity() {
                             ArrestCallerImpl(OkHttpClient()).fetchRootMenuId().toString()
                         }
                     StorageImpl(applicationContext).updateRootMenuId(rootMenuId)
-                    processStage+=1
+                    processStage += 1
                 }
             }
-            3-> {
-                // info menu update
+            3 -> {
                 binding.versionText.text = getString(R.string.status_menu_updated)
-                processStage+=1
+                processStage += 1
             }
-            4-> {
-                // download app update
+            4 -> {
                 binding.versionText.text = getString(R.string.process_downloading_update)
-                processStage+=1
+                processStage += 1
             }
-            5-> {
-                // info running version
+            5 -> {
                 binding.progressCircular.visibility = View.GONE
                 val versionName = packageManager.getPackageInfo(packageName, 0).versionName
                 binding.versionText.text = getString(R.string.debug_version, versionName)
-                processStage+=1
+                processStage += 1
             }
             else -> {
-                // running apps
                 processStage = Constants.MAX_CHECK_UPDATE_PROCESS_STAGE
-                startApps()
+                navigateToLoginActivity()
             }
         }
     }
 
-    private fun startApps() {
+    private fun navigateToLoginActivity() {
         finish()
-        startActivity(
-            Intent(this, MenuActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags( Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        )
+        startActivity(Intent(this, LoginActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
     }
-
 }

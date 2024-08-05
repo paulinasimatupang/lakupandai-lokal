@@ -1,6 +1,8 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -10,9 +12,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
+import android.provider.Settings
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
+import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
@@ -23,8 +28,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONObject
-import android.graphics.Typeface
-import androidx.core.widget.addTextChangedListener
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 
 class FormActivity : AppCompatActivity() {
 
@@ -36,6 +43,7 @@ class FormActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Retrieve formId from intent extras
         formId = intent.extras?.getString(Constants.KEY_FORM_ID) ?: Constants.DEFAULT_ROOT_ID
         Log.d("FormActivity", "formId: $formId")
 
@@ -104,6 +112,7 @@ class FormActivity : AppCompatActivity() {
                 Log.d("FormActivity", "Displaying activity_form_login")
             }
             else -> {
+                // Optionally handle the case where none of the keywords match
                 setContentView(R.layout.activity_form)
                 Log.d("FormActivity", "Displaying activity_form")
             }
@@ -277,7 +286,6 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            setTypeface(null, Typeface.BOLD)
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {
@@ -353,9 +361,24 @@ class FormActivity : AppCompatActivity() {
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
+
+            // Get device Android ID
+//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//
+//            // Generate timestamp in the required format
+//            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+//
+//            // Concatenate msg_ui with timestamp to generate msg_id
+//            val msgId = msgUi + timestamp
+//
+//            // Use actionUrl from screen; if null, msg_si will be null
+//            val msgSi = screen.actionUrl
+
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
             val msgSi = "N00001"
+
+
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { component ->
                     when (component.type) {
@@ -364,11 +387,12 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
 
-            val msgObject = JSONObject()
-            msgObject.put("msg_id", msgId)
-            msgObject.put("msg_ui", msgUi)
-            msgObject.put("msg_si", msgSi)
-            msgObject.put("msg_dt", msgDt)
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi) // This may be null if actionUrl is not provided
+                put("msg_dt", msgDt)
+            }
 
             msg.put("msg", msgObject)
 

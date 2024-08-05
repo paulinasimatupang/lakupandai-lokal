@@ -34,7 +34,11 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0"/>
+        app:layout_constraintVertical_bias="0.0">
+
+        <!-- Content inside Card 2 -->
+
+    </androidx.cardview.widget.CardView>
 
     <!-- Card Yellow -->
     <View
@@ -60,6 +64,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/card_yellow" />
 
+    <!-- RecyclerView List Menu -->
     <!-- FrameLayout for activity_menu_nav -->
 
     <!-- RecyclerView List Menu -->
@@ -123,7 +128,7 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/card1"
         android:layout_width="310dp"
-        android:layout_height="84dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="120dp"
         app:cardBackgroundColor="#0B623E"
         app:cardCornerRadius="16dp"
@@ -131,5 +136,43 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints"/>
+        tools:ignore="MissingConstraints">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/saldo_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Saldo: "
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:layout_centerHorizontal="true"/>
+
+            <TextView
+                android:id="@+id/account_number_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Rekening: "
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:layout_below="@id/saldo_text"
+                android:layout_centerHorizontal="true"/>
+
+            <Button
+                android:id="@+id/check_saldo_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Check Saldo"
+                android:layout_below="@id/account_number_text"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="16dp"/>
+
+        </RelativeLayout>
+    </androidx.cardview.widget.CardView>
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

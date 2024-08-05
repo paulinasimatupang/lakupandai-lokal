@@ -148,6 +148,9 @@ class FormActivity : AppCompatActivity() {
 
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
+            if (component.visible == false) {
+                continue
+            }
             val view = when (component.type) {
                 0 -> {
                     val inflater = layoutInflater
@@ -165,23 +168,19 @@ class FormActivity : AppCompatActivity() {
                     view
                 }
                 1 -> {
-                    if (component.visible != false) {
-                        LinearLayout(this@FormActivity).apply {
-                            orientation = LinearLayout.VERTICAL
-                            addView(TextView(this@FormActivity).apply {
-                                text = component.label
-                                textSize = 20f
-                                setTypeface(null, Typeface.BOLD)
-                                setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
-                            })
-                            addView(TextView(this@FormActivity).apply {
-                                text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                                textSize = 18f
-                            })
-                            background = getDrawable(R.drawable.text_view_background)
-                        }
-                    } else{
-                        continue
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            textSize = 20f
+                            setTypeface(null, Typeface.BOLD)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
+                        })
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            textSize = 18f
+                        })
+                        background = getDrawable(R.drawable.text_view_background)
                     }
                 }
                 2 -> {
@@ -256,6 +255,7 @@ class FormActivity : AppCompatActivity() {
                         addView(spinner)
                     }
                 }
+
                 5 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -280,6 +280,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
+
                 6 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -307,6 +308,7 @@ class FormActivity : AppCompatActivity() {
                         addView(radioGroup)
                     }
                 }
+
                 7 -> {
                     Button(this).apply {
                         text = component.label
@@ -358,9 +360,13 @@ class FormActivity : AppCompatActivity() {
 
         }
     }
+
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val savedUsername = sharedPreferences.getString("username", "") ?: ""
+            Log.e("FormActivity", "Saved Username: $savedUsername")
 
             // Get device Android ID
 //            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -378,13 +384,29 @@ class FormActivity : AppCompatActivity() {
             val msgUi = "353471045058692"
 //            val msgSi = "N00001"
 
+            val componentValues = mutableMapOf<String, String>()
+            screen.comp.filter { it.type != 7 }.forEach { component ->
+                Log.d("FormActivity", "Component: $component")
+
+                when {
+                    component.type == 1 && component.label == "Username" -> {
+                        componentValues[component.id] = savedUsername
+                        Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
+                    }
+                    component.type == 1 -> {
+                        val value = (component.values.firstOrNull() as? String) ?: ""
+                        componentValues[component.id] = value
+                        Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
+                    }
+                    else -> {
+                        componentValues[component.id] = inputValues[component.id] ?: ""
+                    }
+                }
+            }
 
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { component ->
-                    when (component.type) {
-                        1 -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                        else -> inputValues[component.id] ?: ""
-                    }
+                    componentValues[component.id] ?: ""
                 }
 
             val msgObject = JSONObject().apply {

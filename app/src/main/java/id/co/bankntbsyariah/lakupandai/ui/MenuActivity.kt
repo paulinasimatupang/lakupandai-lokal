@@ -3,6 +3,7 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -66,6 +67,7 @@ class MenuActivity : AppCompatActivity() {
         setContentView(
             when (menuId) {
                 "HMB0000" -> R.layout.hamburger
+                "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
             }
@@ -139,6 +141,11 @@ class MenuActivity : AppCompatActivity() {
             showHamburgerMenu()
         }
 
+        // Set up check saldo button click listener
+        findViewById<Button>(R.id.check_saldo_button)?.setOnClickListener {
+            checkSaldo()
+        }
+
         // Set up BottomNavigationView
         val navView: BottomNavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment_activity_menu)
@@ -165,7 +172,14 @@ class MenuActivity : AppCompatActivity() {
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                 // Handle popups or alerts
             }
-            else -> setupMenuRecyclerView(screen)
+            else -> {
+                setupMenuRecyclerView(screen)
+                val titleTextView: TextView? = findViewById(R.id.title)
+                titleTextView?.let {
+                    it.text = screen.title
+                    it.visibility = View.VISIBLE
+                }
+            }
         }
     }
 
@@ -240,6 +254,18 @@ class MenuActivity : AppCompatActivity() {
         }
     }
 
+
+    fun onShowPopupotpClick(view: View) {
+        val builder = AlertDialog.Builder(this)
+        val popupView = LayoutInflater.from(this).inflate(R.layout.pop_up_otp, null)
+        builder.setView(popupView)
+        val alertDialog = builder.create()
+        popupView.findViewById<Button>(R.id.verifyButton).setOnClickListener {
+            alertDialog.dismiss()
+        }
+        alertDialog.show()
+    }
+
     private fun restartMenuActivity() {
         finish()
         startActivity(Intent(this, MenuActivity::class.java).apply {
@@ -250,5 +276,102 @@ class MenuActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment_activity_menu)
         return navController.navigateUp() || super.onSupportNavigateUp()
+    }
+
+    private fun createMessageBody(): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val savedUsername = sharedPreferences.getString("username", "") ?: ""
+            val msg = JSONObject()
+            val msgId = "353471045058692200995"
+            val msgUi = "353471045058692"
+            val msgSi = "N00001"
+            val username = savedUsername
+            val accountNumber = "0010200512271"
+            val msgDt = "$username|$accountNumber"
+
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi)
+                put("msg_dt", msgDt)
+            }
+
+            msg.put("msg", msgObject)
+
+            // Logging the JSON message details
+            Log.d("MenuActivity", "Message ID: $msgId")
+            Log.d("MenuActivity", "Message UI: $msgUi")
+            Log.d("MenuActivity", "Message SI: $msgSi")
+            Log.d("MenuActivity", "Message DT: $msgDt")
+            Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
+
+            msg
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    private fun checkSaldo() {
+        val messageBody = createMessageBody()
+        if (messageBody != null) {
+            Log.d("MenuActivity", "Requesting saldo with message: $messageBody")
+
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let {
+                    Log.d("MenuActivity", "Received response: $it")
+                    try {
+                        val jsonResponse = JSONObject(it)
+                        Log.d("MenuActivity", "Parsed JSON response: $jsonResponse")
+                        val msgObject = jsonResponse.optJSONObject("screen")
+                        if (msgObject != null) {
+                            val comps = msgObject.optJSONObject("comps")
+                            val compArray = comps?.optJSONArray("comp")
+                            if (compArray != null) {
+                                var accountNumber: String? = null
+                                var saldo: String? = null
+
+                                for (i in 0 until compArray.length()) {
+                                    val comp = compArray.getJSONObject(i)
+                                    val label = comp.optString("comp_lbl")
+                                    val value = comp.optJSONObject("comp_values")?.optJSONArray("comp_value")?.optJSONObject(0)?.optString("value")
+
+                                    if (label == "No Rekening") {
+                                        accountNumber = value
+                                    } else if (label == "Saldo Akhir") {
+                                        saldo = value
+                                    }
+                                }
+
+                                runOnUiThread {
+                                    findViewById<TextView>(R.id.account_number_text)?.text = "No Rekening: $accountNumber"
+                                    findViewById<TextView>(R.id.saldo_text)?.text = "Saldo: $saldo"
+                                    Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
+                                    Log.d("MenuActivity", "Updated Saldo text: $saldo")
+                                }
+                            }
+                        } else {
+                            Log.e("MenuActivity", "screen object is null in JSON response")
+                            runOnUiThread {
+                                Toast.makeText(this, "Failed to fetch saldo", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MenuActivity", "Failed to parse response", e)
+                        runOnUiThread {
+                            Toast.makeText(this, "Failed to fetch saldo", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } ?: run {
+                    Log.e("MenuActivity", "Failed to fetch saldo, responseBody is null")
+                    runOnUiThread {
+                        Toast.makeText(this, "Failed to fetch saldo", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            Log.e("MenuActivity", "Failed to create message body, request not sent")
+        }
     }
 }

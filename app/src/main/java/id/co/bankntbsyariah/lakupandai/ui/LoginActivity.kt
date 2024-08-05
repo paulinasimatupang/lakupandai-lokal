@@ -21,6 +21,7 @@ import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import android.content.Context
 
 class LoginActivity : AppCompatActivity() {
 
@@ -94,6 +95,12 @@ class LoginActivity : AppCompatActivity() {
                     val token = jsonResponse.optString("token")
 
                     if (token.isNotEmpty()) {
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                        val editor = sharedPreferences.edit()
+                        editor.putString("username", username)
+                        editor.apply()
+                        val savedUsername = sharedPreferences.getString("username", "defaultUsername")
+                        Log.d(TAG, "Username yang disimpan: $savedUsername")
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@LoginActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
                             navigateToMenuActivity()

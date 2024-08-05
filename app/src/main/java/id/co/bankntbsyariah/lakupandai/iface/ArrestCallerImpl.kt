@@ -8,7 +8,6 @@ import okhttp3.OkHttpClient
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import okhttp3.Call
 import okhttp3.Callback
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -118,11 +117,13 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
     }
 
     override fun requestPost(msg: JSONObject, callback: (String?) -> Unit) {
-        val requestBody = RequestBody.create("charset=utf-8".toMediaTypeOrNull(), msg.toString())
+        val requestBody = RequestBody.create(null, msg.toString())
         val request = Request.Builder()
-            .url("http://108.137.154.8:8080/ARRest/api/")
+            .url("http://108.137.154.8:8080/ARRest/api/")  // Pastikan URL ini benar dan dapat mengakses endpoint API
             .post(requestBody)
             .build()
+
+        Log.d(TAG, "Posting request with body: $msg")
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -131,15 +132,15 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
             }
 
             override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string()
+                Log.d(TAG, "Response code: ${response.code}")
+                Log.d(TAG, "Response message: ${response.message}")
+                Log.d(TAG, "Response body: $responseBody")
                 if (!response.isSuccessful) {
                     Log.e(TAG, "Failed to post message: ${response.message}")
-                    Log.e(TAG, "Response code: ${response.code}")
-                    val responseBody = response.body?.string()
-                    Log.e(TAG, "Response body: $responseBody")
+                    callback(null)
                 } else {
                     Log.i(TAG, "Message posted successfully")
-                    val responseBody = response.body?.string()
-                    Log.i(TAG, "Response body: $responseBody")
                     callback(responseBody)
                 }
             }

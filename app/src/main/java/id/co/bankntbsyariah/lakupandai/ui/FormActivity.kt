@@ -32,7 +32,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
@@ -73,12 +72,7 @@ class FormActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                finish()
-                startActivity(
-                    Intent(this@FormActivity, MenuActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                )
+                navigateToHome()
             }
         })
 
@@ -124,7 +118,7 @@ class FormActivity : AppCompatActivity() {
                 Log.d("FormActivity", "Displaying activity_form2")
             }
             screenTitle.contains("Review", ignoreCase = true) -> {
-                setContentView(R.layout.activity_review)
+                setContentView(R.layout.activity_form2)
                 Log.d("FormActivity", "Displaying activity_review")
             }
             screenTitle.contains("Bayar", ignoreCase = true) -> {
@@ -176,15 +170,13 @@ class FormActivity : AppCompatActivity() {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 20f
                             setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
                         })
                         addView(TextView(this@FormActivity).apply {
                             text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             textSize = 18f
+                            background = getDrawable(R.drawable.text_view_background)
                         })
-                        background = getDrawable(R.drawable.text_view_background)
                     }
                 }
                 2 -> {
@@ -235,7 +227,7 @@ class FormActivity : AppCompatActivity() {
                             setTypeface(null, Typeface.BOLD)
                         })
 
-                        val spinner = Spinner(this@FormActivity).apply {
+                        addView(Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
                             val adapter = ArrayAdapter(
                                 this@FormActivity,
@@ -248,19 +240,7 @@ class FormActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.MATCH_PARENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                        }
-
-                        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                                inputValues[component.id] = component.values[position].first
-                            }
-
-                            override fun onNothingSelected(parent: AdapterView<*>) {
-                                // Do nothing
-                            }
-                        }
-
-                        addView(spinner)
+                        })
                     }
                 }
 
@@ -270,21 +250,12 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            setTypeface(null, Typeface.BOLD)
                         })
 
                         component.values.forEach { value ->
-                            val checkBox = CheckBox(this@FormActivity).apply {
+                            addView(CheckBox(this@FormActivity).apply {
                                 text = value.first
-                            }
-                            checkBox.setOnCheckedChangeListener { _, isChecked ->
-                                if (isChecked) {
-                                    inputValues[component.id] = value.first
-                                } else {
-                                    inputValues.remove(component.id)
-                                }
-                            }
-                            addView(checkBox)
+                            })
                         }
                     }
                 }
@@ -295,7 +266,6 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            setTypeface(null, Typeface.BOLD)
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {
@@ -303,15 +273,9 @@ class FormActivity : AppCompatActivity() {
                         }
 
                         component.values.forEach { value ->
-                            val radioButton = RadioButton(this@FormActivity).apply {
+                            radioGroup.addView(RadioButton(this@FormActivity).apply {
                                 text = value.first
-                            }
-                            radioButton.setOnCheckedChangeListener { _, isChecked ->
-                                if (isChecked) {
-                                    inputValues[component.id] = value.first
-                                }
-                            }
-                            radioGroup.addView(radioButton)
+                            })
                         }
 
                         addView(radioGroup)
@@ -382,26 +346,13 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Failed to create message body, request not sent")
         }
     }
+
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
-
-            // Get device Android ID
-//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//
-//            // Generate timestamp in the required format
-//            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-//
-//            // Concatenate msg_ui with timestamp to generate msg_id
-//            val msgId = msgUi + timestamp
-//
-//            // Use actionUrl from screen; if null, msg_si will be null
-//            val msgSi = screen.actionUrl
-
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
             val msgSi = "N00001"
-
 
             val msgDt = screen.comp.filter { it.type != 7 }
                 .joinToString("|") { inputValues[it.id] ?: "" }
@@ -437,4 +388,11 @@ class FormActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun navigateToHome() {
+        val intent = Intent(this, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "MN00000")
+        }
+        startActivity(intent)
+    }
 }

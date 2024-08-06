@@ -164,6 +164,9 @@ class MenuActivity : AppCompatActivity() {
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                 // Handle popups or alerts
             }
+            Constants.SCREEN_TYPE_POPUP_OTP-> {
+                navigateToFormActivity()
+            }
             else -> {
                 setupMenuRecyclerView(screen)
                 val titleTextView: TextView? = findViewById(R.id.title)
@@ -253,9 +256,6 @@ class MenuActivity : AppCompatActivity() {
         val popupView = LayoutInflater.from(this).inflate(R.layout.pop_up_otp, null)
         builder.setView(popupView)
         val alertDialog = builder.create()
-        popupView.findViewById<Button>(R.id.verifyButton).setOnClickListener {
-            alertDialog.dismiss()
-        }
         alertDialog.show()
     }
 

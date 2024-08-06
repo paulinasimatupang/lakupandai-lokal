@@ -125,9 +125,10 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun navigateToMenuActivity() {
+        var id = intent.extras?.getString(Constants.KEY_FORM_ID) ?: Constants.DEFAULT_ROOT_ID
         val intent = Intent(this, MenuActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            putExtra(Constants.KEY_MENU_ID, "MN00000")
+            putExtra(Constants.KEY_FORM_ID, id)
         }
         startActivity(intent)
         finish()

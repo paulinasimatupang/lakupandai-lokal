@@ -6,7 +6,7 @@ class Constants {
         const val BASE_API= "http://108.137.154.8:8080/ARRest/"
 
         const val DEFAULT_VERSION = 1
-        const val DEFAULT_ROOT_ID = "MN00000"
+        const val DEFAULT_ROOT_ID = "CS00001"
         const val KEY_SCREEN_JSON = "screen_json"
 
         const val SP_APPS = "ntbs storage"
@@ -23,6 +23,7 @@ class Constants {
         const val SCREEN_TYPE_POPUP_SUKSES = 2
         const val SCREEN_TYPE_POPUP_GAGAL = 3
         const val SCREEN_TYPE_POPUP_LOGOUT = 4
+        const val SCREEN_TYPE_POPUP_OTP = 7
         const val ELE_TYPE_TEXT = 0
 
     }

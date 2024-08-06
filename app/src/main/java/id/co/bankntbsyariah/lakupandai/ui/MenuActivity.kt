@@ -21,11 +21,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
@@ -41,10 +36,11 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.json.JSONException
 import org.json.JSONObject
+import android.widget.ImageButton
 
 class MenuActivity : AppCompatActivity() {
 
-    private var menuId = Constants.DEFAULT_ROOT_ID
+    private var menuId:String = Constants.DEFAULT_ROOT_ID
     private val menuList = ArrayList<MenuItem>()
     private var backToExit = false
 
@@ -72,6 +68,13 @@ class MenuActivity : AppCompatActivity() {
                 else -> R.layout.activity_menu
             }
         )
+
+        val someTextView: TextView? = findViewById(R.id.title)
+        if (someTextView != null) {
+            // Do something with the view
+        } else {
+            Log.e("MenuActivity", "some_text_view is null")
+        }
 
         // Set up edge-to-edge insets for the main view
         val mainView: View? = findViewById(R.id.main)
@@ -142,19 +145,9 @@ class MenuActivity : AppCompatActivity() {
         }
 
         // Set up check saldo button click listener
-        findViewById<Button>(R.id.check_saldo_button)?.setOnClickListener {
+        findViewById<ImageButton>(R.id.check_saldo_button)?.setOnClickListener {
             checkSaldo()
         }
-
-        val navView: BottomNavigationView = findViewById(R.id.nav_view)
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications
-            )
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
     }
 
     private fun showError(message: String) {
@@ -267,14 +260,9 @@ class MenuActivity : AppCompatActivity() {
 
     private fun restartMenuActivity() {
         finish()
-        startActivity(Intent(this, MenuActivity::class.java).apply {
-            putExtra(Constants.KEY_MENU_ID, Constants.DEFAULT_ROOT_ID)
+        startActivity(Intent(this@MenuActivity, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         })
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
-        return navController.navigateUp() || super.onSupportNavigateUp()
     }
 
     private fun createMessageBody(): JSONObject? {

@@ -150,26 +150,4 @@ class RecyclerViewMenuAdapter(
         val menuSubtitle: TextView = itemView.findViewById(R.id.subhead)
         val menuDescription: TextView = itemView.findViewById(R.id.body)
     }
-
-//    class MenuAdapter : RecyclerView.Adapter<MenuAdapter.ViewHolder>() {
-//        private val menuItems = arrayOf("PPOB", "Laku Pandai")
-//
-//        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-//            val view = LayoutInflater.from(parent.context).inflate(R.layout.recycler_view_menu_item, parent, false)
-//            return ViewHolder(view)
-//        }
-//
-//        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-//            holder.menuItemText.text = menuItems[position]
-//        }
-//
-//        override fun getItemCount(): Int {
-//            return menuItems.size
-//        }
-//
-//        class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-//            val menuItemText: TextView = itemView.findViewById(R.id.menu_item_text)
-//        }
-//    }
-
 }

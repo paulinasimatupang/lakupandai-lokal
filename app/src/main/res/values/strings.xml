@@ -12,6 +12,7 @@
     <string name="process_downloading_update">Downloading updates</string>
     <string name="process_downloading_menu">Downloading menus</string>
 
+
     <string name="status_menu_updated">Menu already has latest version</string>
 
     <!--    Form-->
@@ -23,4 +24,5 @@
 
     <!--    Templates-->
     <string name="footer_text">Laku Pandai - NTB Syariah</string>
+    <string name="check_saldo_desc">Check your balance</string>
 </resources>

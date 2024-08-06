@@ -13,11 +13,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
-import android.provider.Settings
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
-import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
@@ -378,11 +376,11 @@ class FormActivity : AppCompatActivity() {
 //            val msgId = msgUi + timestamp
 //
 //            // Use actionUrl from screen; if null, msg_si will be null
-            val msgSi = screen.actionUrl
+//            val msgSi = screen.actionUrl
 
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
-//            val msgSi = "N00001"
+            val msgSi = "N00001"
 
             val componentValues = mutableMapOf<String, String>()
             screen.comp.filter { it.type != 7 }.forEach { component ->

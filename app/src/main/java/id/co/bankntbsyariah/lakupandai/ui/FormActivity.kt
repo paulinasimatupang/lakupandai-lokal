@@ -29,7 +29,9 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import java.util.Calendar
+import android.app.DatePickerDialog
+import id.co.bankntbsyariah.lakupandai.common.Component
 
 class FormActivity : AppCompatActivity() {
 
@@ -93,8 +95,8 @@ class FormActivity : AppCompatActivity() {
                         // Pass form
                     }
                 }
-                handleScreenTitle(screen.title)
-                setupForm(screen)
+                handleScreenTitle(screen?.title ?: "")
+                screen?.let { setupForm(it) }
             }
         }
     }
@@ -122,6 +124,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Form", ignoreCase = true) -> R.layout.activity_form2
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
+            screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {
@@ -192,6 +195,14 @@ class FormActivity : AppCompatActivity() {
                             hint = component.label
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
+                            tag = component.id
+                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
+                                inputType = android.text.InputType.TYPE_NULL
+                                setOnClickListener {
+                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
+                                    showDatePickerDialog(this)
+                                }
+                            }
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
@@ -221,7 +232,7 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 4 -> {
-                    LinearLayout(this).apply {
+                    LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
 
                         addView(TextView(this@FormActivity).apply {
@@ -242,11 +253,15 @@ class FormActivity : AppCompatActivity() {
 
                         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                             override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                                inputValues[component.id] = component.values[position].first
+                                val adjustedPosition = if (component.id in listOf("CIF06", "CIF25")) {
+                                    (position + 1).toString() // Start index from 1
+                                } else {
+                                    position.toString()
+                                }
+                                inputValues[component.id] = adjustedPosition
                             }
 
                             override fun onNothingSelected(parent: AdapterView<*>) {
-                                // Do nothing
                             }
                         }
 
@@ -291,13 +306,18 @@ class FormActivity : AppCompatActivity() {
                             orientation = RadioGroup.VERTICAL
                         }
 
-                        component.values.forEach { value ->
+                        component.values.forEachIndexed { index, value ->
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
                             }
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
+                                val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
+                                    (index + 1).toString()
+                                } else {
+                                    index.toString()
+                                }
                                 if (isChecked) {
-                                    inputValues[component.id] = value.first
+                                    inputValues[component.id] = valueToSave
                                 }
                             }
                             radioGroup.addView(radioButton)
@@ -314,28 +334,32 @@ class FormActivity : AppCompatActivity() {
                         textSize = 18f
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
-                            val messageBody = createMessageBody(screen)
-                            if (messageBody != null) {
-                                Log.d("FormActivity", "Message Body: $messageBody")
-                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                    responseBody?.let { body ->
-                                        lifecycleScope.launch {
-                                            val screenJson = JSONObject(body)
-                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                            handleScreenTitle(screen.title)
-                                            setupForm(screen)
-                                        }
-                                    } ?: run {
-                                        Log.e("FormActivity", "Failed to fetch response body")
-                                    }
-                                }
+                            if (component.id == "KM001") {
+                                handleButtonClick(component, screen)
                             } else {
-                                Log.e("FormActivity", "Failed to create message body, request not sent")
+                                val messageBody = createMessageBody(screen)
+                                if (messageBody != null) {
+                                    Log.d("FormActivity", "Message Body: $messageBody")
+                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                        responseBody?.let { body ->
+                                            lifecycleScope.launch {
+                                                val screenJson = JSONObject(body)
+                                                val screen: Screen = ScreenParser.parseJSON(screenJson)
+                                                handleScreenTitle(screen.title)
+                                                setupForm(screen)
+                                            }
+                                        } ?: run {
+                                            Log.e("FormActivity", "Failed to fetch response body")
+                                        }
+                                    }
+                                } else {
+                                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                                }
                             }
                         }
-
                     }
                 }
+
                 else -> {
                     null
                 }
@@ -358,6 +382,30 @@ class FormActivity : AppCompatActivity() {
 
         }
     }
+    private fun handleButtonClick(component: Component, screen: Screen?) {
+        if (component.id == "KM001") {
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            finish()
+        } else {
+        }
+    }
+
+    private fun showDatePickerDialog(editText: EditText) {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
+            val selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+            editText.setText(selectedDate)
+            inputValues[editText.tag as String] = selectedDate // Set the selected date in inputValues
+        }, year, month, day)
+        datePickerDialog.show()
+    }
 
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
@@ -376,11 +424,11 @@ class FormActivity : AppCompatActivity() {
 //            val msgId = msgUi + timestamp
 //
 //            // Use actionUrl from screen; if null, msg_si will be null
-//            val msgSi = screen.actionUrl
+            val msgSi = screen.actionUrl
 
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
-            val msgSi = "N00001"
+//            val msgSi = "N00001"
 
             val componentValues = mutableMapOf<String, String>()
             screen.comp.filter { it.type != 7 }.forEach { component ->

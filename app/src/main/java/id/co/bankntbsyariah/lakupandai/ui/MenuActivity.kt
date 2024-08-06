@@ -193,6 +193,7 @@ class MenuActivity : AppCompatActivity() {
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->
+            if (!comp.visible) return@forEach
             menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
         }
         Log.d("MenuActivity", "Menu item count: ${menuList.size}")

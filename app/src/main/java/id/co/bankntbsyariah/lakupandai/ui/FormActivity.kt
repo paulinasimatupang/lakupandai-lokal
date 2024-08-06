@@ -475,10 +475,11 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
                     }
                     component.type == 1 -> {
-                        val value = (component.values.firstOrNull() as? String) ?: ""
+                        val value = (component.values.get(0)?.second ?: "") as String
                         componentValues[component.id] = value
                         Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
                     }
+
                     else -> {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }

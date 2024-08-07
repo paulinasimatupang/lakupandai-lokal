@@ -44,6 +44,7 @@ class FormActivity : AppCompatActivity() {
     private var isForm = false
     private val inputValues = mutableMapOf<String, String>()
     private var msg03Value: String? = null
+    private var isOtpValidated = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,31 +88,6 @@ class FormActivity : AppCompatActivity() {
             } else {
                 val screenJson = JSONObject(formValue)
                 val screen: Screen = ScreenParser.parseJSON(screenJson)
-                msg03Value = try {
-                    if (screenJson.has("comps")) {
-                        Log.d("FormActivity", "comps key exists in JSON")
-                        screenJson.getJSONObject("comps")
-                            .getJSONArray("comp")
-                            .let { compsArray ->
-                                (0 until compsArray.length()).map { i ->
-                                    compsArray.getJSONObject(i)
-                                }
-                            }
-                            .find { it.getString("comp_id") == "MSG03" }
-                            ?.getJSONObject("comp_values")
-                            ?.getJSONArray("comp_value")
-                            ?.getJSONObject(0)
-                            ?.getString("value")
-                    } else {
-                        Log.d("FormActivity", "comps key does not exist in JSON")
-                        null
-                    }
-                } catch (e: JSONException) {
-                    Log.e("FormActivity", "JSONException occurred: ${e.message}")
-                    null
-                }
-
-                Log.d("FormActivity", "msg03Value: $msg03Value")
 
                 val sType = screen.type
                 when (sType) {
@@ -158,7 +134,7 @@ class FormActivity : AppCompatActivity() {
             }
             else -> {
                 // Optionally handle the case where none of the keywords match
-                setContentView(R.layout.activity_form)
+                setContentView(R.layout.activity_form2)
                 Log.d("FormActivity", "Displaying activity_form")
             }
         }
@@ -170,9 +146,9 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
-            else -> R.layout.activity_form
+            else -> R.layout.activity_form2
         }
-        if (layoutId != R.layout.activity_form) {
+        if (layoutId != R.layout.activity_form2) {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
@@ -181,23 +157,32 @@ class FormActivity : AppCompatActivity() {
     private fun setupForm(screen: Screen, containerView: View? = null) {
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
-        val buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container)
-            ?: findViewById(R.id.button_type_7_container)
+        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container)
 
-        if (container == null || buttonContainer == null) {
-            Log.e("FormActivity", "One of the containers is null. container: $container, buttonContainer: $buttonContainer")
+        if (container == null) {
+            Log.e("FormActivity", "Container is null.")
             return
         }
 
         container.removeAllViews()
-        buttonContainer.removeAllViews()
+        buttonContainer?.removeAllViews()
 
         Log.d("FormActivity", "Screen components: ${screen.comp}")
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
+
+            if (component.id == "MSG03") {
+                val value = component.compValues?.compValue?.firstOrNull()?.value
+                Log.d("FormActivity", "Value of MSG03: $value")
+                msg03Value = value
+            } else {
+                Log.d("FormActivity", "Component: ${component.id}")
+            }
+
             if (component.visible == false) {
                 continue
             }
+
             val view = when (component.type) {
                 0 -> {
                     val inflater = layoutInflater
@@ -214,6 +199,7 @@ class FormActivity : AppCompatActivity() {
 
                     view
                 }
+
                 1 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -230,6 +216,7 @@ class FormActivity : AppCompatActivity() {
                         background = getDrawable(R.drawable.text_view_background)
                     }
                 }
+
                 2 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -242,7 +229,15 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
-                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
+                            if (component.id in listOf(
+                                    "CIF04",
+                                    "D0001",
+                                    "D0002",
+                                    "ED001",
+                                    "B1007",
+                                    "SD001"
+                                )
+                            ) {
                                 inputType = android.text.InputType.TYPE_NULL
                                 setOnClickListener {
                                     Log.d("FormActivity", "EditText clicked: ${component.id}")
@@ -257,6 +252,7 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
+
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -266,7 +262,8 @@ class FormActivity : AppCompatActivity() {
                         })
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
-                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                            inputType =
+                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                         }
@@ -277,6 +274,7 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
+
                 4 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -288,7 +286,11 @@ class FormActivity : AppCompatActivity() {
 
                         val spinner = Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
-                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options).apply {
+                            val adapter = ArrayAdapter(
+                                this@FormActivity,
+                                android.R.layout.simple_spinner_item,
+                                options
+                            ).apply {
                                 setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             }
                             setAdapter(adapter)
@@ -298,6 +300,7 @@ class FormActivity : AppCompatActivity() {
                         addView(spinner)
                     }
                 }
+
                 6 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -318,65 +321,33 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
+
                 7 -> {
-                    val button = Button(this@FormActivity).apply {
+                    Button(this).apply {
                         text = component.label
                         setTextColor(getColor(R.color.white))
                         textSize = 18f
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
-                            val messageBody = createMessageBody(screen)
+                            Log.d("FormActivity", "Screen Type: ${screen.type}")
+                            if (screen.type == 7) {
+                                val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
+                                val dialog = AlertDialog.Builder(this@FormActivity)
+                                    .setView(dialogView)
+                                    .create()
 
-                            if (msg03Value != null) {
-                                val enteredOtp = inputValues["OTP"]
-                                if (enteredOtp == msg03Value) {
-                                    val enteredOtp = inputValues["OTP"]
-                                    if (enteredOtp == msg03Value) {
-                                        if (messageBody != null) {
-                                            Log.d("FormActivity", "Message Body: $messageBody")
-                                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                responseBody?.let { body ->
-                                                    lifecycleScope.launch {
-                                                        val screenJson = JSONObject(body)
-                                                        val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                                        handleScreenTitle(screen.title)
-                                                        setupForm(screen)
-                                                    }
-                                                } ?: run {
-                                                    Log.e("FormActivity", "Failed to fetch response body")
-                                                }
-                                            }
-                                        } else {
-                                            Log.e("FormActivity", "Failed to create message body, request not sent")
-                                        }
-                                    } else {
-                                        Toast.makeText(this@FormActivity, "Kode OTP salah", Toast.LENGTH_SHORT).show()
+                                setupForm(screen, dialogView)
+                                dialog.show()
+                                dialogView.findViewById<Button>(R.id.button_type_7_container)
+                                    ?.setOnClickListener {
+                                        handleButtonClick(component, screen)
+                                        dialog.dismiss()
                                     }
-                                } else {
-                                    Toast.makeText(this@FormActivity, "Kode OTP salah", Toast.LENGTH_SHORT).show()
-                                }
                             } else {
-                                if (messageBody != null) {
-                                    Log.d("FormActivity", "Messages Body: $messageBody")
-                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                        responseBody?.let { body ->
-                                            lifecycleScope.launch {
-                                                val screenJson = JSONObject(body)
-                                                val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                                handleScreenTitle(screen.title)
-                                                setupForm(screen)
-                                            }
-                                        } ?: run {
-                                            Log.e("FormActivity", "Failed to fetch response body")
-                                        }
-                                    }
-                                } else {
-                                    Log.e("FormActivity", "Failed to create message body, request not sent")
-                                }
+                                handleButtonClick(component, screen)
                             }
                         }
                     }
-                    button
                 }
                 15 -> {
                     val inflater = layoutInflater
@@ -401,7 +372,6 @@ class FormActivity : AppCompatActivity() {
                             override fun afterTextChanged(s: Editable?) {}
                         })
                     }
-
                     otpView
                 }
 
@@ -419,13 +389,120 @@ class FormActivity : AppCompatActivity() {
                 it.layoutParams = params
 
                 if (component.type == 7) {
-                    buttonContainer.addView(it)
+                    if (buttonContainer == null) {
+                        buttonContainer = LinearLayout(this).apply {
+                            id = View.generateViewId()  // Generate a new ID for the buttonContainer
+                            orientation = LinearLayout.VERTICAL
+                        }
+                        container.addView(buttonContainer)
+                        buttonContainer!!.addView(it)
+                    }
                 } else {
                     container.addView(it)
                 }
             }
         }
+
     }
+
+    private fun handleButtonClick(component: Component, screen: Screen?) {
+        if (component.id == "KM001") {
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            finish()
+        } else {
+            val otpComponent = screen?.comp?.find { it.id == "OTP01" }
+            if (otpComponent != null) {
+                val otpValue = inputValues["OTP"]
+                Log.e("OTP", "OTP: $otpValue")
+                Log.e("MSG", "MSG: $msg03Value")
+                if (msg03Value == otpValue) {
+                    isOtpValidated = true
+                    val messageBody = createMessageBody(screen)
+                    if (messageBody != null) {
+                        Log.d("FormActivity", "Message Body: $messageBody")
+                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            responseBody?.let { body ->
+                                lifecycleScope.launch {
+                                    val screenJson = JSONObject(body)
+                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                    handleScreenTitle(newScreen.title)
+                                    if (newScreen.type == 7) {
+                                        showPopup(newScreen, component)
+                                    } else {
+                                        setupForm(newScreen)
+                                    }
+                                }
+                            } ?: run {
+                                Log.e("FormActivity", "Failed to fetch response body")
+                            }
+                        }
+                    } else {
+                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                    }
+                } else {
+                    Toast.makeText(this@FormActivity, "Kode OTP yang dimasukkan salah", Toast.LENGTH_SHORT).show()
+                    findViewById<EditText>(R.id.otpDigit1)?.text?.clear()
+                    findViewById<EditText>(R.id.otpDigit2)?.text?.clear()
+                    findViewById<EditText>(R.id.otpDigit3)?.text?.clear()
+                    findViewById<EditText>(R.id.otpDigit4)?.text?.clear()
+                    findViewById<EditText>(R.id.otpDigit1)?.error = "OTP salah"
+                }
+            } else {
+                val messageBody = screen?.let { createMessageBody(it) }
+                if (messageBody != null) {
+                    Log.d("FormActivity", "Message Body: $messageBody")
+                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                        responseBody?.let { body ->
+                            lifecycleScope.launch {
+                                val screenJson = JSONObject(body)
+                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                handleScreenTitle(newScreen.title)
+                                if (newScreen.type == 7) {
+                                    showPopup(newScreen, component)
+                                } else {
+                                    setupForm(newScreen)
+                                }
+                            }
+                        } ?: run {
+                            Log.e("FormActivity", "Failed to fetch response body")
+                        }
+                    }
+                } else {
+                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                }
+            }
+        }
+    }
+
+    private fun showPopup(screen: Screen, component: Component) {
+        val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
+        val dialog = AlertDialog.Builder(this@FormActivity)
+            .setView(dialogView)
+            .create()
+
+        setupForm(screen, dialogView)
+        dialog.show()
+
+        val buttonContainer = dialogView.findViewById<LinearLayout>(R.id.button_type_7_container)
+        val button = Button(this).apply {
+            text = component.label
+            setTextColor(getColor(R.color.white))
+            textSize = 18f
+            background = getDrawable(R.drawable.button_yellow)
+            setOnClickListener {
+                handleButtonClick(component, screen)
+                if (isOtpValidated) {
+                    dialog.dismiss()
+                }
+            }
+        }
+        buttonContainer.addView(button)
+    }
+
+
 
     private fun showDatePickerDialog(editText: EditText) {
         val calendar = Calendar.getInstance()
@@ -449,24 +526,12 @@ class FormActivity : AppCompatActivity() {
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
             Log.e("FormActivity", "Saved Username: $savedUsername")
 
-            // Get device Android ID
-//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//
-//            // Generate timestamp in the required format
-//            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-//
-//            // Concatenate msg_ui with timestamp to generate msg_id
-//            val msgId = msgUi + timestamp
-//
-//            // Use actionUrl from screen; if null, msg_si will be null
-            val msgSi = screen.actionUrl
-
             val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
-//            val msgSi = "N00001"
+            val msgSi = screen.actionUrl
 
             val componentValues = mutableMapOf<String, String>()
-            screen.comp.filter { it.type != 7 }.forEach { component ->
+            screen.comp.filter { it.type != 7 && it.type != 15 }.forEach { component ->
                 Log.d("FormActivity", "Component: $component")
 
                 when {
@@ -479,14 +544,13 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] = value
                         Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
                     }
-
                     else -> {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }
                 }
             }
 
-            val msgDt = screen.comp.filter { it.type != 7 }
+            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 }
                 .joinToString("|") { component ->
                     componentValues[component.id] ?: ""
                 }
@@ -494,7 +558,7 @@ class FormActivity : AppCompatActivity() {
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)
                 put("msg_ui", msgUi)
-                put("msg_si", msgSi) // This may be null if actionUrl is not provided
+                put("msg_si", msgSi)
                 put("msg_dt", msgDt)
             }
 

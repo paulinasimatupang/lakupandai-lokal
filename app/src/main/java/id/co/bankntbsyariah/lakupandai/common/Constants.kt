@@ -6,7 +6,7 @@ class Constants {
         const val BASE_API= "http://108.137.154.8:8080/ARRest/"
 
         const val DEFAULT_VERSION = 1
-        const val DEFAULT_ROOT_ID = "CS00001"
+        const val DEFAULT_ROOT_ID = "CRF001"
         const val KEY_SCREEN_JSON = "screen_json"
 
         const val SP_APPS = "ntbs storage"

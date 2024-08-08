@@ -45,6 +45,8 @@ class FormActivity : AppCompatActivity() {
     private val inputValues = mutableMapOf<String, String>()
     private var msg03Value: String? = null
     private var isOtpValidated = false
+    // coba
+    private val formInputs = mutableMapOf<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -142,7 +144,11 @@ class FormActivity : AppCompatActivity() {
 
     private fun handleScreenTitle(screenTitle: String) {
         val layoutId = when {
-            screenTitle.contains("Form", ignoreCase = true) -> R.layout.activity_form2
+            //coba
+            screenTitle.contains("Form", ignoreCase = true) -> {
+                formInputs.clear()
+                R.layout.activity_form2
+            }
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
@@ -247,7 +253,11 @@ class FormActivity : AppCompatActivity() {
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
-                            inputValues[component.id] = it.toString()
+                            val input = it.toString()
+                            inputValues[component.id] = input
+                            formInputs[component.id] = input
+
+                            Log.d("FormActivity", "Type 2: ${component.id} -> $input")
                         }
                         addView(editText)
                     }
@@ -550,10 +560,29 @@ class FormActivity : AppCompatActivity() {
                 }
             }
 
-            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 }
-                .joinToString("|") { component ->
-                    componentValues[component.id] ?: ""
-                }
+//            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 }
+//                .joinToString("|") { component ->
+//                    componentValues[component.id] ?: ""
+//                }
+
+            // coba
+            val otpinput = inputValues["OTP"]
+            Log.d("FormActivity", "OTP: $otpinput")
+            Log.d("FormActivity", "msg03Value: $msg03Value")
+            val msgDt = if (!msg03Value.isNullOrEmpty() && !inputValues["OTP"].isNullOrEmpty() && inputValues["OTP"] == msg03Value) {
+                Log.d("FormActivity", "Hello")
+                Log.d("FormActivity", "Form Inputs : $formInputs")
+                val savedValues = mutableListOf(savedUsername)
+                savedValues.addAll(formInputs.values) // Fix here
+                savedValues.joinToString("|")
+            } else {
+                Log.d("FormActivity", "Gak Hello")
+                screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
+                    .joinToString("|") { component ->
+                        componentValues[component.id] ?: ""
+                    }
+            }
+
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)

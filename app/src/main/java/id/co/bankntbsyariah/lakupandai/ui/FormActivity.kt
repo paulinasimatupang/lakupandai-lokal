@@ -142,11 +142,19 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    //coba
+//    private lateinit var currentScreen: Screen
+//    fun initializeScreen(data: JSONObject) {
+//        currentScreen = ScreenParser.parseJSON(data)
+//    }
+
     private fun handleScreenTitle(screenTitle: String) {
         val layoutId = when {
             //coba
             screenTitle.contains("Form", ignoreCase = true) -> {
-                formInputs.clear()
+//                if (currentScreen.id != "TF00001") { // Memeriksa ID dari objek Screen
+//                    formInputs.clear()
+//                }
                 R.layout.activity_form2
             }
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
@@ -235,21 +243,21 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
-                            if (component.id in listOf(
-                                    "CIF04",
-                                    "D0001",
-                                    "D0002",
-                                    "ED001",
-                                    "B1007",
-                                    "SD001"
-                                )
-                            ) {
-                                inputType = android.text.InputType.TYPE_NULL
-                                setOnClickListener {
-                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
-                                    showDatePickerDialog(this)
-                                }
-                            }
+//                            if (component.id in listOf(
+//                                    "CIF04",
+//                                    "D0001",
+//                                    "D0002",
+//                                    "ED001",
+//                                    "B1007",
+//                                    "SD001"
+//                                )
+//                            ) {
+//                                inputType = android.text.InputType.TYPE_NULL
+//                                setOnClickListener {
+//                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
+//                                    showDatePickerDialog(this)
+//                                }
+//                            }
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
@@ -536,8 +544,18 @@ class FormActivity : AppCompatActivity() {
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
             Log.e("FormActivity", "Saved Username: $savedUsername")
 
-            val msgId = "353471045058692200995"
+            // Get device Android ID
+//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//
+            // Generate timestamp in the required format
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+
+            // Concatenate msg_ui with timestamp to generate msg_id
+//            val msgId = msgUi + timestamp
+
+//            val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
+            val msgId = msgUi + timestamp
             val msgSi = screen.actionUrl
 
             val componentValues = mutableMapOf<String, String>()
@@ -570,11 +588,17 @@ class FormActivity : AppCompatActivity() {
             Log.d("FormActivity", "OTP: $otpinput")
             Log.d("FormActivity", "msg03Value: $msg03Value")
             val msgDt = if (!msg03Value.isNullOrEmpty() && !inputValues["OTP"].isNullOrEmpty() && inputValues["OTP"] == msg03Value) {
-                Log.d("FormActivity", "Hello")
-                Log.d("FormActivity", "Form Inputs : $formInputs")
-                val savedValues = mutableListOf(savedUsername)
-                savedValues.addAll(formInputs.values) // Fix here
-                savedValues.joinToString("|")
+                //coba
+//                Log.d("FormActivity", "Hello")
+//                Log.d("FormActivity", "Form Inputs : $formInputs")
+//                val savedValues = mutableListOf(savedUsername)
+//                savedValues.addAll(formInputs.values) // Fix here
+//                savedValues.joinToString("|")
+                Log.d("FormActivity", "Gak Hello")
+                screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
+                    .joinToString("|") { component ->
+                        componentValues[component.id] ?: ""
+                    }
             } else {
                 Log.d("FormActivity", "Gak Hello")
                 screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }

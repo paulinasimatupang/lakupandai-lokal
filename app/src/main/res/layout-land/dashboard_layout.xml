@@ -30,17 +30,29 @@
     <!-- Card White -->
 
     <!-- RecyclerView List Menu -->
-
     <View
         android:id="@+id/card_yellow"
         android:layout_width="0dp"
         android:layout_height="400dp"
-        android:layout_marginTop="264dp"
+        android:layout_marginTop="276dp"
         android:background="@drawable/rounded_corners"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/card_white"
+        android:layout_width="0dp"
+        android:layout_height="800dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/bg_dialog"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/card_yellow"
+        app:layout_constraintVertical_bias="0.563" />
 
     <!--    <TextView-->
 <!--        android:id="@+id/menu_text"-->
@@ -66,45 +78,21 @@
 <!--        app:layout_constraintStart_toStartOf="parent"-->
 <!--        app:layout_constraintBottom_toBottomOf="@id/card_yellow" />-->
 
-    <View
-        android:id="@+id/card_white"
-        android:layout_width="0dp"
-        android:layout_height="800dp"
-        android:layout_marginTop="20dp"
-        android:background="@drawable/bg_dialog"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/card_yellow"
-        app:layout_constraintVertical_bias="0.635" />
-
-    <TextView
-        android:id="@+id/transaksi_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="532dp"
-        android:gravity="center"
-        android:padding="16dp"
-        android:text="Transaksi"
-        android:textColor="@android:color/black"
-        android:textSize="17sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.026"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/menu_container"
         android:layout_width="0dp"
-        android:layout_height="320dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="200dp"
+        android:layout_marginBottom="50dp"
         android:padding="20dp"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:layout_constrainedHeight="true"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/card_yellow"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/card_yellow"
+        app:layout_constraintVertical_bias="1.0"
         app:spanCount="4"
         tools:itemCount="8"
         tools:listitem="@layout/recycler_view_menu_item" />

@@ -288,34 +288,86 @@ class FormActivity : AppCompatActivity() {
 
                         val spinner = Spinner(this@FormActivity).apply {
                             val options = component.values.map { it.first }
-                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options).apply {
-                                setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
+                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                            this.adapter = adapter
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                        }
+
+                        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+                                val adjustedPosition = if (component.id in listOf("CIF06", "CIF25")) {
+                                    (position + 1).toString() // Start index from 1
+                                } else {
+                                    position.toString()
+                                }
+                                inputValues[component.id] = adjustedPosition
                             }
-                            setAdapter(adapter)
-                            setSelection(0, false)
+
+                            override fun onNothingSelected(parent: AdapterView<*>) {
+                            }
                         }
 
                         addView(spinner)
                     }
                 }
-                6 -> {
-                    LinearLayout(this@FormActivity).apply {
+                5 -> {
+                    LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
+
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
                         })
-                        val editText = EditText(this@FormActivity).apply {
-                            hint = component.label
-                            inputType = android.text.InputType.TYPE_CLASS_PHONE
-                            background = getDrawable(R.drawable.edit_text_background)
-                            id = View.generateViewId()
+
+                        component.values.forEachIndexed { index, value ->
+                            val checkBox = CheckBox(this@FormActivity).apply {
+                                text = value.first
+                            }
+                            checkBox.setOnCheckedChangeListener { _, isChecked ->
+                                if (isChecked) {
+                                    inputValues[component.id] = index.toString()
+                                } else {
+                                    inputValues.remove(component.id)
+                                }
+                            }
+                            addView(checkBox)
                         }
-                        inputValues[component.id] = ""
-                        editText.addTextChangedListener {
-                            inputValues[component.id] = it.toString()
+                    }
+                }
+                6 -> {
+                    LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                        })
+
+                        val radioGroup = RadioGroup(this@FormActivity).apply {
+                            orientation = RadioGroup.VERTICAL
                         }
-                        addView(editText)
+
+                        component.values.forEachIndexed { index, value ->
+                            val radioButton = RadioButton(this@FormActivity).apply {
+                                text = value.first
+                            }
+                            radioButton.setOnCheckedChangeListener { _, isChecked ->
+                                val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
+                                    (index + 1).toString()
+                                } else {
+                                    index.toString()
+                                }
+                                if (isChecked) {
+                                    inputValues[component.id] = valueToSave
+                                }
+                            }
+                            radioGroup.addView(radioButton)
+                        }
+
+                        addView(radioGroup)
                     }
                 }
                 7 -> {
@@ -426,7 +478,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun showDatePickerDialog(editText: EditText) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
@@ -434,13 +485,13 @@ class FormActivity : AppCompatActivity() {
         val day = calendar.get(Calendar.DAY_OF_MONTH)
 
         val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
-            val formattedDate = String.format("%02d-%02d-%04d", selectedDay, selectedMonth + 1, selectedYear)
-            editText.setText(formattedDate)
-            editText.error = null // Clear any previous error message
+            val selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+            editText.setText(selectedDate)
+            inputValues[editText.tag as String] = selectedDate // Set the selected date in inputValues
         }, year, month, day)
-
         datePickerDialog.show()
     }
+
 
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {

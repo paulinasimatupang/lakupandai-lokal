@@ -270,12 +270,13 @@ class MenuActivity : AppCompatActivity() {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
+            val norekening = sharedPreferences.getString("norekening", "") ?: "" // Mengambil norekening dari SharedPreferences
             val msg = JSONObject()
-            val msgId = "353471045058692200995"
+            val msgId = "353471045058692200995" //stan + timestamp
             val msgUi = "353471045058692"
             val msgSi = "N00001"
             val username = savedUsername
-            val accountNumber = "0010200512271"
+            val accountNumber = norekening // Menggunakan norekening sebagai accountNumber
             val msgDt = "$username|$accountNumber"
 
             val msgObject = JSONObject().apply {
@@ -293,7 +294,6 @@ class MenuActivity : AppCompatActivity() {
             Log.d("MenuActivity", "Message SI: $msgSi")
             Log.d("MenuActivity", "Message DT: $msgDt")
             Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
-
             msg
         } catch (e: Exception) {
             Log.e("MenuActivity", "Failed to create message body", e)

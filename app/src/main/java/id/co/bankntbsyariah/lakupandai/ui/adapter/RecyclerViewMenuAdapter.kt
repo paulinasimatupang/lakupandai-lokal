@@ -134,6 +134,9 @@ class RecyclerViewMenuAdapter(
             "voucher game" to "voucher_game.png",
             "pln pascabayar" to "pln_pascabayar.png",
             "pln prabayar" to "pln_prabayar.png",
+            "reversal" to "reversal.png",
+            "create cif" to "create_cif.png",
+            "create rekening" to "create_rekening.png",
         )
         // Check if the icon name exists in the mapping
         return compIconMapping.containsValue(iconName)

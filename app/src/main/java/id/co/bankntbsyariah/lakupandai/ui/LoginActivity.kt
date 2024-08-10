@@ -93,21 +93,46 @@ class LoginActivity : AppCompatActivity() {
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
                     val token = jsonResponse.optString("token")
+                    val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
 
-                    if (token.isNotEmpty()) {
+                    if (token.isNotEmpty() && merchantData != null) {
                         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                         val editor = sharedPreferences.edit()
+
+                        // Menyimpan data pengguna
                         editor.putString("username", username)
+                        editor.putString("token", token)
+
+                        // Menyimpan data merchant
+                        editor.putInt("merchant_id", merchantData.optInt("id"))
+                        editor.putString("merchant_name", merchantData.optString("name"))
+                        editor.putString("norekening", merchantData.optString("no")) // Menyimpan "no" sebagai "norekening"
+                        editor.putString("merchant_code", merchantData.optString("code"))
+                        editor.putString("merchant_address", merchantData.optString("address"))
+                        editor.putString("merchant_phone", merchantData.optString("phone"))
+                        editor.putString("merchant_email", merchantData.optString("email"))
+                        editor.putString("merchant_balance", merchantData.optString("balance"))
+                        editor.putString("merchant_avatar", merchantData.optString("avatar"))
+                        editor.putInt("merchant_status", merchantData.optInt("status"))
+                        // Lanjutkan menyimpan field lainnya yang diperlukan
+
                         editor.apply()
+
                         val savedUsername = sharedPreferences.getString("username", "defaultUsername")
+                        val savedMerchantName = sharedPreferences.getString("merchant_name", "defaultMerchant")
+                        val savedNorekening = sharedPreferences.getString("norekening", "defaultNorekening")
+
                         Log.d(TAG, "Username yang disimpan: $savedUsername")
+                        Log.d(TAG, "Merchant Name yang disimpan: $savedMerchantName")
+                        Log.d(TAG, "Norekening yang disimpan: $savedNorekening")
+
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@LoginActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
                             navigateToMenuActivity()
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@LoginActivity, "Token tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@LoginActivity, "Token atau data merchant tidak ditemukan", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {

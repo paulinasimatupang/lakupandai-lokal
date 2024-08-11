@@ -586,7 +586,11 @@ class FormActivity : AppCompatActivity() {
             val msg = JSONObject()
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
+            val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
+            val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
             Log.e("FormActivity", "Saved Username: $savedUsername")
+            Log.e("FormActivity", "Saved Norekening: $savedNorekening")
+            Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
 
             // Get device Android ID
 //            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -612,6 +616,15 @@ class FormActivity : AppCompatActivity() {
                     component.type == 1 && component.label == "Username" -> {
                         componentValues[component.id] = savedUsername
                         Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label == "Nomor Rekening Agen" -> {
+                        componentValues[component.id] = savedNorekening
+                        Log.d("FormActivity", "Updated componentValues with savedNorekening for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label == "Kode Agen" -> {
+                        componentValues[component.id] = savedKodeAgen.toString()
+                        Log.d("FormActivity","Kode Agen : $savedKodeAgen")
+                        Log.d("FormActivity", "Updated componentValues with savedKodeAgen for Component ID: ${component.id}")
                     }
                     component.type == 1 -> {
                         val value = (component.values.get(0)?.second ?: "") as String
@@ -641,7 +654,7 @@ class FormActivity : AppCompatActivity() {
 //                val savedValues = mutableListOf(savedUsername)
 //                savedValues.addAll(formInputs.values) // Fix here
 //                savedValues.joinToString("|")
-                Log.d("FormActivity", "Gak Hello")
+                Log.d("FormActivity", "Hello")
                 screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
                     .joinToString("|") { component ->
                         componentValues[component.id] ?: ""

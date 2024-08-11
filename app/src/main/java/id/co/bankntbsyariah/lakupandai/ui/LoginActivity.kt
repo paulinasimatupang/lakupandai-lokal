@@ -121,10 +121,12 @@ class LoginActivity : AppCompatActivity() {
                         val savedUsername = sharedPreferences.getString("username", "defaultUsername")
                         val savedMerchantName = sharedPreferences.getString("merchant_name", "defaultMerchant")
                         val savedNorekening = sharedPreferences.getString("norekening", "defaultNorekening")
+                        val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
 
                         Log.d(TAG, "Username yang disimpan: $savedUsername")
                         Log.d(TAG, "Merchant Name yang disimpan: $savedMerchantName")
                         Log.d(TAG, "Norekening yang disimpan: $savedNorekening")
+                        Log.d(TAG, "Kode Agen yang disimpan: $savedKodeAgen")
 
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@LoginActivity, "Login berhasil", Toast.LENGTH_SHORT).show()

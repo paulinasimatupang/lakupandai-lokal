@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="5dp"
+    android:gravity="center">
+
+    <LinearLayout
+        android:padding="15dp"
+        android:layout_width="350dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#FFFFFF">
+
+        <ImageView
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:src="@mipmap/berhasil"/>
+
+        <TextView
+            android:id="@+id/title_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Success"
+            android:textSize="18sp"
+            android:textColor="#68C5EF"
+            android:gravity="center"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/body_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Koneksi Berhasil"
+            android:textSize="16sp"
+            android:layout_marginTop="10dp"
+            android:textColor="#000000"
+            android:gravity="center"/>
+
+        <Button
+            android:id="@+id/popup_button"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginTop="20dp"
+            android:background="#68C5EF"
+            android:text="OK"/>
+    </LinearLayout>
+</LinearLayout>

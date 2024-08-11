@@ -148,6 +148,12 @@ class MenuActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.check_saldo_button)?.setOnClickListener {
             checkSaldo()
         }
+
+        findViewById<ImageButton>(R.id.dashboard_nav)?.setOnClickListener {
+            val intent = Intent(this, MenuActivity::class.java)
+            intent.putExtra("formId", "MN00000")
+            startActivity(intent)
+        }
     }
 
     private fun showError(message: String) {

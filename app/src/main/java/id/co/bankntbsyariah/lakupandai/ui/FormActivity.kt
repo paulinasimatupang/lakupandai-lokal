@@ -645,7 +645,7 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] = savedUsername
                         Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
                     }
-                    component.type == 1 && component.label == "Nomor Rekening Agen" -> {
+                    component.type == 1 && component.label == "No Rekening Agen" -> {
                         componentValues[component.id] = savedNorekening
                         Log.d("FormActivity", "Updated componentValues with savedNorekening for Component ID: ${component.id}")
                     }

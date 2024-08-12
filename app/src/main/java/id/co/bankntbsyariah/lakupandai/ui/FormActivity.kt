@@ -254,13 +254,13 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
-                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
-                                inputType = android.text.InputType.TYPE_NULL
-                                setOnClickListener {
-                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
-                                    showDatePickerDialog(this)
-                                }
-                            }
+//                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
+//                                inputType = android.text.InputType.TYPE_NULL
+//                                setOnClickListener {
+//                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
+//                                    showDatePickerDialog(this)
+//                                }
+//                            }
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
@@ -312,15 +312,26 @@ class FormActivity : AppCompatActivity() {
 
                         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                             override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                                val adjustedPosition = if (component.id in listOf("CIF06", "CIF25")) {
-                                    (position + 1).toString() // Start index from 1
+                                val selectedValue = component.values[position].first
+
+                                Log.d("FormActivity", "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position")
+
+                                if (component.id == "CR002" && selectedValue == "BSA Lakupandai") {
+                                    inputValues[component.id] = "36"
+                                    Log.d("FormActivity", "Special case for CR010: Value set to 36")
                                 } else {
-                                    position.toString()
+                                    val adjustedPosition = if (component.id in listOf("CIF06", "CIF25")) {
+                                        (position + 1).toString()
+                                    } else {
+                                        position.toString()
+                                    }
+                                    inputValues[component.id] = adjustedPosition
+                                    Log.d("FormActivity", "Value set to: $adjustedPosition")
                                 }
-                                inputValues[component.id] = adjustedPosition
                             }
 
                             override fun onNothingSelected(parent: AdapterView<*>) {
+                                Log.d("FormActivity", "Nothing selected for Component ID: ${component.id}")
                             }
                         }
 

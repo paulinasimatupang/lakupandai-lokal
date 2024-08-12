@@ -316,17 +316,33 @@ class FormActivity : AppCompatActivity() {
 
                                 Log.d("FormActivity", "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position")
 
-                                if (component.id == "CR002" && selectedValue == "BSA Lakupandai") {
-                                    inputValues[component.id] = "36"
-                                    Log.d("FormActivity", "Special case for CR010: Value set to 36")
-                                } else {
-                                    val adjustedPosition = if (component.id in listOf("CIF06", "CIF25")) {
-                                        (position + 1).toString()
-                                    } else {
-                                        position.toString()
+                                when (component.id) {
+                                    "CR002" -> if (selectedValue == "BSA Lakupandai") {
+                                        inputValues[component.id] = "36"
+                                        Log.d("FormActivity", "Special case for CR002: Value set to 36")
                                     }
-                                    inputValues[component.id] = adjustedPosition
-                                    Log.d("FormActivity", "Value set to: $adjustedPosition")
+                                    "Cif13" -> {
+                                        val cif13Codes = mapOf(
+                                            0 to "5201", 1 to "5202", 2 to "5203", 3 to "5204", 4 to "5205",
+                                            5 to "5206", 6 to "5207", 7 to "5208", 8 to "5271", 9 to "5272"
+                                        )
+                                        inputValues[component.id] = cif13Codes[position] ?: "5201"
+                                        Log.d("FormActivity", "Value set to: ${cif13Codes[position] ?: "5201"}")
+                                    }
+                                    "CIF06", "CIF25" -> inputValues[component.id] = (position + 1).toString()
+                                    "CIF14" -> {
+                                        val provinceCodes = mapOf(
+                                            0 to "11", 1 to "12", 2 to "13", 3 to "14", 4 to "15", 5 to "16",
+                                            6 to "17", 7 to "18", 8 to "19", 9 to "21", 10 to "31", 11 to "32",
+                                            12 to "33", 13 to "34", 14 to "35", 15 to "36", 16 to "51", 17 to "52",
+                                            18 to "53", 19 to "61", 20 to "62", 21 to "63", 22 to "64", 23 to "65",
+                                            24 to "71", 25 to "72", 26 to "73", 27 to "74", 28 to "75", 29 to "76",
+                                            30 to "81", 31 to "82", 32 to "91", 33 to "94", 34 to "99"
+                                        )
+                                        inputValues[component.id] = provinceCodes[position] ?: "99"
+                                        Log.d("FormActivity", "Value set to: ${provinceCodes[position] ?: "99"}")
+                                    }
+                                    else -> inputValues[component.id] = position.toString()
                                 }
                             }
 
@@ -334,6 +350,7 @@ class FormActivity : AppCompatActivity() {
                                 Log.d("FormActivity", "Nothing selected for Component ID: ${component.id}")
                             }
                         }
+
 
                         addView(spinner)
                     }

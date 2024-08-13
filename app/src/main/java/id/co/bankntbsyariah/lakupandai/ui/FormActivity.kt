@@ -302,7 +302,7 @@ class FormActivity : AppCompatActivity() {
                             text = component.label
                             textSize = 20f
                             setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
                         })
                         addView(TextView(this@FormActivity).apply {
                             text = when (component.id) {
@@ -357,7 +357,6 @@ class FormActivity : AppCompatActivity() {
                                 }
                                 else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             }
-                            setPadding(paddingLeft, paddingTop , paddingRight, paddingBottom + 1 )
                             textSize = 18f
 
                         })
@@ -631,6 +630,45 @@ class FormActivity : AppCompatActivity() {
 //        } else {
 //            Toast.makeText(this, "Validasi gagal", Toast.LENGTH_SHORT).show()
 //        }
+        if (screen?.id == "MB81120") {
+            val startDateComponent = screen.comp.find { it.id == "SD001" }
+            val endDateComponent = screen.comp.find { it.id == "ED001" }
+
+            if (startDateComponent != null && endDateComponent != null) {
+                val startDateStr = inputValues[startDateComponent.id]
+                val endDateStr = inputValues[endDateComponent.id]
+                Log.d("FormActivity", "Start: $startDateStr")
+                Log.d("FormActivity", "End: $endDateStr")
+
+                if (startDateStr != null && endDateStr != null) {
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val startDate = dateFormat.parse(startDateStr)
+                    val endDate = dateFormat.parse(endDateStr)
+
+                    Log.d("FormActivity", "Parsed Start: $startDate")
+                    Log.d("FormActivity", "Parsed End: $endDate")
+
+                    if (startDate != null && endDate != null) {
+                        val diffInMillis = endDate.time - startDate.time
+                        Log.d("FormActivity", "Difference in Milliseconds: $diffInMillis")
+                        val diffInDays = TimeUnit.MILLISECONDS.toDays(diffInMillis)
+                        Log.d("FormActivity", "Difference in Days: $diffInDays")
+
+                        if (diffInDays > 7) {
+                            Toast.makeText(this, "Maksimal periode 7 hari", Toast.LENGTH_SHORT).show()
+                            return
+                        }
+                    } else {
+                        Log.d("FormActivity", "One or both dates are null after parsing.")
+                    }
+                } else {
+                    Log.d("FormActivity", "Start or end date string is null.")
+                }
+            } else {
+                Log.d("FormActivity", "StartDateComponent or EndDateComponent is null.")
+            }
+        }
+
         if (component.id == "KM001") {
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

@@ -44,6 +44,11 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".ui.PopupActivity"
+            android:theme="@style/TransparentActivity">
+        </activity>
+
+        <activity
             android:name=".ui.CheckUpdateActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"

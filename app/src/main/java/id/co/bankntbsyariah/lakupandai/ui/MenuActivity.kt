@@ -165,8 +165,38 @@ class MenuActivity : AppCompatActivity() {
     private fun handleScreen(screen: Screen) {
         when (screen.type) {
             Constants.SCREEN_TYPE_FORM -> navigateToFormActivity()
-            Constants.SCREEN_TYPE_POPUP_GAGAL,
-            Constants.SCREEN_TYPE_POPUP_SUKSES,
+            Constants.SCREEN_TYPE_POPUP_GAGAL -> {
+                when (screen.id) {
+                    "000000F" -> {
+                        // Handle failure case
+                        val failureMessage = screen.comp.firstOrNull { it.id == "0000A" }
+                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
+                        val intent = Intent(this@MenuActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                            putExtra("MESSAGE_BODY", failureMessage)
+                        }
+                        startActivity(intent)
+                    }
+                    else -> {
+                        // Handle other failure cases if necessary
+                    }
+                }
+            }
+            Constants.SCREEN_TYPE_POPUP_SUKSES -> {
+                when (screen.id) {
+                    "000000D" -> {
+                        // Handle success case
+                        val intent = Intent(this@MenuActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                            putExtra("MESSAGE_BODY", "Operation successful.")
+                        }
+                        startActivity(intent)
+                    }
+                    else -> {
+                        // Handle other success cases if necessary
+                    }
+                }
+            }
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                 // Handle popups or alerts
             }

@@ -45,6 +45,7 @@ class FormActivity : AppCompatActivity() {
     private val inputValues = mutableMapOf<String, String>()
     private var msg03Value: String? = null
     private var isOtpValidated = false
+    private var otpDialog: AlertDialog? = null
     // coba
     private val formInputs = mutableMapOf<String, String>()
 
@@ -58,12 +59,26 @@ class FormActivity : AppCompatActivity() {
 
         setInitialLayout()
 
+        setupWindowInsets()
+
+        handleBackPress()
+
+        // Load the form and setup screen
+        lifecycleScope.launch {
+            val formValue = loadForm()
+            setupScreen(formValue)
+        }
+    }
+
+    private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+    }
 
+    private fun handleBackPress() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 finish()
@@ -74,96 +89,122 @@ class FormActivity : AppCompatActivity() {
                 )
             }
         })
+    }
 
-        lifecycleScope.launch {
-            var formValue = StorageImpl(applicationContext).fetchForm(formId)
-            if (formValue.isNullOrEmpty()) {
-                withContext(Dispatchers.IO) {
-                    val fv = ArrestCallerImpl(OkHttpClient()).fetchScreen(formId)
-                    formValue = fv
-                }
-                Log.i("FormActivity", "Fetched formValue: $formValue")
+    private suspend fun loadForm(): String? {
+        var formValue = StorageImpl(applicationContext).fetchForm(formId)
+        if (formValue.isNullOrEmpty()) {
+            formValue = withContext(Dispatchers.IO) {
+                ArrestCallerImpl(OkHttpClient()).fetchScreen(formId)
             }
-            if (formValue.isNullOrEmpty()) {
-                findViewById<TextView>(R.id.error_message).visibility = View.VISIBLE
-                findViewById<RecyclerView>(R.id.menu_container).visibility = View.GONE
+            Log.i("FormActivity", "Fetched formValue: $formValue")
+        }
+        return formValue
+    }
+
+    private fun setupScreen(formValue: String?) {
+        if (formValue.isNullOrEmpty()) {
+            findViewById<TextView>(R.id.error_message).visibility = View.VISIBLE
+            findViewById<RecyclerView>(R.id.menu_container).visibility = View.GONE
+        } else {
+            val screenJson = JSONObject(formValue)
+            val screen: Screen = ScreenParser.parseJSON(screenJson)
+            msg03Value = extractMsg03Value(screenJson)
+            handleScreenType(screen)
+        }
+    }
+
+    private fun extractMsg03Value(screenJson: JSONObject): String? {
+        return try {
+            if (screenJson.has("comps")) {
+                screenJson.getJSONObject("comps")
+                    .getJSONArray("comp")
+                    .let { compsArray ->
+                        (0 until compsArray.length()).map { i ->
+                            compsArray.getJSONObject(i)
+                        }
+                    }
+                    .find { it.getString("comp_id") == "MSG03" }
+                    ?.getJSONObject("comp_values")
+                    ?.getJSONArray("comp_value")
+                    ?.getJSONObject(0)
+                    ?.getString("value")
             } else {
-                val screenJson = JSONObject(formValue)
-                val screen: Screen = ScreenParser.parseJSON(screenJson)
-                msg03Value = try {
-                    if (screenJson.has("comps")) {
-                        Log.d("FormActivity", "comps key exists in JSON")
-                        screenJson.getJSONObject("comps")
-                            .getJSONArray("comp")
-                            .let { compsArray ->
-                                (0 until compsArray.length()).map { i ->
-                                    compsArray.getJSONObject(i)
-                                }
-                            }
-                            .find { it.getString("comp_id") == "MSG03" }
-                            ?.getJSONObject("comp_values")
-                            ?.getJSONArray("comp_value")
-                            ?.getJSONObject(0)
-                            ?.getString("value")
-                    } else {
-                        Log.d("FormActivity", "comps key does not exist in JSON")
-                        null
-                    }
-                } catch (e: JSONException) {
-                    Log.e("FormActivity", "JSONException occurred: ${e.message}")
-                    null
-                }
+                null
+            }
+        } catch (e: JSONException) {
+            Log.e("FormActivity", "JSONException occurred: ${e.message}")
+            null
+        }
+    }
 
-                Log.d("FormActivity", "msg03Value: $msg03Value")
-
-                val sType = screen.type
-                when (sType) {
-                    Constants.SCREEN_TYPE_MENU -> {
-                        // Move to menu
-                    }
-                    Constants.SCREEN_TYPE_POPUP_GAGAL,
-                    Constants.SCREEN_TYPE_POPUP_SUKSES,
-                    Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
-                        // Show popup
-                    }
-                    Constants.SCREEN_TYPE_POPUP_OTP -> {
-                        val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
-                        val dialog = AlertDialog.Builder(this@FormActivity)
-                            .setView(dialogView)
-                            .create()
-
-                        setupForm(screen, dialogView)
-                        dialog.show()
+    private fun handleScreenType(screen: Screen) {
+        when (screen.type) {
+            Constants.SCREEN_TYPE_MENU -> {
+                // Move to menu
+            }
+            Constants.SCREEN_TYPE_POPUP_GAGAL -> {
+                when (screen.id) {
+                    "000000F" -> {
+                        // Handle failure case
+                        val failureMessage = screen.comp.firstOrNull { it.id == "0000A" }
+                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
+                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_success)
+                            putExtra("MESSAGE_BODY", failureMessage)
+                        }
+                        startActivity(intent)
                     }
                     else -> {
-                        // Pass form
+                        // Handle other failure cases if necessary
                     }
                 }
-                handleScreenTitle(screen.title)
-                if (sType != 7) {
-                    handleScreenTitle(screen?.title ?: "")
-                    screen?.let { setupForm(it) }
+            }
+            Constants.SCREEN_TYPE_POPUP_SUKSES -> {
+                when (screen.id) {
+                    "000000D" -> {
+                        // Handle success case
+                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_success)
+                            putExtra("MESSAGE_BODY", "Operation successful.")
+                        }
+                        startActivity(intent)
+                    }
+                    else -> {
+                        // Handle other success cases if necessary
+                    }
                 }
+            }
+            Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
+                // Handle logout popup
+            }
+            Constants.SCREEN_TYPE_POPUP_OTP -> {
+                val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
+                otpDialog = AlertDialog.Builder(this@FormActivity)
+                    .setView(dialogView)
+                    .create()
+
+                setupForm(screen, dialogView)
+                otpDialog?.show()
+            }
+            else -> {
+                setupForm(screen)
             }
         }
 
+        if (screen.type != Constants.SCREEN_TYPE_POPUP_GAGAL &&
+            screen.type != Constants.SCREEN_TYPE_POPUP_SUKSES &&
+            screen.type != Constants.SCREEN_TYPE_POPUP_OTP) {
+            handleScreenTitle(screen.title)
+            setupForm(screen)
+        }
     }
 
     private fun setInitialLayout() {
         when (formId) {
-            "AWL0000" -> {
-                setContentView(R.layout.activity_awal)
-                Log.d("FormActivity", "Displaying activity_awal")
-            }
-            "AU00001" -> {
-                setContentView(R.layout.activity_form_login)
-                Log.d("FormActivity", "Displaying activity_form_login")
-            }
-            else -> {
-                // Optionally handle the case where none of the keywords match
-                setContentView(R.layout.activity_form)
-                Log.d("FormActivity", "Displaying activity_form")
-            }
+            "AWL0000" -> setContentView(R.layout.activity_awal)
+            "AU00001" -> setContentView(R.layout.activity_form_login)
+            else -> setContentView(R.layout.activity_form)
         }
     }
 
@@ -184,7 +225,7 @@ class FormActivity : AppCompatActivity() {
     private fun setupForm(screen: Screen, containerView: View? = null) {
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
-        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container)
+        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -419,22 +460,7 @@ class FormActivity : AppCompatActivity() {
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
-                            if (screen.type == 7) {
-                                val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
-                                val dialog = AlertDialog.Builder(this@FormActivity)
-                                    .setView(dialogView)
-                                    .create()
-
-                                setupForm(screen, dialogView)
-                                dialog.show()
-                                dialogView.findViewById<Button>(R.id.button_type_7_container)
-                                    ?.setOnClickListener {
-                                        handleButtonClick(component, screen)
-                                        dialog.dismiss()
-                                    }
-                            } else {
-                                handleButtonClick(component, screen)
-                            }
+                            handleButtonClick(component, screen)
                         }
                     }
                 }
@@ -481,15 +507,22 @@ class FormActivity : AppCompatActivity() {
                 if (component.type == 7) {
                     if (buttonContainer == null) {
                         buttonContainer = LinearLayout(this).apply {
-                            id = View.generateViewId()  // Generate a new ID for the buttonContainer
+                            id = View.generateViewId()
                             orientation = LinearLayout.VERTICAL
                         }
                         container.addView(buttonContainer)
+                    }
+
+                    if (it is Button) {  // Cek apakah view yang akan ditambahkan adalah Button
                         buttonContainer!!.addView(it)
+                    } else {
+                        Log.e("FormActivity", "View is not a Button, skipping addition to buttonContainer")
                     }
                 } else {
                     container.addView(it)
                 }
+
+
             }
         }
 
@@ -510,6 +543,7 @@ class FormActivity : AppCompatActivity() {
                 Log.e("MSG", "MSG: $msg03Value")
                 if (msg03Value == otpValue) {
                     isOtpValidated = true
+                    otpDialog?.dismiss()
                     val messageBody = createMessageBody(screen)
                     if (messageBody != null) {
                         Log.d("FormActivity", "Message Body: $messageBody")
@@ -518,12 +552,7 @@ class FormActivity : AppCompatActivity() {
                                 lifecycleScope.launch {
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    handleScreenTitle(newScreen.title)
-                                    if (newScreen.type == 7) {
-                                        showPopup(newScreen, component)
-                                    } else {
-                                        setupForm(newScreen)
-                                    }
+                                    handleScreenType(newScreen)
                                 }
                             } ?: run {
                                 Log.e("FormActivity", "Failed to fetch response body")
@@ -549,12 +578,7 @@ class FormActivity : AppCompatActivity() {
                             lifecycleScope.launch {
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                handleScreenTitle(newScreen.title)
-                                if (newScreen.type == 7) {
-                                    showPopup(newScreen, component)
-                                } else {
-                                    setupForm(newScreen)
-                                }
+                                handleScreenType(newScreen)
                             }
                         } ?: run {
                             Log.e("FormActivity", "Failed to fetch response body")
@@ -566,6 +590,7 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+
 
     private fun showPopup(screen: Screen, component: Component) {
         val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
@@ -666,35 +691,10 @@ class FormActivity : AppCompatActivity() {
                 }
             }
 
-//            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 }
-//                .joinToString("|") { component ->
-//                    componentValues[component.id] ?: ""
-//                }
-
-            // coba
-            val otpinput = inputValues["OTP"]
-            Log.d("FormActivity", "OTP: $otpinput")
-            Log.d("FormActivity", "msg03Value: $msg03Value")
-            val msgDt = if (!msg03Value.isNullOrEmpty() && !inputValues["OTP"].isNullOrEmpty() && inputValues["OTP"] == msg03Value) {
-                //coba
-//                Log.d("FormActivity", "Hello")
-//                Log.d("FormActivity", "Form Inputs : $formInputs")
-//                val savedValues = mutableListOf(savedUsername)
-//                savedValues.addAll(formInputs.values) // Fix here
-//                savedValues.joinToString("|")
-                Log.d("FormActivity", "Hello")
-                screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
-                    .joinToString("|") { component ->
-                        componentValues[component.id] ?: ""
-                    }
-            } else {
-                Log.d("FormActivity", "Gak Hello")
-                screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
-                    .joinToString("|") { component ->
-                        componentValues[component.id] ?: ""
-                    }
-            }
-
+            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03"}
+                .joinToString("|") { component ->
+                    componentValues[component.id] ?: ""
+                }
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)

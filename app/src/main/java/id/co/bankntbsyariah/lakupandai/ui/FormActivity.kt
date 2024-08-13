@@ -302,7 +302,7 @@ class FormActivity : AppCompatActivity() {
                             text = component.label
                             textSize = 20f
                             setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
                         })
                         addView(TextView(this@FormActivity).apply {
                             text = when (component.id) {
@@ -357,6 +357,7 @@ class FormActivity : AppCompatActivity() {
                                 }
                                 else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             }
+                            setPadding(paddingLeft, paddingTop , paddingRight, paddingBottom + 1 )
                             textSize = 18f
 
                         })

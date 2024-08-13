@@ -21,6 +21,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
@@ -28,6 +29,7 @@ import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.RecyclerViewMenuAdapter
+import id.co.bankntbsyariah.lakupandai.ui.adapter.ImageSliderAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import id.co.bankntbsyariah.lakupandai.utils.SpacingItemDecorator
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +45,8 @@ class MenuActivity : AppCompatActivity() {
     private var menuId:String = Constants.DEFAULT_ROOT_ID
     private val menuList = ArrayList<MenuItem>()
     private var backToExit = false
+    private lateinit var imageSlider: ViewPager2
+    private lateinit var sliderAdapter: ImageSliderAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +72,17 @@ class MenuActivity : AppCompatActivity() {
                 else -> R.layout.activity_menu
             }
         )
+
+        // Initialize Image Slider
+        imageSlider = findViewById(R.id.imageSlider)
+        val imageList = listOf(
+            R.drawable.image1,
+            R.drawable.image2,
+            R.drawable.image3
+        )
+
+        sliderAdapter = ImageSliderAdapter(imageList)
+        imageSlider.adapter = sliderAdapter
 
         val someTextView: TextView? = findViewById(R.id.title)
         if (someTextView != null) {

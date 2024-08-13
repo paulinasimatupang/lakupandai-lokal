@@ -62,7 +62,6 @@ class FormActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Retrieve formId from intent extras
         formId = intent.extras?.getString(Constants.KEY_FORM_ID) ?: Constants.DEFAULT_ROOT_ID
         Log.d("FormActivity", "formId: $formId")
 
@@ -159,6 +158,11 @@ class FormActivity : AppCompatActivity() {
 
     }
 
+    private fun getSequenceOptionsForComponent(componentId: String): List<Pair<String, String>> {
+        // Replace with actual logic to fetch sequence options based on componentId
+        return listOf() // Placeholder
+    }
+
     private fun setInitialLayout() {
         when (formId) {
             "AWL0000" -> {
@@ -192,6 +196,8 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun setupForm(screen: Screen, containerView: View? = null) {
+
+
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container)
@@ -246,7 +252,58 @@ class FormActivity : AppCompatActivity() {
                             setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
                         })
                         addView(TextView(this@FormActivity).apply {
-                            text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            text = when (component.id) {
+                                "CIF32" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "Laki-Laki"
+                                    "2" -> "Perempuan"
+                                    else -> ""
+                                }
+                                "CIF34" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "Kawin"
+                                    "2" -> "Belum Kawin"
+                                    "3" -> "Janda/Duda"
+                                    else -> ""
+                                }
+                                "CIF33" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "Islam"
+                                    "2" -> "Kristen Protestan"
+                                    "3" -> "Katholik"
+                                    "4" -> "Budha"
+                                    "5" -> "Hindu"
+                                    "6" -> "Konghucu"
+                                    else -> ""
+                                } "CIF42" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "0" -> "Tidak Menetap"
+                                    "1" -> "Menetap"
+                                    else -> ""
+                                }"CIF43" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "WNI"
+                                    "2" -> "WNA"
+                                    else -> ""
+                                }"CIF47" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "KTP"
+                                    "2" -> "PASSPORT"
+                                    else -> ""
+                                }"CIF49" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "0" -> "A"
+                                    "1" -> "AB"
+                                    "2" -> "B"
+                                    "3" -> "O"
+                                    "4" -> "-"
+                                    else -> ""
+                                }"CIF51" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "SD"
+                                    "2" -> "SLTP"
+                                    "3" -> "SMA"
+                                    "4" -> "AKADEMI"
+                                    "5" -> "S1"
+                                    "6" -> "S2"
+                                    "7" -> "S3"
+                                    "8" -> "OTHERS"
+                                    else -> ""
+                                }
+                                else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            }
                             textSize = 18f
                         })
                         background = getDrawable(R.drawable.text_view_background)
@@ -264,13 +321,13 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
-//                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
-//                                inputType = android.text.InputType.TYPE_NULL
-//                                setOnClickListener {
-//                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
-//                                    showDatePickerDialog(this)
-//                                }
-//                            }
+                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
+                                inputType = android.text.InputType.TYPE_NULL
+                                setOnClickListener {
+                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
+                                    showDatePickerDialog(this)
+                                }
+                            }
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
@@ -494,7 +551,7 @@ class FormActivity : AppCompatActivity() {
                 if (component.type == 7) {
                     if (buttonContainer == null) {
                         buttonContainer = LinearLayout(this).apply {
-                            id = View.generateViewId()  // Generate a new ID for the buttonContainer
+                            id = View.generateViewId()
                             orientation = LinearLayout.VERTICAL
                         }
                         container.addView(buttonContainer)
@@ -508,7 +565,17 @@ class FormActivity : AppCompatActivity() {
 
     }
 
+
     private fun handleButtonClick(component: Component, screen: Screen?) {
+//        val isComponentValid = validateComponent(component)
+
+//        if (screen?.actionUrl == "CC0000" && component.id == "CF001" && !isComponentValid) {
+//            Log.d("FormActivity", "Service ID CC0000, Component CF001 invalid, but proceeding to next screen")
+//            navigateToCreate()
+//            return
+//        } else {
+//            Toast.makeText(this, "Validasi gagal", Toast.LENGTH_SHORT).show()
+//        }
         if (component.id == "KM001") {
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -679,6 +746,7 @@ class FormActivity : AppCompatActivity() {
                 }
             }
 
+
 //            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 }
 //                .joinToString("|") { component ->
 //                    componentValues[component.id] ?: ""
@@ -695,6 +763,11 @@ class FormActivity : AppCompatActivity() {
 //                val savedValues = mutableListOf(savedUsername)
 //                savedValues.addAll(formInputs.values) // Fix here
 //                savedValues.joinToString("|")
+                screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
+                    .joinToString("|") { component ->
+                        componentValues[component.id] ?: ""
+                    }
+
                 Log.d("FormActivity", "Hello")
                 screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
                     .joinToString("|") { component ->
@@ -819,11 +892,17 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+//    private fun navigateToCreate() {
+//        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+//            putExtra(Constants.KEY_MENU_ID, "CCIF004")
+//        })
+//    }
+
     private fun navigateToScreen() {
         startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             putExtra(Constants.KEY_MENU_ID, "MN00000")
         })
-//        finish()
     }
 }

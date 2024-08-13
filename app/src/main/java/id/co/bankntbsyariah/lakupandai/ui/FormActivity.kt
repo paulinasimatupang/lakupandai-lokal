@@ -1,6 +1,7 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
 import android.app.DatePickerDialog
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -35,8 +36,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.appcompat.app.AlertDialog
+import okhttp3.FormBody
+import okhttp3.Request
 import org.json.JSONException
 import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 class FormActivity : AppCompatActivity() {
 
@@ -48,6 +52,12 @@ class FormActivity : AppCompatActivity() {
     private var otpDialog: AlertDialog? = null
     // coba
     private val formInputs = mutableMapOf<String, String>()
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,7 +160,7 @@ class FormActivity : AppCompatActivity() {
                         val failureMessage = screen.comp.firstOrNull { it.id == "0000A" }
                             ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                            putExtra("LAYOUT_ID", R.layout.pop_up_success)
+                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                             putExtra("MESSAGE_BODY", failureMessage)
                         }
                         startActivity(intent)
@@ -165,7 +175,7 @@ class FormActivity : AppCompatActivity() {
                     "000000D" -> {
                         // Handle success case
                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                            putExtra("LAYOUT_ID", R.layout.pop_up_success)
+                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                             putExtra("MESSAGE_BODY", "Operation successful.")
                         }
                         startActivity(intent)
@@ -198,13 +208,29 @@ class FormActivity : AppCompatActivity() {
             handleScreenTitle(screen.title)
             setupForm(screen)
         }
+
+    }
+
+    private fun getSequenceOptionsForComponent(componentId: String): List<Pair<String, String>> {
+        // Replace with actual logic to fetch sequence options based on componentId
+        return listOf() // Placeholder
     }
 
     private fun setInitialLayout() {
         when (formId) {
-            "AWL0000" -> setContentView(R.layout.activity_awal)
-            "AU00001" -> setContentView(R.layout.activity_form_login)
-            else -> setContentView(R.layout.activity_form)
+            "AWL0000" -> {
+                setContentView(R.layout.activity_awal)
+                Log.d("FormActivity", "Displaying activity_awal")
+            }
+            "AU00001" -> {
+                setContentView(R.layout.activity_form_login)
+                Log.d("FormActivity", "Displaying activity_form_login")
+            }
+            else -> {
+                // Optionally handle the case where none of the keywords match
+                setContentView(R.layout.activity_form)
+                Log.d("FormActivity", "Displaying activity_form")
+            }
         }
     }
 
@@ -223,6 +249,8 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun setupForm(screen: Screen, containerView: View? = null) {
+
+
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
@@ -274,11 +302,64 @@ class FormActivity : AppCompatActivity() {
                             text = component.label
                             textSize = 20f
                             setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
                         })
                         addView(TextView(this@FormActivity).apply {
-                            text = component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            text = when (component.id) {
+                                "CIF32" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "Laki-Laki"
+                                    "2" -> "Perempuan"
+                                    else -> ""
+                                }
+                                "CIF34" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "Kawin"
+                                    "2" -> "Belum Kawin"
+                                    "3" -> "Janda/Duda"
+                                    else -> ""
+                                }
+                                "CIF33" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "Islam"
+                                    "2" -> "Kristen Protestan"
+                                    "3" -> "Katholik"
+                                    "4" -> "Budha"
+                                    "5" -> "Hindu"
+                                    "6" -> "Konghucu"
+                                    else -> ""
+                                } "CIF42" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "0" -> "Tidak Menetap"
+                                    "1" -> "Menetap"
+                                    else -> ""
+                                }"CIF43" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "WNI"
+                                    "2" -> "WNA"
+                                    else -> ""
+                                }"CIF47" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "KTP"
+                                    "2" -> "PASSPORT"
+                                    else -> ""
+                                }"CIF49" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "0" -> "A"
+                                    "1" -> "AB"
+                                    "2" -> "B"
+                                    "3" -> "O"
+                                    "4" -> "-"
+                                    else -> ""
+                                }"CIF51" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                                    "1" -> "SD"
+                                    "2" -> "SLTP"
+                                    "3" -> "SMA"
+                                    "4" -> "AKADEMI"
+                                    "5" -> "S1"
+                                    "6" -> "S2"
+                                    "7" -> "S3"
+                                    "8" -> "OTHERS"
+                                    else -> ""
+                                }
+                                else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            }
+                            setPadding(paddingLeft, paddingTop , paddingRight, paddingBottom + 1 )
                             textSize = 18f
+
                         })
                         background = getDrawable(R.drawable.text_view_background)
                     }
@@ -306,6 +387,7 @@ class FormActivity : AppCompatActivity() {
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
+
                         }
                         addView(editText)
                     }
@@ -323,10 +405,12 @@ class FormActivity : AppCompatActivity() {
                             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
+                            textSize = 18f
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
+
                         }
                         addView(editText)
                     }
@@ -337,6 +421,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 18f
                             setTypeface(null, Typeface.BOLD)
                         })
 
@@ -401,6 +486,7 @@ class FormActivity : AppCompatActivity() {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 18f
                             setTypeface(null, Typeface.BOLD)
                         })
 
@@ -425,6 +511,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 18f
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {
@@ -434,6 +521,7 @@ class FormActivity : AppCompatActivity() {
                         component.values.forEachIndexed { index, value ->
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
+                                textSize = 18f
                             }
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
                                 val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
@@ -460,7 +548,11 @@ class FormActivity : AppCompatActivity() {
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
-                            handleButtonClick(component, screen)
+                            if (formId == "AU00001") {
+                                loginUser()
+                            }else{
+                                handleButtonClick(component, screen)
+                            }
                         }
                     }
                 }
@@ -528,7 +620,17 @@ class FormActivity : AppCompatActivity() {
 
     }
 
+
     private fun handleButtonClick(component: Component, screen: Screen?) {
+//        val isComponentValid = validateComponent(component)
+
+//        if (screen?.actionUrl == "CC0000" && component.id == "CF001" && !isComponentValid) {
+//            Log.d("FormActivity", "Service ID CC0000, Component CF001 invalid, but proceeding to next screen")
+//            navigateToCreate()
+//            return
+//        } else {
+//            Toast.makeText(this, "Validasi gagal", Toast.LENGTH_SHORT).show()
+//        }
         if (component.id == "KM001") {
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -719,4 +821,104 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun loginUser() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val formBodyBuilder = FormBody.Builder()
+            var username: String? = null
+            var password: String? = null
+
+            for ((key, value) in inputValues) {
+                when (key) {
+                    "UN001" -> {
+                        username = value
+                        formBodyBuilder.add("username", value)
+                    }
+                    "A0002" -> {
+                        password = value
+                        formBodyBuilder.add("password", value)
+                    }
+                    else -> formBodyBuilder.add(key, value)
+                }
+            }
+
+            val formBody = formBodyBuilder.build()
+
+            Log.d(TAG, "Form body content: username=$username, password=$password")
+
+            val request = Request.Builder()
+                .url("http://api.selada.id/api/auth/login")
+                .post(formBody)
+                .build()
+
+            Log.d(TAG, "Sending login request to server...")
+
+            try {
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+
+                Log.d(TAG, "Received response from server. Response code: ${response.code}, Response body: $responseData")
+
+                if (response.isSuccessful && responseData != null) {
+                    val jsonResponse = JSONObject(responseData)
+                    val token = jsonResponse.optString("token")
+                    val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
+
+                    if (token.isNotEmpty() && merchantData != null) {
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                        val editor = sharedPreferences.edit()
+
+                        // Menyimpan data pengguna
+                        editor.putString("username", username)
+                        editor.putString("token", token)
+
+                        // Menyimpan data merchant
+                        editor.putInt("merchant_id", merchantData.optInt("id"))
+                        editor.putString("merchant_name", merchantData.optString("name"))
+                        editor.putString("norekening", merchantData.optString("no")) // Menyimpan "no" sebagai "norekening"
+                        editor.putString("merchant_code", merchantData.optString("code"))
+                        editor.putString("merchant_address", merchantData.optString("address"))
+                        editor.putString("merchant_phone", merchantData.optString("phone"))
+                        editor.putString("merchant_email", merchantData.optString("email"))
+                        editor.putString("merchant_balance", merchantData.optString("balance"))
+                        editor.putString("merchant_avatar", merchantData.optString("avatar"))
+                        editor.putInt("merchant_status", merchantData.optInt("status"))
+
+                        editor.apply()
+
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                            navigateToScreen()
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Token atau data merchant tidak ditemukan", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception occurred while logging in", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+//    private fun navigateToCreate() {
+//        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+//            putExtra(Constants.KEY_MENU_ID, "CCIF004")
+//        })
+//    }
+
+    private fun navigateToScreen() {
+        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "MN00000")
+        })
+    }
 }

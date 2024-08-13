@@ -172,7 +172,7 @@ class MenuActivity : AppCompatActivity() {
                         val failureMessage = screen.comp.firstOrNull { it.id == "0000A" }
                             ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
                         val intent = Intent(this@MenuActivity, PopupActivity::class.java).apply {
-                            putExtra("LAYOUT_ID", R.layout.pop_up_success)
+                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                             putExtra("MESSAGE_BODY", failureMessage)
                         }
                         startActivity(intent)
@@ -187,7 +187,7 @@ class MenuActivity : AppCompatActivity() {
                     "000000D" -> {
                         // Handle success case
                         val intent = Intent(this@MenuActivity, PopupActivity::class.java).apply {
-                            putExtra("LAYOUT_ID", R.layout.pop_up_success)
+                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                             putExtra("MESSAGE_BODY", "Operation successful.")
                         }
                         startActivity(intent)
@@ -306,14 +306,16 @@ class MenuActivity : AppCompatActivity() {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
-            val norekening = sharedPreferences.getString("norekening", "") ?: "" // Mengambil norekening dari SharedPreferences
+            val norekening = sharedPreferences.getString("norekening", "") ?: ""
+            val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
             val msg = JSONObject()
             val msgId = "353471045058692200995" //stan + timestamp
             val msgUi = "353471045058692"
             val msgSi = "N00001"
             val username = savedUsername
-            val accountNumber = norekening // Menggunakan norekening sebagai accountNumber
-            val msgDt = "$username|$accountNumber"
+            val accountNumber = norekening
+            val name = merchant_name
+            val msgDt = "$username|$accountNumber|$name"
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)

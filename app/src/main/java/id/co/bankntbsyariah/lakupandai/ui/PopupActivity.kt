@@ -9,7 +9,7 @@ import id.co.bankntbsyariah.lakupandai.R
 class PopupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val layoutId = intent.getIntExtra("LAYOUT_ID", R.layout.pop_up_success) // Default to success
+        val layoutId = intent.getIntExtra("LAYOUT_ID", R.layout.pop_up_berhasil) // Default to success
         setContentView(layoutId)
 
         val messageBody = intent.getStringExtra("MESSAGE_BODY") ?: "No message"
@@ -17,7 +17,7 @@ class PopupActivity : AppCompatActivity() {
         val bodyMessage = findViewById<TextView>(R.id.body_message)
         val popupButton = findViewById<Button>(R.id.popup_button)
 
-        titleMessage.text = if (layoutId == R.layout.pop_up_success) "Success" else "Gagal"
+        titleMessage.text = if (layoutId == R.layout.pop_up_berhasil) "Success" else "Gagal"
         bodyMessage.text = messageBody
 
         popupButton.setOnClickListener {

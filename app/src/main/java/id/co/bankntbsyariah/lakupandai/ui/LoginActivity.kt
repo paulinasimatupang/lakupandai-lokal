@@ -51,9 +51,9 @@ class LoginActivity : AppCompatActivity() {
             insets
         }
 
-        usernameEditText = findViewById(R.id.usernameEditText)
-        passwordEditText = findViewById(R.id.passwordEditText)
-        loginButton = findViewById(R.id.loginButton)
+//        usernameEditText = findViewById(R.id.usernameEditText)
+//        passwordEditText = findViewById(R.id.passwordEditText)
+//        loginButton = findViewById(R.id.loginButton)
 
         loginButton.setOnClickListener {
             val username = usernameEditText.text.toString()

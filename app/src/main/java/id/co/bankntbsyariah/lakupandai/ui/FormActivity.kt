@@ -249,7 +249,7 @@ class FormActivity : AppCompatActivity() {
                             text = component.label
                             textSize = 20f
                             setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 7)
+                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
                         })
                         addView(TextView(this@FormActivity).apply {
                             text = when (component.id) {
@@ -304,7 +304,9 @@ class FormActivity : AppCompatActivity() {
                                 }
                                 else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             }
+                            setPadding(paddingLeft, paddingTop , paddingRight, paddingBottom + 1 )
                             textSize = 18f
+
                         })
                         background = getDrawable(R.drawable.text_view_background)
                     }
@@ -321,6 +323,7 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
+                            textSize = 18f
                             if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
                                 inputType = android.text.InputType.TYPE_NULL
                                 setOnClickListener {
@@ -332,6 +335,7 @@ class FormActivity : AppCompatActivity() {
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
+
                         }
                         addView(editText)
                     }
@@ -349,10 +353,12 @@ class FormActivity : AppCompatActivity() {
                             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
+                            textSize = 18f
                         }
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
+
                         }
                         addView(editText)
                     }
@@ -363,6 +369,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 18f
                             setTypeface(null, Typeface.BOLD)
                         })
 
@@ -427,6 +434,7 @@ class FormActivity : AppCompatActivity() {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 18f
                             setTypeface(null, Typeface.BOLD)
                         })
 
@@ -451,6 +459,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 18f
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {
@@ -460,6 +469,7 @@ class FormActivity : AppCompatActivity() {
                         component.values.forEachIndexed { index, value ->
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
+                                textSize = 18f
                             }
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
                                 val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {

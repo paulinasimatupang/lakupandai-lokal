@@ -1,6 +1,7 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
 import android.app.DatePickerDialog
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -35,8 +36,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.appcompat.app.AlertDialog
+import okhttp3.FormBody
+import okhttp3.Request
 import org.json.JSONException
 import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 class FormActivity : AppCompatActivity() {
 
@@ -47,6 +51,12 @@ class FormActivity : AppCompatActivity() {
     private var isOtpValidated = false
     // coba
     private val formInputs = mutableMapOf<String, String>()
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -419,6 +429,9 @@ class FormActivity : AppCompatActivity() {
                         background = getDrawable(R.drawable.button_yellow)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
+                            if (formId == "AU00001") {
+                                loginUser()
+                            }
                             if (screen.type == 7) {
                                 val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
                                 val dialog = AlertDialog.Builder(this@FormActivity)
@@ -719,4 +732,98 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun loginUser() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val formBodyBuilder = FormBody.Builder()
+            var username: String? = null
+            var password: String? = null
+
+            for ((key, value) in inputValues) {
+                when (key) {
+                    "UN001" -> {
+                        username = value
+                        formBodyBuilder.add("username", value)
+                    }
+                    "A0002" -> {
+                        password = value
+                        formBodyBuilder.add("password", value)
+                    }
+                    else -> formBodyBuilder.add(key, value)
+                }
+            }
+
+            val formBody = formBodyBuilder.build()
+
+            Log.d(TAG, "Form body content: username=$username, password=$password")
+
+            val request = Request.Builder()
+                .url("http://api.selada.id/api/auth/login")
+                .post(formBody)
+                .build()
+
+            Log.d(TAG, "Sending login request to server...")
+
+            try {
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+
+                Log.d(TAG, "Received response from server. Response code: ${response.code}, Response body: $responseData")
+
+                if (response.isSuccessful && responseData != null) {
+                    val jsonResponse = JSONObject(responseData)
+                    val token = jsonResponse.optString("token")
+                    val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
+
+                    if (token.isNotEmpty() && merchantData != null) {
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                        val editor = sharedPreferences.edit()
+
+                        // Menyimpan data pengguna
+                        editor.putString("username", username)
+                        editor.putString("token", token)
+
+                        // Menyimpan data merchant
+                        editor.putInt("merchant_id", merchantData.optInt("id"))
+                        editor.putString("merchant_name", merchantData.optString("name"))
+                        editor.putString("norekening", merchantData.optString("no")) // Menyimpan "no" sebagai "norekening"
+                        editor.putString("merchant_code", merchantData.optString("code"))
+                        editor.putString("merchant_address", merchantData.optString("address"))
+                        editor.putString("merchant_phone", merchantData.optString("phone"))
+                        editor.putString("merchant_email", merchantData.optString("email"))
+                        editor.putString("merchant_balance", merchantData.optString("balance"))
+                        editor.putString("merchant_avatar", merchantData.optString("avatar"))
+                        editor.putInt("merchant_status", merchantData.optInt("status"))
+
+                        editor.apply()
+
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                            navigateToScreen()
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Token atau data merchant tidak ditemukan", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception occurred while logging in", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun navigateToScreen() {
+        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "MN00000")
+        })
+//        finish()
+    }
 }

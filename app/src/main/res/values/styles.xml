@@ -35,4 +35,11 @@
         <item name="android:backgroundDimAmount">0.5</item> <!-- Adjust dim amount -->
     </style>
 
+    <style name="BottomNavViewCurvedShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">20dp</item> <!-- Ubah sesuai kebutuhan -->
+        <item name="cornerSizeTopRight">20dp</item> <!-- Ubah sesuai kebutuhan -->
+    </style>
+
+
 </resources>

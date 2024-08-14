@@ -74,30 +74,37 @@ class MenuActivity : AppCompatActivity() {
             }
         )
 
+        // Initialize Image Slider only if the current layout contains the image slider
+        val imageSliderView: View? = findViewById(R.id.imageSlider)
+        if (imageSliderView != null) {
+            imageSlider = imageSliderView as ViewPager2
+            val imageList = listOf(
+                BannerItem("banner1"),
+                BannerItem("banner2"),
+                BannerItem("banner3")
+            )
 
-        imageSlider = findViewById(R.id.imageSlider)
-        val imageList = listOf(
-            BannerItem("banner1"),
-            BannerItem("banner2"),
-            BannerItem("banner3")
-        )
+            sliderAdapter = ImageSliderAdapter(imageList, this)
+            imageSlider.adapter = sliderAdapter
 
-        sliderAdapter = ImageSliderAdapter(imageList, this)
-        imageSlider.adapter = sliderAdapter
+            // Optional: Set up auto-slide
+            val handler = Handler()
+            val runnable = object : Runnable {
+                var currentItem = 0
 
-        val handler = Handler()
-        val runnable = object : Runnable {
-            var currentItem = 0
-
-            override fun run() {
-                if (currentItem == imageList.size) {
-                    currentItem = 0
+                override fun run() {
+                    if (currentItem == imageList.size) {
+                        currentItem = 0
+                    }
+                    imageSlider.setCurrentItem(currentItem++, true)
+                    handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
                 }
-                imageSlider.setCurrentItem(currentItem++, true)
-                handler.postDelayed(this, 3000)
             }
+            handler.postDelayed(runnable, 3000)
+        } else {
+            Log.d("MenuActivity", "No image slider found for menuId: $menuId")
         }
-        handler.postDelayed(runnable, 3000)
+
 
         val someTextView: TextView? = findViewById(R.id.title)
         if (someTextView != null) {

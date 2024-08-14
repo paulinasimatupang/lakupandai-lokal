@@ -73,16 +73,32 @@ class MenuActivity : AppCompatActivity() {
             }
         )
 
+
         // Initialize Image Slider
         imageSlider = findViewById(R.id.imageSlider)
         val imageList = listOf(
-            R.drawable.image1,
-            R.drawable.image2,
-            R.drawable.image3
+            R.mipmap.image1,
+            R.mipmap.image2,
+            R.mipmap.image3
         )
 
         sliderAdapter = ImageSliderAdapter(imageList)
         imageSlider.adapter = sliderAdapter
+
+        // Optional: Set up auto-slide
+        val handler = Handler()
+        val runnable = object : Runnable {
+            var currentItem = 0
+
+            override fun run() {
+                if (currentItem == imageList.size) {
+                    currentItem = 0
+                }
+                imageSlider.setCurrentItem(currentItem++, true)
+                handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
+            }
+        }
+        handler.postDelayed(runnable, 3000)
 
         val someTextView: TextView? = findViewById(R.id.title)
         if (someTextView != null) {

@@ -23,6 +23,37 @@
         android:layout_marginStart="8dp"
         tools:ignore="MissingConstraints" />
 
+    <LinearLayout
+        android:id="@+id/user_greeting_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="0dp"
+        app:layout_constraintStart_toEndOf="@id/hamburger_button"
+        app:layout_constraintTop_toTopOf="@id/hamburger_button"
+        app:layout_constraintBottom_toBottomOf="@id/hamburger_button">
+
+        <!-- ImageView for Logo -->
+        <ImageView
+            android:id="@+id/logo_image"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:src="@mipmap/logo_aja_ntbs"
+            android:contentDescription="Logo" />
+
+        <!-- TextView for "Hi, <nama user>!" -->
+        <TextView
+            android:id="@+id/user_greeting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15dp"
+            android:text="Hi, User!"
+            android:textColor="@android:color/white"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+
     <!-- Card 2 -->
 
     <!-- Card Yellow -->
@@ -64,7 +95,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/card1" />
+        app:layout_constraintTop_toBottomOf="@+id/card_saldo" />
 
     <View
         android:id="@+id/card_white"
@@ -164,61 +195,103 @@
     </com.google.android.material.bottomnavigation.BottomNavigationView>
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/card1"
-        android:layout_width="310dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="120dp"
+        android:id="@+id/card_saldo"
+        android:layout_width="205dp"
+        android:layout_height="115dp"
+        android:layout_marginTop="125dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="0dp"
         app:cardBackgroundColor="#0B623E"
         app:cardCornerRadius="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintEnd_toStartOf="@id/card_rekening"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints">
+        app:layout_constraintWidth_percent="0.5">
 
         <LinearLayout
-            android:layout_width="240dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="15dp">
 
             <TextView
+                android:id="@+id/saldo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="Saldo"
+                android:textColor="@android:color/white"
+                android:textSize="15sp" />
+
+            <TextView
                 android:id="@+id/saldo_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Saldo: XXXXXXXXX"
+                android:layout_marginTop="5dp"
+                android:text="XXXXXXXXX"
+                android:textStyle="bold"
                 android:textColor="@android:color/white"
-                android:textSize="18sp"/>
+                android:textSize="18sp" />
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_rekening"
+        android:layout_width="175dp"
+        android:layout_height="115dp"
+        android:layout_marginTop="125dp"
+        app:cardBackgroundColor="#0B623E"
+        app:cardCornerRadius="16dp"
+        android:layout_marginStart="-10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/card_saldo"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.5">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="15dp">
+
+            <ImageButton
+                android:id="@+id/check_saldo_button"
+                android:layout_width="28dp"
+                android:layout_height="20dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/check_saldo_desc"
+                android:importantForAccessibility="no"
+                android:padding="3dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/view_button"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/account"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Rekening"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="10dp"
+                android:textSize="15sp"
+                app:layout_constraintBottom_toTopOf="@id/account_number_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/check_saldo_button" />
 
             <TextView
                 android:id="@+id/account_number_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="No Rekening: XXXXXXXXX"
+                android:layout_marginTop="5dp"
+                android:text="XXXXXXXXX"
+                android:textStyle="bold"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
-                android:layout_marginTop="8dp"/>
-        </LinearLayout>
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:layout_marginLeft="240dp">
-            <ImageButton
-                android:id="@+id/check_saldo_button"
-                android:layout_width="50dp"
-                android:layout_height="30dp"
-                android:layout_gravity="center"
-                android:layout_marginTop="10dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/check_saldo_desc"
-                android:padding="3dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/view_button"
-                android:importantForAccessibility="no"
-                tools:ignore="MissingConstraints"/>
-        </LinearLayout>
+                app:layout_constraintStart_toStartOf="@id/account"
+                app:layout_constraintTop_toBottomOf="@id/account" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

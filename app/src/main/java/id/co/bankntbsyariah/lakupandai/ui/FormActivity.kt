@@ -313,6 +313,19 @@ class FormActivity : AppCompatActivity() {
                                     Log.d("FormActivity", "NIK sudah terisi dengan: $currentValue")
                                 }
                             } else {
+                                if(component.label == "Kode Agen"){
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
+                                    val currentValue = component.compValues?.compValue?.firstOrNull()?.value
+                                    Log.d("FormActivity", "Current Agen Value : $currentValue")
+                                    if (currentValue == "null" && savedKodeAgen != null) {
+                                        Log.d("FormActivity", "NIK diisi dengan nilai: $savedKodeAgen")
+                                        component.compValues.compValue.firstOrNull()?.value =
+                                            savedKodeAgen.toString()
+                                    } else {
+                                        Log.d("FormActivity", "Kode Agen sudah terisi dengan: $savedKodeAgen")
+                                    }
+                                }
                                 Log.d("FormActivity", "NIK tidak ter-update")
                                 component.compValues?.compValue?.firstOrNull()?.value ?: ""
                             }
@@ -965,8 +978,14 @@ class FormActivity : AppCompatActivity() {
 
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
+                    Log.d(TAG, "Full JSON Response: $jsonResponse")
                     val token = jsonResponse.optString("token")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
+                    val fullname = jsonResponse.optJSONObject("data")?.optString("fullname")
+
+                    Log.d(TAG, "Fullname: $fullname")
+                    Log.d(TAG, "Token: $token")
+
 
                     if (token.isNotEmpty() && merchantData != null) {
                         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -975,6 +994,7 @@ class FormActivity : AppCompatActivity() {
                         // Menyimpan data pengguna
                         editor.putString("username", username)
                         editor.putString("token", token)
+                        editor.putString("fullname", fullname)
 
                         // Menyimpan data merchant
                         editor.putInt("merchant_id", merchantData.optInt("id"))

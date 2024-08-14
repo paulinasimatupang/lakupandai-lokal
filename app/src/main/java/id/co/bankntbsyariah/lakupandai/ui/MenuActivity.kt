@@ -74,6 +74,14 @@ class MenuActivity : AppCompatActivity() {
             }
         )
 
+        val userGreetingTextView: TextView? = findViewById(R.id.user_greeting)
+        if (userGreetingTextView != null) {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
+            Log.d("MenuActivity", "Nama User : $Userfullname")
+            userGreetingTextView.text = "Hi, $Userfullname!"
+        }
+
         // Initialize Image Slider only if the current layout contains the image slider
         val imageSliderView: View? = findViewById(R.id.imageSlider)
         if (imageSliderView != null) {
@@ -408,8 +416,8 @@ class MenuActivity : AppCompatActivity() {
                                 }
 
                                 runOnUiThread {
-                                    findViewById<TextView>(R.id.account_number_text)?.text = "No Rekening: $accountNumber"
-                                    findViewById<TextView>(R.id.saldo_text)?.text = "Saldo: $saldo"
+                                    findViewById<TextView>(R.id.account_number_text)?.text = "$accountNumber"
+                                    findViewById<TextView>(R.id.saldo_text)?.text = "Rp$saldo"
                                     Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
                                     Log.d("MenuActivity", "Updated Saldo text: $saldo")
                                 }

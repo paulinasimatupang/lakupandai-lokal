@@ -25,7 +25,7 @@ class ImageSliderAdapter(
     override fun onBindViewHolder(holder: SliderViewHolder, position: Int) {
         val imageName = imageList[position]
 
-        val imageUrl = "http://108.137.154.8:8081/ARRest/static/$imageName.png"
+        val imageUrl = "http://108.137.154.8:8081/ARRest/static/$imageName"
         Glide.with(context)
             .load(imageUrl)
             .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))

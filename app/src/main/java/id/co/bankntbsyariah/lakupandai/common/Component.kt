@@ -15,7 +15,7 @@ data class Component(
 
 data class ComponentValue(
     val print: String?,
-    val value: String?
+    var value: String?
 )
 
 data class CompValues(

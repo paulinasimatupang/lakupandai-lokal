@@ -45,13 +45,11 @@ import java.util.concurrent.TimeUnit
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
-    private var isForm = false
     private val inputValues = mutableMapOf<String, String>()
     private var msg03Value: String? = null
     private var isOtpValidated = false
     private var otpDialog: AlertDialog? = null
-    // coba
-    private val formInputs = mutableMapOf<String, String>()
+    private var nikValue: String? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -73,7 +71,6 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-        // Load the form and setup screen
         lifecycleScope.launch {
             val formValue = loadForm()
             setupScreen(formValue)
@@ -305,6 +302,20 @@ class FormActivity : AppCompatActivity() {
                             setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
                         })
                         addView(TextView(this@FormActivity).apply {
+                            Log.d("FormActivity", "NIK Value : $nikValue")
+                            if (component.label == "NIK") {
+                                val currentValue = component.compValues?.compValue?.firstOrNull()?.value
+                                Log.d("FormActivity", "Current Value : $currentValue")
+                                if (currentValue == "null" && nikValue != null) {
+                                    Log.d("FormActivity", "NIK diisi dengan nilai: $nikValue")
+                                    component.compValues.compValue.firstOrNull()?.value = nikValue
+                                } else {
+                                    Log.d("FormActivity", "NIK sudah terisi dengan: $currentValue")
+                                }
+                            } else {
+                                Log.d("FormActivity", "NIK tidak ter-update")
+                                component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                            }
                             text = when (component.id) {
                                 "CIF32" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
                                     "1" -> "Laki-Laki"
@@ -385,9 +396,14 @@ class FormActivity : AppCompatActivity() {
 //                            }
                         }
                         inputValues[component.id] = ""
+                        nikValue = null;
                         editText.addTextChangedListener {
-                            inputValues[component.id] = it.toString()
-
+                            val inputText = it.toString()
+                            inputValues[component.id] = inputText
+                            if (component.label == "NIK") {
+                                nikValue = inputText
+                                Log.d("FormActivity", "NIK : $nikValue")
+                            }
                         }
                         addView(editText)
                     }
@@ -654,7 +670,29 @@ class FormActivity : AppCompatActivity() {
                                 lifecycleScope.launch {
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    handleScreenType(newScreen)
+                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                    if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                        newScreen.id = "CCIF001"
+                                        var newScreenId = newScreen.id
+                                        var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
+                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                        // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                            putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                        }
+                                        startActivity(intent)
+                                    } else {
+                                        handleScreenType(newScreen)
+                                    }
                                 }
                             } ?: run {
                                 Log.e("FormActivity", "Failed to fetch response body")
@@ -678,9 +716,32 @@ class FormActivity : AppCompatActivity() {
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                         responseBody?.let { body ->
                             lifecycleScope.launch {
+                                Log.e("FormActivity", "")
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                handleScreenType(newScreen)
+                                Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                    newScreen.id = "CCIF001"
+                                    var newScreenId = newScreen.id
+                                    var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
+                                    if (formValue.isNullOrEmpty()) {
+                                        formValue = withContext(Dispatchers.IO) {
+                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
+                                        }
+                                        Log.i("FormActivity", "Fetched formValue: $formValue")
+                                    }
+                                    setupScreen(formValue)
+                                } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                    // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                    val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                        putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                    }
+                                    startActivity(intent)
+                                } else {
+                                    handleScreenType(newScreen)
+                                }
                             }
                         } ?: run {
                             Log.e("FormActivity", "Failed to fetch response body")
@@ -781,7 +842,12 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity","Kode Agen : $savedKodeAgen")
                         Log.d("FormActivity", "Updated componentValues with savedKodeAgen for Component ID: ${component.id}")
                     }
-                    component.type == 1 -> {
+                    component.type == 1 && component.label == "NIK" -> {
+                        // Use nikValue if component label is "NIK"
+                        componentValues[component.id] = nikValue ?: ""
+                        Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label != "NIK" -> {
                         val value = (component.values.get(0)?.second ?: "") as String
                         componentValues[component.id] = value
                         Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")

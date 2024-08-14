@@ -26,6 +26,7 @@ import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
 import id.co.bankntbsyariah.lakupandai.common.Screen
+import id.co.bankntbsyariah.lakupandai.common.BannerItem
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.RecyclerViewMenuAdapter
@@ -74,18 +75,16 @@ class MenuActivity : AppCompatActivity() {
         )
 
 
-        // Initialize Image Slider
         imageSlider = findViewById(R.id.imageSlider)
         val imageList = listOf(
-            R.mipmap.image1,
-            R.mipmap.image2,
-            R.mipmap.image3
+            BannerItem("banner1"),
+            BannerItem("banner2"),
+            BannerItem("banner3")
         )
 
-        sliderAdapter = ImageSliderAdapter(imageList)
+        sliderAdapter = ImageSliderAdapter(imageList, this)
         imageSlider.adapter = sliderAdapter
 
-        // Optional: Set up auto-slide
         val handler = Handler()
         val runnable = object : Runnable {
             var currentItem = 0
@@ -95,7 +94,7 @@ class MenuActivity : AppCompatActivity() {
                     currentItem = 0
                 }
                 imageSlider.setCurrentItem(currentItem++, true)
-                handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
+                handler.postDelayed(this, 3000)
             }
         }
         handler.postDelayed(runnable, 3000)

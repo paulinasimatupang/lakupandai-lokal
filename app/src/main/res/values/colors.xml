@@ -18,4 +18,9 @@
     <color name="green">#0A6E44</color>
     <color name="yellow">#EFAF32</color>
     <color name="dark_grey">#A6A4A4</color>
+    <color name="blue">#0182BD</color> 68C5EF
+    <color name="grey">#969696</color>
+    <color name="bby_blue">#68C5EF</color>
+    <color name="darker_bby_blue">#4799BE</color>
+    <color name="darker_blue">#055F89</color>
 </resources>

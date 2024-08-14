@@ -41,6 +41,8 @@ import okhttp3.Request
 import org.json.JSONException
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import androidx.core.content.ContextCompat
+import android.view.MotionEvent
 
 class FormActivity : AppCompatActivity() {
 
@@ -295,84 +297,56 @@ class FormActivity : AppCompatActivity() {
                 1 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
-                            text = component.label
-                            textSize = 20f
-                            setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
-                        })
-                        addView(TextView(this@FormActivity).apply {
-                            Log.d("FormActivity", "NIK Value : $nikValue")
-                            if (component.label == "NIK") {
-                                val currentValue = component.compValues?.compValue?.firstOrNull()?.value
-                                Log.d("FormActivity", "Current Value : $currentValue")
-                                if (currentValue == "null" && nikValue != null) {
-                                    Log.d("FormActivity", "NIK diisi dengan nilai: $nikValue")
-                                    component.compValues.compValue.firstOrNull()?.value = nikValue
-                                } else {
-                                    Log.d("FormActivity", "NIK sudah terisi dengan: $currentValue")
-                                }
-                            } else {
-                                Log.d("FormActivity", "NIK tidak ter-update")
-                                component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                            }
-                            text = when (component.id) {
-                                "CIF32" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "Laki-Laki"
-                                    "2" -> "Perempuan"
-                                    else -> ""
-                                }
-                                "CIF34" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "Kawin"
-                                    "2" -> "Belum Kawin"
-                                    "3" -> "Janda/Duda"
-                                    else -> ""
-                                }
-                                "CIF33" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "Islam"
-                                    "2" -> "Kristen Protestan"
-                                    "3" -> "Katholik"
-                                    "4" -> "Budha"
-                                    "5" -> "Hindu"
-                                    "6" -> "Konghucu"
-                                    else -> ""
-                                } "CIF42" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "0" -> "Tidak Menetap"
-                                    "1" -> "Menetap"
-                                    else -> ""
-                                }"CIF43" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "WNI"
-                                    "2" -> "WNA"
-                                    else -> ""
-                                }"CIF47" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "KTP"
-                                    "2" -> "PASSPORT"
-                                    else -> ""
-                                }"CIF49" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "0" -> "A"
-                                    "1" -> "AB"
-                                    "2" -> "B"
-                                    "3" -> "O"
-                                    "4" -> "-"
-                                    else -> ""
-                                }"CIF51" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "SD"
-                                    "2" -> "SLTP"
-                                    "3" -> "SMA"
-                                    "4" -> "AKADEMI"
-                                    "5" -> "S1"
-                                    "6" -> "S2"
-                                    "7" -> "S3"
-                                    "8" -> "OTHERS"
-                                    else -> ""
-                                }
-                                else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                            }
-                            setPadding(paddingLeft, paddingTop , paddingRight, paddingBottom + 1 )
-                            textSize = 18f
+                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
 
-                        })
-                        background = getDrawable(R.drawable.text_view_background)
+                        if (component.id == "TRF27" || component.id == "TFR24") {
+                            LinearLayout(this@FormActivity).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                layoutParams = LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                )
+                                setPadding(0, 4.dpToPx(), 0, 4.dpToPx())
+
+                                addView(ImageView(this@FormActivity).apply {
+                                    setImageDrawable(ContextCompat.getDrawable(this@FormActivity, R.drawable.ic_card))
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        24.dpToPx(), 24.dpToPx()
+                                    ).apply {
+                                        marginEnd = 8.dpToPx()
+                                    }
+                                })
+
+                                addView(TextView(this@FormActivity).apply {
+                                    text = getComponentValue(component)
+                                    textSize = 18f
+                                    setPadding(0, 0, 0, 0)
+                                })
+                            }.also { addView(it) }
+
+                            background = when (component.id) {
+                                "TRF27" -> ContextCompat.getDrawable(this@FormActivity, R.drawable.custom_text_edit)
+                                "TFR24" -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_bby_blue)
+                                else -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
+                            }
+
+                        } else {
+                            addView(TextView(this@FormActivity).apply {
+                                text = component.label
+                                textSize = 15f
+                                setTypeface(null, Typeface.NORMAL)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
+                            })
+
+                            addView(TextView(this@FormActivity).apply {
+                                text = getComponentValue(component)
+                                textSize = 18f
+                                setPadding(16.dpToPx(), 0, 16.dpToPx(), 8.dpToPx()) // Adjust padding to be closer to the label
+                            })
+
+                            background = ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
+                        }
                     }
                 }
                 2 -> {
@@ -419,14 +393,49 @@ class FormActivity : AppCompatActivity() {
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-                            background = getDrawable(R.drawable.edit_text_background)
+                            background = getDrawable(R.drawable.pass_bg)
                             id = View.generateViewId()
                             textSize = 18f
+
+                            // Adjust the padding to move the hint text slightly to the right
+                            setPadding(48, paddingTop, 48, paddingBottom) // Adjust left and right padding
+
+                            // Set the eye icon to the right of the EditText
+                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
+
+                            // Add padding between the text and eye icon
+                            setCompoundDrawablePadding(16)
+
+                            // Toggle visibility on eye icon touch
+                            setOnTouchListener { v, event ->
+                                if (event.action == MotionEvent.ACTION_UP) {
+                                    if (event.rawX >= (right - compoundDrawables[2].bounds.width() - paddingRight)) {
+                                        if (inputType == android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) {
+                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_open, 0)
+                                        } else {
+                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
+                                        }
+                                        setSelection(text.length)  // Move cursor to end
+                                        return@setOnTouchListener true
+                                    }
+                                }
+                                false
+                            }
                         }
+
+                        // Increase the size of the EditText box
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 16, 0, 16) // Add margins if needed
+                        editText.layoutParams = params
+
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
-
                         }
                         addView(editText)
                     }
@@ -634,6 +643,71 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    fun Int.dpToPx(): Int {
+        val density = resources.displayMetrics.density
+        return (this * density).toInt()
+    }
+
+    fun getComponentValue(component: Component): String {
+        return when (component.id) {
+            "CIF32" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "1" -> "Laki-Laki"
+                "2" -> "Perempuan"
+                else -> ""
+            }
+            "CIF34" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "1" -> "Kawin"
+                "2" -> "Belum Kawin"
+                "3" -> "Janda/Duda"
+                else -> ""
+            }
+            "CIF33" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "1" -> "Islam"
+                "2" -> "Kristen Protestan"
+                "3" -> "Katholik"
+                "4" -> "Budha"
+                "5" -> "Hindu"
+                "6" -> "Konghucu"
+                else -> ""
+            }
+            "CIF42" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "0" -> "Tidak Menetap"
+                "1" -> "Menetap"
+                else -> ""
+            }
+            "CIF43" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "1" -> "WNI"
+                "2" -> "WNA"
+                else -> ""
+            }
+            "CIF47" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "1" -> "KTP"
+                "2" -> "PASSPORT"
+                else -> ""
+            }
+            "CIF49" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "0" -> "A"
+                "1" -> "AB"
+                "2" -> "B"
+                "3" -> "O"
+                "4" -> "-"
+                else -> ""
+            }
+            "CIF51" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
+                "1" -> "SD"
+                "2" -> "SLTP"
+                "3" -> "SMA"
+                "4" -> "AKADEMI"
+                "5" -> "S1"
+                "6" -> "S2"
+                "7" -> "S3"
+                "8" -> "OTHERS"
+                else -> ""
+            }
+            else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
+        }
     }
 
 

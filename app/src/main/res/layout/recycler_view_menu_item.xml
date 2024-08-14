@@ -6,7 +6,7 @@
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="120dp"
         app:cardBackgroundColor="#A6A4A4"
         app:cardCornerRadius="8dp"
         app:cardElevation="@dimen/cardview_default_elevation"
@@ -40,9 +40,8 @@
                 android:layout_marginTop="4dp"
                 android:gravity="center"
                 android:text="Buka Rekening"
-                android:textColor="@color/white"
+                android:textColor="@color/black"
                 android:textSize="11sp"
-
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/header_image" />

@@ -240,6 +240,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
+            screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {

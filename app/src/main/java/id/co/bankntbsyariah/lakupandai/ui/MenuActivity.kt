@@ -86,13 +86,14 @@ class MenuActivity : AppCompatActivity() {
         val imageSliderView: View? = findViewById(R.id.imageSlider)
         if (imageSliderView != null) {
             imageSlider = imageSliderView as ViewPager2
+            val imageUrlBase = "http://108.137.154.8:8081/ARRest/static"
             val imageList = listOf(
-                BannerItem("banner1"),
-                BannerItem("banner2"),
-                BannerItem("banner3")
+                BannerItem("banner1.png"),
+                BannerItem("banner2.png"),
+                BannerItem("banner3.png")
             )
 
-            sliderAdapter = ImageSliderAdapter(imageList, this)
+            sliderAdapter = ImageSliderAdapter(imageList, this, imageUrlBase)
             imageSlider.adapter = sliderAdapter
 
             // Optional: Set up auto-slide
@@ -101,7 +102,7 @@ class MenuActivity : AppCompatActivity() {
                 var currentItem = 0
 
                 override fun run() {
-                    if (currentItem == imageList.size) {
+                    if (currentItem >= imageList.size) {
                         currentItem = 0
                     }
                     imageSlider.setCurrentItem(currentItem++, true)
@@ -110,8 +111,9 @@ class MenuActivity : AppCompatActivity() {
             }
             handler.postDelayed(runnable, 3000)
         } else {
-            Log.d("MenuActivity", "No image slider found for menuId: $menuId")
+            Log.d("MenuActivity", "No image slider found")
         }
+
 
 
         val someTextView: TextView? = findViewById(R.id.title)

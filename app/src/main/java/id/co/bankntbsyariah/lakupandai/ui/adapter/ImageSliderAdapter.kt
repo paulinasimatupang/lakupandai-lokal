@@ -13,8 +13,9 @@ import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.BannerItem
 
 class ImageSliderAdapter(
-    private val imageList: List<BannerItem>,  // List of image names
-    private val context: Context
+    private val imageList: List<BannerItem>,  // List of BannerItems
+    private val context: Context,
+    private val imageUrlBase: String  // Base URL for images
 ) : RecyclerView.Adapter<ImageSliderAdapter.SliderViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SliderViewHolder {
@@ -23,9 +24,9 @@ class ImageSliderAdapter(
     }
 
     override fun onBindViewHolder(holder: SliderViewHolder, position: Int) {
-        val imageName = imageList[position]
+        val bannerItem = imageList[position]
 
-        val imageUrl = "http://108.137.154.8:8081/ARRest/static/$imageName"
+        val imageUrl = "$imageUrlBase/${bannerItem.imageName}.png"  // Use the base URL and image name
         Glide.with(context)
             .load(imageUrl)
             .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))
@@ -34,16 +35,6 @@ class ImageSliderAdapter(
 
     override fun getItemCount(): Int {
         return imageList.size
-    }
-
-    // Check if the icon name exists in the mapping
-    private fun isIconNameInCompIcon(imageName: String): Boolean {
-        val compIconMapping = mapOf(
-            "banner1" to "banner1.png",
-            "banner2" to "banner2.png",
-            "banner3" to "banner3.png",
-        )
-        return compIconMapping.containsValue(imageName)
     }
 
     class SliderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

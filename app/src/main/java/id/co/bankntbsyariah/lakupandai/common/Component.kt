@@ -10,7 +10,7 @@ data class Component(
     var desc: String,
     var seq: Int,
     var opt: String,
-    val values: List<Pair<String, String>> = emptyList(),
+    var values: List<Pair<String, String>> = emptyList(),
     val compValues: CompValues? = null
 )
 
@@ -20,5 +20,5 @@ data class ComponentValue(
 )
 
 data class CompValues(
-    val compValue: List<ComponentValue>
+    var compValue: List<ComponentValue>
 )

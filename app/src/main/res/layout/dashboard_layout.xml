@@ -26,16 +26,19 @@
             <!-- Elements that should stay fixed at the top -->
             <ImageButton
                 android:id="@+id/hamburger_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="28dp"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginStart="5%"
+                android:layout_marginTop="5%"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:importantForAccessibility="no"
                 android:src="@drawable/hamburger_button"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_percent="0.1"
+                app:layout_constraintHeight_percent="0.1"
                 tools:ignore="MissingConstraints" />
+
             <LinearLayout
                 android:id="@+id/user_greeting_layout"
                 android:layout_width="wrap_content"
@@ -49,18 +52,20 @@
                 <!-- ImageView for Logo -->
                 <ImageView
                     android:id="@+id/logo_image"
-                    android:layout_width="45dp"
-                    android:layout_height="45dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:src="@mipmap/logo_aja_ntbs"
-                    android:contentDescription="Logo" />
+                    android:contentDescription="Logo"
+                    app:layout_constraintWidth_percent="0.1"
+                    app:layout_constraintHeight_percent="0.1" />
 
                 <!-- TextView for "Hi, <nama user>!" -->
                 <TextView
                     android:id="@+id/user_greeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginTop="15dp"
+                    android:layout_marginStart="5%"
+                    android:layout_marginTop="10%"
                     android:text="Hi, User!"
                     android:textColor="@android:color/white"
                     android:textSize="18sp" />
@@ -68,7 +73,7 @@
             <!-- Overlapping Card Views -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_saldo"
-                android:layout_width="205dp"
+                android:layout_width="0dp"
                 android:layout_height="115dp"
                 android:layout_marginTop="125dp"
                 android:layout_marginStart="3dp"
@@ -187,16 +192,18 @@
 
                 <View
                     android:id="@+id/card_white"
-                    android:layout_width="447dp"
-                    android:layout_height="701dp"
-                    android:layout_marginTop="50dp"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="5%"
                     android:background="@drawable/bg_white"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="0.486"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="@id/card_yellow"
-                    app:layout_constraintVertical_bias="1.0" />
+                    app:layout_constraintVertical_bias="1.0"
+                    app:layout_constraintWidth_percent="1.0"
+                    app:layout_constraintHeight_percent="0.5" />
 
                 <androidx.viewpager2.widget.ViewPager2
                     android:id="@+id/imageSlider"

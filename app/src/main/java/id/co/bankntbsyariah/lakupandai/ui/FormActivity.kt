@@ -851,6 +851,7 @@ class FormActivity : AppCompatActivity() {
                                 lifecycleScope.launch {
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                    processResponse(newScreen.toString())
                                     Log.e("FormActivity", "SCREEN ${screen.id} ")
                                     Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                     if (screen.id == "CCIF000" && newScreen.id == "000000F") {
@@ -900,6 +901,7 @@ class FormActivity : AppCompatActivity() {
                                 Log.e("FormActivity", "")
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                processResponse(newScreen.toString())
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                 if (screen.id == "CCIF000" && newScreen.id == "000000F") {
@@ -987,8 +989,6 @@ class FormActivity : AppCompatActivity() {
         }
         buttonContainer.addView(button)
     }
-
-
 
     private fun showDatePickerDialog(editText: EditText) {
         val calendar = Calendar.getInstance()
@@ -1194,5 +1194,35 @@ class FormActivity : AppCompatActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             putExtra(Constants.KEY_MENU_ID, "MN00000")
         })
+    }
+    private fun processResponse(response: String) {
+        if (response.isBlank()) {
+            Log.d("TransactionLog", "Response is empty or blank")
+            return
+        }
+
+        // Pisahkan response berdasarkan '\n'
+        val lines = response.split("\n").filter { it.isNotBlank() } // Filter blank strings
+
+        if (lines.isEmpty()) {
+            Log.d("TransactionLog", "No transactions found after splitting response")
+            return
+        }
+
+        // Define a regex pattern to match transaction lines
+        val transactionPattern = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}""")
+
+        // Filter and log only the lines that match the transaction pattern
+        val transactions = lines.filter { line -> transactionPattern.containsMatchIn(line) }
+
+        if (transactions.isEmpty()) {
+            Log.d("TransactionLog", "No valid transactions found")
+            return
+        }
+
+        // Log each transaction with the desired format
+        transactions.forEachIndexed { index, transaction ->
+            Log.d("TransactionLog", "List ${index + 1} = $transaction")
+        }
     }
 }

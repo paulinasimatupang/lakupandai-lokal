@@ -48,10 +48,12 @@ class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
     private val inputValues = mutableMapOf<String, String>()
+    val errorTextViews = mutableMapOf<Int, TextView>()
     private var msg03Value: String? = null
     private var isOtpValidated = false
     private var otpDialog: AlertDialog? = null
     private var nikValue: String? = null
+
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -248,8 +250,6 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun setupForm(screen: Screen, containerView: View? = null) {
-
-
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
@@ -750,6 +750,13 @@ class FormActivity : AppCompatActivity() {
 //        } else {
 //            Toast.makeText(this, "Validasi gagal", Toast.LENGTH_SHORT).show()
 //        }
+
+        screen?.comp?.forEach { comp ->
+            if (comp.type == 2 && !validateInput(comp)) {
+                return
+            }
+        }
+
         if (screen?.id == "MB81120") {
             val startDateComponent = screen.comp.find { it.id == "SD001" }
             val endDateComponent = screen.comp.find { it.id == "ED001" }
@@ -775,7 +782,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Difference in Days: $diffInDays")
 
                         if (diffInDays > 7) {
-                            Toast.makeText(this, "Maksimal periode 7 hari", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Maksimal Periode Tanggal 7 hari", Toast.LENGTH_SHORT).show()
                             return
                         }
                     } else {
@@ -896,6 +903,33 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun validateInput(component: Component): Boolean {
+        Log.d("FormActivity", "Comp OPT: ${component.opt}")
+
+        val mandatory = component.opt.substring(0, 1).toIntOrNull() ?: 0
+        val minLength = component.opt.substring(3, 6).toIntOrNull() ?: 0
+        val maxLength = component.opt.substring(6).toIntOrNull() ?: Int.MAX_VALUE
+
+        Log.d("FormActivity", "mandatory: $mandatory")
+        Log.d("FormActivity", "min_length: $minLength")
+        Log.d("FormActivity", "max_length: $maxLength")
+
+        val inputValue = inputValues[component.id] ?: ""
+        Log.d("FormActivity", "input value: $inputValue")
+        Log.d("FormActivity", "input value length: ${inputValue.length}")
+
+        if (mandatory == 1 && inputValue == "") {
+            Toast.makeText(this, "${component.label} Wajib Diisi", Toast.LENGTH_SHORT).show()
+            return false
+        } else if (inputValue.length < minLength) {
+            Toast.makeText(this, "${component.label} Minimal $minLength karakter", Toast.LENGTH_SHORT).show()
+            return false
+        } else if (inputValue.length > maxLength) {
+            Toast.makeText(this, "${component.label} Maksimal $maxLength karakter", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
 
     private fun showPopup(screen: Screen, component: Component) {
         val dialogView = layoutInflater.inflate(R.layout.pop_up, null)

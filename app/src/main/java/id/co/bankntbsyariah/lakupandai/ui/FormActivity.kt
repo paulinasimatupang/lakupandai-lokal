@@ -602,10 +602,26 @@ class FormActivity : AppCompatActivity() {
                                 val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
                                 inputValues["OTP"] = otpValue
 
-                                if (s?.length == 1) {
-                                    val nextIndex = index + 1
-                                    if (nextIndex < otpDigits.size) {
-                                        otpDigits[nextIndex].requestFocus()
+                                s?.let {
+                                    when {
+                                        it.length == 1 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < otpDigits.size) {
+                                                otpDigits[nextIndex].requestFocus()
+                                            }
+                                        }
+                                        it.length == 0 -> {
+                                            val prevIndex = index - 1
+                                            if (prevIndex >= 0) {
+                                                otpDigits[prevIndex].requestFocus()
+                                            }
+                                        }
+                                        it.length > 1 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < otpDigits.size) {
+                                                otpDigits[nextIndex].requestFocus()
+                                            }
+                                        }
                                     }
                                 }
                             }

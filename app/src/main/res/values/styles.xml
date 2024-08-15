@@ -27,4 +27,19 @@
         <item name="android:textColor">@color/black</item>
         <item name="android:padding">16dp</item>
     </style>
+
+    <style name="TransparentActivity" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item> <!-- Adjust dim amount -->
+    </style>
+
+    <style name="BottomNavViewCurvedShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">20dp</item> <!-- Ubah sesuai kebutuhan -->
+        <item name="cornerSizeTopRight">20dp</item> <!-- Ubah sesuai kebutuhan -->
+    </style>
+
+
 </resources>

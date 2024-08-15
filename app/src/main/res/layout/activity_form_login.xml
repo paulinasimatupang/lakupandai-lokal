@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
-    tools:context=".ui.LoginActivity">
+    tools:context=".ui.FormActivity">
 
     <ImageView
         android:id="@+id/top_logo"
@@ -31,66 +31,87 @@
         android:src="@mipmap/logo_bank_ntb_syariah"
         android:contentDescription="@string/logo_alt"
         />
-
-    <EditText
-        android:id="@+id/usernameEditText"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="100dp"
-        android:hint="Username"
-        android:minHeight="48dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="50dp"
         app:layout_constraintTop_toBottomOf="@id/bank_logo"
+        app:layout_constraintBottom_toTopOf="@id/footer_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        />
+        tools:ignore="SpeakableTextPresentCheck">
 
-    <EditText
-        android:id="@+id/passwordEditText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:hint="Password"
-        android:inputType="textPassword"
-        android:minHeight="48dp"
-        app:layout_constraintTop_toBottomOf="@id/usernameEditText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        />
+        <LinearLayout
+            android:id="@+id/menu_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="15dp"
+            android:orientation="vertical"
+            android:padding="8dp" />
+    </androidx.core.widget.NestedScrollView>
 
-    <Button
-        android:id="@+id/loginButton"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="Login"
-        android:backgroundTint="@color/green"
-        android:textColor="@color/white"
-        app:layout_constraintTop_toBottomOf="@id/passwordEditText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        />
+    <!--    <EditText-->
+    <!--        android:id="@+id/usernameEditText"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginTop="100dp"-->
+    <!--        android:hint="Username"-->
+    <!--        android:minHeight="48dp"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/bank_logo"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        app:layout_constraintLeft_toLeftOf="parent"-->
+    <!--        app:layout_constraintRight_toRightOf="parent"-->
+    <!--        />-->
+
+    <!--    <EditText-->
+    <!--        android:id="@+id/passwordEditText"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginTop="20dp"-->
+    <!--        android:hint="Password"-->
+    <!--        android:inputType="textPassword"-->
+    <!--        android:minHeight="48dp"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/usernameEditText"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        />-->
+
+    <!--    <Button-->
+    <!--        android:id="@+id/loginButton"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginTop="20dp"-->
+    <!--        android:text="Login"-->
+    <!--        android:backgroundTint="@color/green"-->
+    <!--        android:textColor="@color/white"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/passwordEditText"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        />-->
 
     <LinearLayout
         android:id="@+id/footer_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
+        android:orientation="vertical"
+        android:padding="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        >
+        android:gravity="center"
+        android:elevation="10dp">
 
         <LinearLayout
             android:id="@+id/button_type_7_container"
-            android:layout_width="360dp"
+            android:layout_width="400dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@android:color/transparent"
             android:orientation="vertical"
-            android:padding="30dp"></LinearLayout>
-
+            android:padding="30dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

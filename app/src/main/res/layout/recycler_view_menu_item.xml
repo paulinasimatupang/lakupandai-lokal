@@ -5,11 +5,13 @@
     android:layout_height="wrap_content">
 
     <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="75dp"
+        android:layout_height="110dp"
         app:cardBackgroundColor="#A6A4A4"
         app:cardCornerRadius="8dp"
-        app:cardElevation="@dimen/cardview_default_elevation"
+        app:cardElevation="6dp"
+        app:cardMaxElevation="2dp"
+        app:cardUseCompatPadding="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -23,8 +25,8 @@
 
             <ImageView
                 android:id="@+id/header_image"
-                android:layout_width="70dp"
-                android:layout_height="70dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:padding="3dp"
                 android:scaleType="fitCenter"
                 android:src="@mipmap/logo_aja_ntbs"
@@ -37,11 +39,11 @@
                 android:id="@+id/title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:gravity="center"
                 android:text="Buka Rekening"
                 android:textColor="@color/white"
-                android:textSize="8sp"
+                android:textSize="11sp"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

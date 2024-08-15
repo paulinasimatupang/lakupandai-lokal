@@ -21,13 +21,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
 import id.co.bankntbsyariah.lakupandai.common.Screen
+import id.co.bankntbsyariah.lakupandai.common.BannerItem
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.RecyclerViewMenuAdapter
+import id.co.bankntbsyariah.lakupandai.ui.adapter.ImageSliderAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import id.co.bankntbsyariah.lakupandai.utils.SpacingItemDecorator
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +46,8 @@ class MenuActivity : AppCompatActivity() {
     private var menuId:String = Constants.DEFAULT_ROOT_ID
     private val menuList = ArrayList<MenuItem>()
     private var backToExit = false
+    private lateinit var imageSlider: ViewPager2
+    private lateinit var sliderAdapter: ImageSliderAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +73,46 @@ class MenuActivity : AppCompatActivity() {
                 else -> R.layout.activity_menu
             }
         )
+
+        val userGreetingTextView: TextView? = findViewById(R.id.user_greeting)
+        if (userGreetingTextView != null) {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
+            Log.d("MenuActivity", "Nama User : $Userfullname")
+            userGreetingTextView.text = "Hi, $Userfullname!"
+        }
+
+        // Initialize Image Slider only if the current layout contains the image slider
+        val imageSliderView: View? = findViewById(R.id.imageSlider)
+        if (imageSliderView != null) {
+            imageSlider = imageSliderView as ViewPager2
+            val imageList = listOf(
+                BannerItem("banner1"),
+                BannerItem("banner2"),
+                BannerItem("banner3")
+            )
+
+            sliderAdapter = ImageSliderAdapter(imageList, this)
+            imageSlider.adapter = sliderAdapter
+
+            // Optional: Set up auto-slide
+            val handler = Handler()
+            val runnable = object : Runnable {
+                var currentItem = 0
+
+                override fun run() {
+                    if (currentItem == imageList.size) {
+                        currentItem = 0
+                    }
+                    imageSlider.setCurrentItem(currentItem++, true)
+                    handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
+                }
+            }
+            handler.postDelayed(runnable, 3000)
+        } else {
+            Log.d("MenuActivity", "No image slider found for menuId: $menuId")
+        }
+
 
         val someTextView: TextView? = findViewById(R.id.title)
         if (someTextView != null) {
@@ -165,8 +210,38 @@ class MenuActivity : AppCompatActivity() {
     private fun handleScreen(screen: Screen) {
         when (screen.type) {
             Constants.SCREEN_TYPE_FORM -> navigateToFormActivity()
-            Constants.SCREEN_TYPE_POPUP_GAGAL,
-            Constants.SCREEN_TYPE_POPUP_SUKSES,
+            Constants.SCREEN_TYPE_POPUP_GAGAL -> {
+                when (screen.id) {
+                    "000000F" -> {
+                        // Handle failure case
+                        val failureMessage = screen.comp.firstOrNull { it.id == "0000A" }
+                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
+                        val intent = Intent(this@MenuActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                            putExtra("MESSAGE_BODY", failureMessage)
+                        }
+                        startActivity(intent)
+                    }
+                    else -> {
+                        // Handle other failure cases if necessary
+                    }
+                }
+            }
+            Constants.SCREEN_TYPE_POPUP_SUKSES -> {
+                when (screen.id) {
+                    "000000D" -> {
+                        // Handle success case
+                        val intent = Intent(this@MenuActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                            putExtra("MESSAGE_BODY", "Operation successful.")
+                        }
+                        startActivity(intent)
+                    }
+                    else -> {
+                        // Handle other success cases if necessary
+                    }
+                }
+            }
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
                 // Handle popups or alerts
             }
@@ -276,14 +351,16 @@ class MenuActivity : AppCompatActivity() {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
-            val norekening = sharedPreferences.getString("norekening", "") ?: "" // Mengambil norekening dari SharedPreferences
+            val norekening = sharedPreferences.getString("norekening", "") ?: ""
+            val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
             val msg = JSONObject()
             val msgId = "353471045058692200995" //stan + timestamp
             val msgUi = "353471045058692"
             val msgSi = "N00001"
             val username = savedUsername
-            val accountNumber = norekening // Menggunakan norekening sebagai accountNumber
-            val msgDt = "$username|$accountNumber"
+            val accountNumber = norekening
+            val name = merchant_name
+            val msgDt = "$username|$accountNumber|$name"
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)
@@ -339,8 +416,8 @@ class MenuActivity : AppCompatActivity() {
                                 }
 
                                 runOnUiThread {
-                                    findViewById<TextView>(R.id.account_number_text)?.text = "No Rekening: $accountNumber"
-                                    findViewById<TextView>(R.id.saldo_text)?.text = "Saldo: $saldo"
+                                    findViewById<TextView>(R.id.account_number_text)?.text = "$accountNumber"
+                                    findViewById<TextView>(R.id.saldo_text)?.text = "Rp$saldo"
                                     Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
                                     Log.d("MenuActivity", "Updated Saldo text: $saldo")
                                 }

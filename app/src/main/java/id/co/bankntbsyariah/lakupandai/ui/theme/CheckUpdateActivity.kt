@@ -95,9 +95,11 @@ class CheckUpdateActivity : AppCompatActivity() {
         }
     }
 
-    private fun navigateToLoginActivity() {
+    private fun navigateToLoginActivity(){
         finish()
-        startActivity(Intent(this, LoginActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        startActivity(Intent(this, MenuActivity::class.java).apply{
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_FORM_ID, "MN00000")
+        })
     }
 }

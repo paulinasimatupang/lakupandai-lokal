@@ -117,9 +117,12 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
     }
 
     override fun requestPost(msg: JSONObject, callback: (String?) -> Unit) {
-        val requestBody = RequestBody.create(null, msg.toString())
+        val mediaType = "text/plain".toMediaTypeOrNull()
+
+        val requestBody = RequestBody.create(mediaType, msg.toString())
         val request = Request.Builder()
-            .url("http://108.137.154.8:8080/ARRest/api/")  // Pastikan URL ini benar dan dapat mengakses endpoint API
+            .url("http://108.137.154.8:8080/ARRest/api/")
+            .addHeader("Content-Type", "text/plain")
             .post(requestBody)
             .build()
 

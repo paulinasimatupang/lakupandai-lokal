@@ -105,6 +105,7 @@ class MenuActivity : AppCompatActivity() {
                     if (currentItem >= imageList.size) {
                         currentItem = 0
                     }
+                    Log.d("MenuActivity", "Sliding to item: $currentItem")
                     imageSlider.setCurrentItem(currentItem++, true)
                     handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
                 }
@@ -113,8 +114,6 @@ class MenuActivity : AppCompatActivity() {
         } else {
             Log.d("MenuActivity", "No image slider found")
         }
-
-
 
         val someTextView: TextView? = findViewById(R.id.title)
         if (someTextView != null) {

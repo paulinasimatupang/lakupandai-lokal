@@ -69,6 +69,7 @@ class ScreenParser {
                         compJson.optString("comp_icon", ""),
                         compJson.optString("comp_desc", ""),
                         compJson.optInt("seq", 0),
+                        compJson.optString("comp_opt", ""),
                         valuesArray,
                         compValues
                     )

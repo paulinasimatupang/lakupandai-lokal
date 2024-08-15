@@ -9,6 +9,7 @@ data class Component(
     var icon: String,
     var desc: String,
     var seq: Int,
+    var opt: String,
     val values: List<Pair<String, String>> = emptyList(),
     val compValues: CompValues? = null
 )

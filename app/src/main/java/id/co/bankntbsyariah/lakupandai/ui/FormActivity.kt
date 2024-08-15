@@ -593,25 +593,23 @@ class FormActivity : AppCompatActivity() {
 
                     val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4)
 
-                    otpDigits.forEachIndexed { index, editText ->
-                        editText.addTextChangedListener(object : TextWatcher {
+                    otpDigits.forEachIndexed { index, digit ->
+                        digit.addTextChangedListener(object : TextWatcher {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null && s.length == 1) {
-                                    if (index < otpDigits.size - 1) {
-                                        otpDigits[index + 1].requestFocus()
+                                val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
+                                inputValues["OTP"] = otpValue
+
+                                if (s?.length == 1) {
+                                    val nextIndex = index + 1
+                                    if (nextIndex < otpDigits.size) {
+                                        otpDigits[nextIndex].requestFocus()
                                     }
                                 }
                             }
 
-                            override fun afterTextChanged(s: Editable?) {
-                                if (s != null && s.isEmpty()) {
-                                    if (index > 0) {
-                                        otpDigits[index - 1].requestFocus()
-                                    }
-                                }
-                            }
+                            override fun afterTextChanged(s: Editable?) {}
                         })
                     }
 

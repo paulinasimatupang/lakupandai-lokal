@@ -660,7 +660,7 @@ class FormActivity : AppCompatActivity() {
     }
 
     fun getComponentValue(component: Component): String {
-        val currentValue = component.compValues?.compValue?.firstOrNull()?.value
+        var currentValue = component.compValues?.compValue?.firstOrNull()?.value
 
         when (component.label) {
             "NIK" -> {
@@ -687,7 +687,17 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+        // Ambil nilai di luar [OI] jika comp_id adalah CB001
+        if (component.id == "CB001") {
+            currentValue = currentValue?.let {
+                Regex("""\[(?:OI|oi)\](\d+)""").find(it)?.groupValues?.get(1)
+            }
+        }
+
         return when (component.id) {
+//            "CB001" -> {
+//                if (currentValue != "OI") currentValue ?: "" else ""
+//            }
             "CIF32" -> when (currentValue) {
                 "1" -> "Laki-Laki"
                 "2" -> "Perempuan"

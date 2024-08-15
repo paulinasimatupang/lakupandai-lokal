@@ -41,17 +41,19 @@ import okhttp3.Request
 import org.json.JSONException
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import androidx.core.content.ContextCompat
+import android.view.MotionEvent
 
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
-    private var isForm = false
     private val inputValues = mutableMapOf<String, String>()
+    val errorTextViews = mutableMapOf<Int, TextView>()
     private var msg03Value: String? = null
     private var isOtpValidated = false
     private var otpDialog: AlertDialog? = null
-    // coba
-    private val formInputs = mutableMapOf<String, String>()
+    private var nikValue: String? = null
+
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -73,7 +75,6 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-        // Load the form and setup screen
         lifecycleScope.launch {
             val formValue = loadForm()
             setupScreen(formValue)
@@ -250,8 +251,6 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun setupForm(screen: Screen, containerView: View? = null) {
-
-
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
@@ -299,70 +298,56 @@ class FormActivity : AppCompatActivity() {
                 1 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
-                            text = component.label
-                            textSize = 20f
-                            setTypeface(null, Typeface.BOLD)
-                            setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom + 10)
-                        })
-                        addView(TextView(this@FormActivity).apply {
-                            text = when (component.id) {
-                                "CIF32" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "Laki-Laki"
-                                    "2" -> "Perempuan"
-                                    else -> ""
-                                }
-                                "CIF34" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "Kawin"
-                                    "2" -> "Belum Kawin"
-                                    "3" -> "Janda/Duda"
-                                    else -> ""
-                                }
-                                "CIF33" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "Islam"
-                                    "2" -> "Kristen Protestan"
-                                    "3" -> "Katholik"
-                                    "4" -> "Budha"
-                                    "5" -> "Hindu"
-                                    "6" -> "Konghucu"
-                                    else -> ""
-                                } "CIF42" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "0" -> "Tidak Menetap"
-                                    "1" -> "Menetap"
-                                    else -> ""
-                                }"CIF43" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "WNI"
-                                    "2" -> "WNA"
-                                    else -> ""
-                                }"CIF47" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "KTP"
-                                    "2" -> "PASSPORT"
-                                    else -> ""
-                                }"CIF49" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "0" -> "A"
-                                    "1" -> "AB"
-                                    "2" -> "B"
-                                    "3" -> "O"
-                                    "4" -> "-"
-                                    else -> ""
-                                }"CIF51" -> when (component.compValues?.compValue?.firstOrNull()?.value) {
-                                    "1" -> "SD"
-                                    "2" -> "SLTP"
-                                    "3" -> "SMA"
-                                    "4" -> "AKADEMI"
-                                    "5" -> "S1"
-                                    "6" -> "S2"
-                                    "7" -> "S3"
-                                    "8" -> "OTHERS"
-                                    else -> ""
-                                }
-                                else -> component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                            }
-                            setPadding(paddingLeft, paddingTop , paddingRight, paddingBottom + 1 )
-                            textSize = 18f
+                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
 
-                        })
-                        background = getDrawable(R.drawable.text_view_background)
+                        if (component.id == "TRF27" || component.id == "TFR24") {
+                            LinearLayout(this@FormActivity).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                layoutParams = LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                )
+                                setPadding(0, 4.dpToPx(), 0, 4.dpToPx())
+
+                                addView(ImageView(this@FormActivity).apply {
+                                    setImageDrawable(ContextCompat.getDrawable(this@FormActivity, R.drawable.ic_card))
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        24.dpToPx(), 24.dpToPx()
+                                    ).apply {
+                                        marginEnd = 8.dpToPx()
+                                    }
+                                })
+
+                                addView(TextView(this@FormActivity).apply {
+                                    text = getComponentValue(component)
+                                    textSize = 18f
+                                    setPadding(0, 0, 0, 0)
+                                })
+                            }.also { addView(it) }
+
+                            background = when (component.id) {
+                                "TRF27" -> ContextCompat.getDrawable(this@FormActivity, R.drawable.custom_text_edit)
+                                "TFR24" -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_bby_blue)
+                                else -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
+                            }
+
+                        } else {
+                            addView(TextView(this@FormActivity).apply {
+                                text = component.label
+                                textSize = 15f
+                                setTypeface(null, Typeface.NORMAL)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
+                            })
+
+                            addView(TextView(this@FormActivity).apply {
+                                text = getComponentValue(component)
+                                textSize = 18f
+                                setPadding(16.dpToPx(), 0, 16.dpToPx(), 8.dpToPx()) // Adjust padding to be closer to the label
+                            })
+
+                            background = ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
+                        }
                     }
                 }
                 2 -> {
@@ -386,9 +371,14 @@ class FormActivity : AppCompatActivity() {
 //                            }
                         }
                         inputValues[component.id] = ""
+                        nikValue = null;
                         editText.addTextChangedListener {
-                            inputValues[component.id] = it.toString()
-
+                            val inputText = it.toString()
+                            inputValues[component.id] = inputText
+                            if (component.label == "NIK") {
+                                nikValue = inputText
+                                Log.d("FormActivity", "NIK : $nikValue")
+                            }
                         }
                         addView(editText)
                     }
@@ -404,10 +394,46 @@ class FormActivity : AppCompatActivity() {
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-                            background = getDrawable(R.drawable.edit_text_background)
+                            background = getDrawable(R.drawable.pass_bg)
                             id = View.generateViewId()
                             textSize = 18f
+
+                            // Adjust the padding to move the hint text slightly to the right
+                            setPadding(48, paddingTop, 48, paddingBottom) // Adjust left and right padding
+
+                            // Set the eye icon to the right of the EditText
+                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
+
+                            // Add padding between the text and eye icon
+                            setCompoundDrawablePadding(16)
+
+                            // Toggle visibility on eye icon touch
+                            setOnTouchListener { v, event ->
+                                if (event.action == MotionEvent.ACTION_UP) {
+                                    if (event.rawX >= (right - compoundDrawables[2].bounds.width() - paddingRight)) {
+                                        if (inputType == android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) {
+                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_open, 0)
+                                        } else {
+                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
+                                        }
+                                        setSelection(text.length)  // Move cursor to end
+                                        return@setOnTouchListener true
+                                    }
+                                }
+                                false
+                            }
                         }
+
+                        // Increase the size of the EditText box
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 16, 0, 16) // Add margins if needed
+                        editText.layoutParams = params
+
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
@@ -568,13 +594,20 @@ class FormActivity : AppCompatActivity() {
 
                     val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4)
 
-                    otpDigits.forEach { digit ->
+                    otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                                 val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
                                 inputValues["OTP"] = otpValue
+
+                                if (s?.length == 1) {
+                                    val nextIndex = index + 1
+                                    if (nextIndex < otpDigits.size) {
+                                        otpDigits[nextIndex].requestFocus()
+                                    }
+                                }
                             }
 
                             override fun afterTextChanged(s: Editable?) {}
@@ -621,6 +654,99 @@ class FormActivity : AppCompatActivity() {
 
     }
 
+    fun Int.dpToPx(): Int {
+        val density = resources.displayMetrics.density
+        return (this * density).toInt()
+    }
+
+    fun getComponentValue(component: Component): String {
+        val currentValue = component.compValues?.compValue?.firstOrNull()?.value
+
+        when (component.label) {
+            "NIK" -> {
+                if (currentValue == "null" && nikValue != null) {
+                    Log.d("FormActivity", "NIK diisi dengan nilai: $nikValue")
+                    component.compValues?.compValue?.firstOrNull()?.value = nikValue
+                } else {
+                    Log.d("FormActivity", "NIK sudah terisi dengan: $currentValue")
+                }
+            }
+            "Kode Agen" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0).toString()
+                if (currentValue == "null" && savedKodeAgen != "0") {
+                    Log.d("FormActivity", "Kode Agen diisi dengan nilai: $savedKodeAgen")
+                    component.compValues?.compValue?.firstOrNull()?.value = savedKodeAgen
+                } else {
+                    Log.d("FormActivity", "Kode Agen sudah terisi dengan: $savedKodeAgen")
+                }
+            }
+            else -> {
+                component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                Log.d("FormActivity", "Komponen tidak memerlukan pembaruan")
+            }
+        }
+
+        return when (component.id) {
+            "CIF32" -> when (currentValue) {
+                "1" -> "Laki-Laki"
+                "2" -> "Perempuan"
+                else -> ""
+            }
+            "CIF34" -> when (currentValue) {
+                "1" -> "Kawin"
+                "2" -> "Belum Kawin"
+                "3" -> "Janda/Duda"
+                else -> ""
+            }
+            "CIF33" -> when (currentValue) {
+                "1" -> "Islam"
+                "2" -> "Kristen Protestan"
+                "3" -> "Katholik"
+                "4" -> "Budha"
+                "5" -> "Hindu"
+                "6" -> "Konghucu"
+                else -> ""
+            }
+            "CIF42" -> when (currentValue) {
+                "0" -> "Tidak Menetap"
+                "1" -> "Menetap"
+                else -> ""
+            }
+            "CIF43" -> when (currentValue) {
+                "1" -> "WNI"
+                "2" -> "WNA"
+                else -> ""
+            }
+            "CIF47" -> when (currentValue) {
+                "1" -> "KTP"
+                "2" -> "PASSPORT"
+                else -> ""
+            }
+            "CIF49" -> when (currentValue) {
+                "0" -> "A"
+                "1" -> "AB"
+                "2" -> "B"
+                "3" -> "O"
+                "4" -> "-"
+                else -> ""
+            }
+            "CIF51" -> when (currentValue) {
+                "1" -> "SD"
+                "2" -> "SLTP"
+                "3" -> "SMA"
+                "4" -> "AKADEMI"
+                "5" -> "S1"
+                "6" -> "S2"
+                "7" -> "S3"
+                "8" -> "OTHERS"
+                else -> ""
+            }
+            else -> currentValue ?: ""
+        }
+    }
+
+
 
     private fun handleButtonClick(component: Component, screen: Screen?) {
 //        val isComponentValid = validateComponent(component)
@@ -632,6 +758,13 @@ class FormActivity : AppCompatActivity() {
 //        } else {
 //            Toast.makeText(this, "Validasi gagal", Toast.LENGTH_SHORT).show()
 //        }
+
+        screen?.comp?.forEach { comp ->
+            if (comp.type == 2 && !validateInput(comp)) {
+                return
+            }
+        }
+
         if (screen?.id == "MB81120") {
             val startDateComponent = screen.comp.find { it.id == "SD001" }
             val endDateComponent = screen.comp.find { it.id == "ED001" }
@@ -657,7 +790,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Difference in Days: $diffInDays")
 
                         if (diffInDays > 7) {
-                            Toast.makeText(this, "Maksimal periode 7 hari", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Maksimal Periode Tanggal 7 hari", Toast.LENGTH_SHORT).show()
                             return
                         }
                     } else {
@@ -694,7 +827,29 @@ class FormActivity : AppCompatActivity() {
                                 lifecycleScope.launch {
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    handleScreenType(newScreen)
+                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                    if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                        newScreen.id = "CCIF001"
+                                        var newScreenId = newScreen.id
+                                        var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
+                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                        // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                            putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                        }
+                                        startActivity(intent)
+                                    } else {
+                                        handleScreenType(newScreen)
+                                    }
                                 }
                             } ?: run {
                                 Log.e("FormActivity", "Failed to fetch response body")
@@ -718,9 +873,32 @@ class FormActivity : AppCompatActivity() {
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                         responseBody?.let { body ->
                             lifecycleScope.launch {
+                                Log.e("FormActivity", "")
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                handleScreenType(newScreen)
+                                Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                    newScreen.id = "CCIF001"
+                                    var newScreenId = newScreen.id
+                                    var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
+                                    if (formValue.isNullOrEmpty()) {
+                                        formValue = withContext(Dispatchers.IO) {
+                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
+                                        }
+                                        Log.i("FormActivity", "Fetched formValue: $formValue")
+                                    }
+                                    setupScreen(formValue)
+                                } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                    // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                    val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                        putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                    }
+                                    startActivity(intent)
+                                } else {
+                                    handleScreenType(newScreen)
+                                }
                             }
                         } ?: run {
                             Log.e("FormActivity", "Failed to fetch response body")
@@ -733,6 +911,33 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun validateInput(component: Component): Boolean {
+        Log.d("FormActivity", "Comp OPT: ${component.opt}")
+
+        val mandatory = component.opt.substring(0, 1).toIntOrNull() ?: 0
+        val minLength = component.opt.substring(3, 6).toIntOrNull() ?: 0
+        val maxLength = component.opt.substring(6).toIntOrNull() ?: Int.MAX_VALUE
+
+        Log.d("FormActivity", "mandatory: $mandatory")
+        Log.d("FormActivity", "min_length: $minLength")
+        Log.d("FormActivity", "max_length: $maxLength")
+
+        val inputValue = inputValues[component.id] ?: ""
+        Log.d("FormActivity", "input value: $inputValue")
+        Log.d("FormActivity", "input value length: ${inputValue.length}")
+
+        if (mandatory == 1 && inputValue == "") {
+            Toast.makeText(this, "${component.label} Wajib Diisi", Toast.LENGTH_SHORT).show()
+            return false
+        } else if (inputValue.length < minLength) {
+            Toast.makeText(this, "${component.label} Minimal $minLength karakter", Toast.LENGTH_SHORT).show()
+            return false
+        } else if (inputValue.length > maxLength) {
+            Toast.makeText(this, "${component.label} Maksimal $maxLength karakter", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
 
     private fun showPopup(screen: Screen, component: Component) {
         val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
@@ -821,7 +1026,12 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity","Kode Agen : $savedKodeAgen")
                         Log.d("FormActivity", "Updated componentValues with savedKodeAgen for Component ID: ${component.id}")
                     }
-                    component.type == 1 -> {
+                    component.type == 1 && component.label == "NIK" -> {
+                        // Use nikValue if component label is "NIK"
+                        componentValues[component.id] = nikValue ?: ""
+                        Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label != "NIK" -> {
                         val value = (component.values.get(0)?.second ?: "") as String
                         componentValues[component.id] = value
                         Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")

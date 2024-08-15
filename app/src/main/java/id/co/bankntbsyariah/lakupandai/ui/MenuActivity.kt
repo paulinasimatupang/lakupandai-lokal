@@ -21,13 +21,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Constants
 import id.co.bankntbsyariah.lakupandai.common.MenuItem
 import id.co.bankntbsyariah.lakupandai.common.Screen
+import id.co.bankntbsyariah.lakupandai.common.BannerItem
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.RecyclerViewMenuAdapter
+import id.co.bankntbsyariah.lakupandai.ui.adapter.ImageSliderAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import id.co.bankntbsyariah.lakupandai.utils.SpacingItemDecorator
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +46,8 @@ class MenuActivity : AppCompatActivity() {
     private var menuId:String = Constants.DEFAULT_ROOT_ID
     private val menuList = ArrayList<MenuItem>()
     private var backToExit = false
+    private lateinit var imageSlider: ViewPager2
+    private lateinit var sliderAdapter: ImageSliderAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +73,48 @@ class MenuActivity : AppCompatActivity() {
                 else -> R.layout.activity_menu
             }
         )
+
+        val userGreetingTextView: TextView? = findViewById(R.id.user_greeting)
+        if (userGreetingTextView != null) {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
+            Log.d("MenuActivity", "Nama User : $Userfullname")
+            userGreetingTextView.text = "Hi, $Userfullname!"
+        }
+
+        // Initialize Image Slider only if the current layout contains the image slider
+        val imageSliderView: View? = findViewById(R.id.imageSlider)
+        if (imageSliderView != null) {
+            imageSlider = imageSliderView as ViewPager2
+            val imageUrlBase = "http://108.137.154.8:8081/ARRest/static"
+            val imageList = listOf(
+                BannerItem("banner1.png"),
+                BannerItem("banner2.png"),
+                BannerItem("banner3.png")
+            )
+
+            sliderAdapter = ImageSliderAdapter(imageList, this, imageUrlBase)
+            imageSlider.adapter = sliderAdapter
+
+            // Optional: Set up auto-slide
+            val handler = Handler()
+            val runnable = object : Runnable {
+                var currentItem = 0
+
+                override fun run() {
+                    if (currentItem >= imageList.size) {
+                        currentItem = 0
+                    }
+                    imageSlider.setCurrentItem(currentItem++, true)
+                    handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
+                }
+            }
+            handler.postDelayed(runnable, 3000)
+        } else {
+            Log.d("MenuActivity", "No image slider found")
+        }
+
+
 
         val someTextView: TextView? = findViewById(R.id.title)
         if (someTextView != null) {
@@ -371,8 +418,8 @@ class MenuActivity : AppCompatActivity() {
                                 }
 
                                 runOnUiThread {
-                                    findViewById<TextView>(R.id.account_number_text)?.text = "No Rekening: $accountNumber"
-                                    findViewById<TextView>(R.id.saldo_text)?.text = "Saldo: $saldo"
+                                    findViewById<TextView>(R.id.account_number_text)?.text = "$accountNumber"
+                                    findViewById<TextView>(R.id.saldo_text)?.text = "Rp$saldo"
                                     Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
                                     Log.d("MenuActivity", "Updated Saldo text: $saldo")
                                 }

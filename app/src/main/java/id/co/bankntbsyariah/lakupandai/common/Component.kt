@@ -9,13 +9,14 @@ data class Component(
     var icon: String,
     var desc: String,
     var seq: Int,
+    var opt: String,
     val values: List<Pair<String, String>> = emptyList(),
     val compValues: CompValues? = null
 )
 
 data class ComponentValue(
     val print: String?,
-    val value: String?
+    var value: String?
 )
 
 data class CompValues(

@@ -26,10 +26,10 @@
             <!-- Elements that should stay fixed at the top -->
             <ImageButton
                 android:id="@+id/hamburger_button"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_marginStart="5%"
-                android:layout_marginTop="5%"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="50dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:importantForAccessibility="no"
                 android:src="@drawable/hamburger_button"
@@ -64,8 +64,8 @@
                     android:id="@+id/user_greeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="5%"
-                    android:layout_marginTop="10%"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="0dp"
                     android:text="Hi, User!"
                     android:textColor="@android:color/white"
                     android:textSize="18sp" />
@@ -73,7 +73,7 @@
             <!-- Overlapping Card Views -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_saldo"
-                android:layout_width="0dp"
+                android:layout_width="185dp"
                 android:layout_height="115dp"
                 android:layout_marginTop="125dp"
                 android:layout_marginStart="3dp"
@@ -95,7 +95,7 @@
                         android:id="@+id/saldo"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="30dp"
+                        android:layout_marginTop="20dp"
                         android:text="Saldo"
                         android:textColor="@android:color/white"
                         android:textSize="15sp" />
@@ -150,7 +150,7 @@
                         android:layout_height="wrap_content"
                         android:text="No Rekening"
                         android:textColor="@android:color/white"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="0dp"
                         android:textSize="15sp"
                         app:layout_constraintBottom_toTopOf="@id/account_number_text"
                         app:layout_constraintStart_toStartOf="parent"
@@ -174,42 +174,44 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layout_constraintTop_toBottomOf="@id/card1">
+                tools:layout_editor_absoluteX="0dp"
+                tools:layout_editor_absoluteY="16dp"
+                tools:ignore="MissingConstraints">
+                <!--                app:layout_constraintTop_toBottomOf="@id/card1">-->
 
                 <!-- Image Slider -->
-                <View
-                    android:id="@+id/card_yellow"
-                    android:layout_width="422dp"
-                    android:layout_height="178dp"
-                    android:layout_marginTop="270dp"
-                    android:background="@drawable/rounded_corners"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.0"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
 
                 <!-- RecyclerView List Menu -->
 
                 <View
+                    android:id="@+id/card_yellow"
+                    android:layout_width="422dp"
+                    android:layout_height="100dp"
+                    android:layout_marginTop="320dp"
+                    android:background="@drawable/rounded_corners"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.545"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <View
                     android:id="@+id/card_white"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_marginTop="5%"
+                    android:layout_width="447dp"
+                    android:layout_height="700dp"
+                    android:layout_marginTop="50dp"
                     android:background="@drawable/bg_white"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="0.486"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="@id/card_yellow"
-                    app:layout_constraintVertical_bias="1.0"
-                    app:layout_constraintWidth_percent="1.0"
-                    app:layout_constraintHeight_percent="0.5" />
+                    app:layout_constraintVertical_bias="1.0" />
 
                 <androidx.viewpager2.widget.ViewPager2
                     android:id="@+id/imageSlider"
-                    android:layout_width="300dp"
-                    android:layout_height="130dp"
-                    android:layout_marginBottom="52dp"
+                    android:layout_width="350dp"
+                    android:layout_height="150dp"
+                    android:layout_marginBottom="10dp"
                     android:background="@android:color/black"
                     app:layout_constraintBottom_toTopOf="@id/menu_container"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -219,7 +221,7 @@
                     android:id="@+id/menu_container"
                     android:layout_width="410dp"
                     android:layout_height="321dp"
-                    android:layout_marginBottom="96dp"
+                    android:layout_marginBottom="190dp"
                     android:padding="20dp"
                     app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                     app:layout_constrainedHeight="true"

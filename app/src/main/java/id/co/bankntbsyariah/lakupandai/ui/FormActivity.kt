@@ -242,6 +242,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
+            screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {
@@ -667,13 +668,36 @@ class FormActivity : AppCompatActivity() {
 
                     val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4)
 
-                    otpDigits.forEach { digit ->
+                    otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                                 val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
                                 inputValues["OTP"] = otpValue
+
+                                s?.let {
+                                    when {
+                                        it.length == 1 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < otpDigits.size) {
+                                                otpDigits[nextIndex].requestFocus()
+                                            }
+                                        }
+                                        it.length == 0 -> {
+                                            val prevIndex = index - 1
+                                            if (prevIndex >= 0) {
+                                                otpDigits[prevIndex].requestFocus()
+                                            }
+                                        }
+                                        it.length > 1 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < otpDigits.size) {
+                                                otpDigits[nextIndex].requestFocus()
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             override fun afterTextChanged(s: Editable?) {}
@@ -747,7 +771,7 @@ class FormActivity : AppCompatActivity() {
     }
 
     fun getComponentValue(component: Component): String {
-        val currentValue = component.compValues?.compValue?.firstOrNull()?.value
+        var currentValue = component.compValues?.compValue?.firstOrNull()?.value
 
         when (component.label) {
             "NIK" -> {
@@ -774,7 +798,17 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+        // Ambil nilai di luar [OI] jika comp_id adalah CB001
+        if (component.id == "CB001") {
+            currentValue = currentValue?.let {
+                Regex("""\[(?:OI|oi)\](\d+)""").find(it)?.groupValues?.get(1)
+            }
+        }
+
         return when (component.id) {
+//            "CB001" -> {
+//                if (currentValue != "OI") currentValue ?: "" else ""
+//            }
             "CIF32" -> when (currentValue) {
                 "1" -> "Laki-Laki"
                 "2" -> "Perempuan"

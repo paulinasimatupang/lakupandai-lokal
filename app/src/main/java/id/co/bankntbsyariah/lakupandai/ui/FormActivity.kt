@@ -15,9 +15,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
-import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.LayoutInflater
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
@@ -43,26 +43,28 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import androidx.core.content.ContextCompat
 import android.view.MotionEvent
+import android.view.WindowManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import id.co.bankntbsyariah.lakupandai.common.Mutation
+import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
+import java.text.NumberFormat
 
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
-    private var isForm = false
     private val inputValues = mutableMapOf<String, String>()
-    val errorTextViews = mutableMapOf<Int, TextView>()
     private var msg03Value: String? = null
     private var isOtpValidated = false
     private var otpDialog: AlertDialog? = null
     private var nikValue: String? = null
-
+    private var nominalValue = 0.0
+    private var feeValue = 0.0
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-    // coba
-    private val formInputs = mutableMapOf<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -199,6 +201,10 @@ class FormActivity : AppCompatActivity() {
                     .create()
 
                 setupForm(screen, dialogView)
+                otpDialog?.window?.setLayout(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT
+                )
                 otpDialog?.show()
             }
             else -> {
@@ -226,12 +232,10 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_awal)
                 Log.d("FormActivity", "Displaying activity_awal")
             }
-
             "AU00001" -> {
                 setContentView(R.layout.activity_form_login)
                 Log.d("FormActivity", "Displaying activity_form_login")
             }
-
             else -> {
                 // Optionally handle the case where none of the keywords match
                 setContentView(R.layout.activity_form)
@@ -246,6 +250,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
+            screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {
@@ -257,8 +262,7 @@ class FormActivity : AppCompatActivity() {
     private fun setupForm(screen: Screen, containerView: View? = null) {
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
-        var buttonContainer =
-            containerView?.findViewById<LinearLayout>(R.id.button_type_7_container)
+        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -268,9 +272,78 @@ class FormActivity : AppCompatActivity() {
         container.removeAllViews()
         buttonContainer?.removeAllViews()
 
+        // lia
+        var norekComponent: Component? = null
+        var nominalComponent: Component? = null
+        var namaDepan: String? = null
+        var extraText = ""
+
+        for (component in screen.comp) {
+            when (component.id) {
+                "TRF27" , "AG001", "TRF26" -> norekComponent = component
+                "TFR24", "AG002", "AG005" -> {
+                    nominalComponent = component
+                    val fullName = getComponentValue(component)
+                    namaDepan = fullName?.split(" ")?.firstOrNull()?.take(1) ?: ""
+                }
+            }
+            if (screen.id == "TF00003" && component.id == "ST003") {
+                val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
+
+                transaksiBerhasilTextView?.let {
+                    val newText = getComponentValue(component)
+                    if (!newText.isNullOrEmpty()) {
+                        it.text = newText
+                    } else {
+                        Log.e("FormActivity", "Value for component ST003 is null or empty")
+                    }
+                } ?: run {
+                    Log.e("FormActivity", "TextView with ID success not found")
+                }
+            }
+
+            if (component.id == "TRF27" && component.label.contains("Penerima")) {
+                extraText = "Penerima"
+            }else if((component.id == "AG001" || component.id == "TRF26") && component.label.contains("Agen")){
+                extraText = "Agen"
+            }
+
+            for (component in screen.comp) {
+                if (component.id == "D1004") {  // ID komponen untuk jenis mutasi
+                    val originalMutasiValue =
+                        component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                    val formattedMutasi = formatMutasi(originalMutasiValue)
+
+                    val mutasiTextView = TextView(this@FormActivity).apply {
+                        text = formattedMutasi
+                        textSize = 16f
+                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                    }
+
+                    container.addView(mutasiTextView)
+                }
+            }
+
+        }
+
+        if (norekComponent != null && nominalComponent != null) {
+            val inflater = LayoutInflater.from(this@FormActivity)
+            val combinedView = inflater.inflate(R.layout.coba_tf, null).apply {
+                findViewById<TextView>(R.id.norekTextView).text = getComponentValue(norekComponent)
+                findViewById<TextView>(R.id.nominalTextView).text = getComponentValue(nominalComponent)
+                findViewById<TextView>(R.id.namaDepanTextView).text = namaDepan
+                findViewById<TextView>(R.id.extraTextViewTop).text = extraText
+            }
+            container.addView(combinedView)
+        }
+
         Log.d("FormActivity", "Screen components: ${screen.comp}")
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
+
+            if (component.id == "TRF27" || component.id == "TFR24" || component.id == "AG001" ||
+                component.id == "AG002" || component.id == "TRF26" || component.id == "AG005" ||
+                (component.id == "ST003" && screen.id == "TF00003") || component.id == "D1004") continue
 
             if (component.id == "MSG03") {
                 val value = component.compValues?.compValue?.firstOrNull()?.value
@@ -282,6 +355,13 @@ class FormActivity : AppCompatActivity() {
 
             if (component.visible == false) {
                 continue
+            }
+
+            fun formatRupiah(amount: Double): String {
+                val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+                format.minimumFractionDigits = 0
+                format.maximumFractionDigits = 0
+                return format.format(amount)
             }
 
             val view = when (component.type) {
@@ -300,59 +380,89 @@ class FormActivity : AppCompatActivity() {
 
                     view
                 }
-
                 1 -> {
-                    LinearLayout(this@FormActivity).apply {
-                        orientation = LinearLayout.VERTICAL
-                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                    if (component.id == "TRF27" || component.id == "TFR24") {
+                        val inflater = LayoutInflater.from(this@FormActivity)
+                        inflater.inflate(R.layout.coba_tf, null).apply {
+                            findViewById<TextView>(R.id.norekTextView).text = getComponentValue(component)
+                            findViewById<TextView>(R.id.nominalTextView).text = getComponentValue(component)
+                        }
+                    } else{
+                        LinearLayout(this@FormActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            //aul
+                            val componentValue = getComponentValue(component)
+                            val numericValue = componentValue.toDoubleOrNull() ?: 0.0
+                            val formattedValue = when {
+                                component.label.contains("nominal", ignoreCase = true) -> {
+                                    nominalValue = numericValue
+                                    formatRupiah(nominalValue)
+                                }
+                                component.label.contains("fee", ignoreCase = true) || component.label.contains("admin bank", ignoreCase = true)  -> {
+                                    feeValue = numericValue
+                                    formatRupiah(feeValue)
+                                }
+                                component.label.contains("saldo", ignoreCase = true) -> {
+                                    formatRupiah(getComponentValue(component).toDoubleOrNull() ?: 0.0)
+                                }
+                                else -> componentValue
+                            }
 
-                        if (component.id == "TRF27" || component.id == "TFR24") {
-                            LinearLayout(this@FormActivity).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                layoutParams = LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                    LinearLayout.LayoutParams.WRAP_CONTENT
-                                )
-                                setPadding(0, 4.dpToPx(), 0, 4.dpToPx())
+                            if (component.id == "T0002") {
+                                val totalValue = nominalValue + feeValue
+                                Log.d("FormActivity", "Nominal : $nominalValue")
+                                Log.d("FormActivity", "Fee : $feeValue")
+                                Log.d("FormActivity", "Total : $totalValue")
+                                val totalFormatted = formatRupiah(totalValue)
 
-                                addView(ImageView(this@FormActivity).apply {
-                                    setImageDrawable(ContextCompat.getDrawable(this@FormActivity, R.drawable.ic_card))
-                                    layoutParams = LinearLayout.LayoutParams(
-                                        24.dpToPx(), 24.dpToPx()
-                                    ).apply {
-                                        marginEnd = 8.dpToPx()
-                                    }
+                                component.values = component.values.mapIndexed { index, pair ->
+                                    if (index == 0) pair.copy(second = totalFormatted) else pair
+                                }
+
+                                component.compValues?.compValue = component.compValues?.compValue?.mapIndexed { index, compVal ->
+                                    if (index == 0) compVal.copy(value = totalFormatted) else compVal
+                                } ?: emptyList()
+                            }
+
+                            if (screen.id == "TF00003") {
+                                setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                            } else {
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                            }
+
+                            if (component.id == "APY00") {
+                                addView(TextView(this@FormActivity).apply {
+                                    text = component.label
+                                    textSize = 15f
+                                    setTypeface(null, Typeface.BOLD)
+                                    setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                    setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
                                 })
-
+                            }else{
+                                addView(TextView(this@FormActivity).apply {
+                                    text = component.label
+                                    textSize = 15f
+                                    setTypeface(null, Typeface.NORMAL)
+                                    if (screen.id == "TF00003") {
+                                        setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                                    } else {
+                                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                    }
+                                    setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
+                                })
                                 addView(TextView(this@FormActivity).apply {
                                     text = getComponentValue(component)
                                     textSize = 18f
-                                    setPadding(0, 0, 0, 0)
+                                    if (screen.id == "TF00003") {
+                                        setPadding(3.dpToPx(), 0, 16.dpToPx(), 2.dpToPx())
+                                    } else {
+                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                    }
                                 })
-                            }.also { addView(it) }
-
-                            background = when (component.id) {
-                                "TRF27" -> ContextCompat.getDrawable(this@FormActivity, R.drawable.custom_text_edit)
-                                "TFR24" -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_bby_blue)
-                                else -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
                             }
-
-                        } else {
-                            addView(TextView(this@FormActivity).apply {
-                                text = component.label
-                                textSize = 15f
-                                setTypeface(null, Typeface.NORMAL)
-                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
-                            })
-
-                            addView(TextView(this@FormActivity).apply {
-                                text = getComponentValue(component)
-                                textSize = 18f
-                                setPadding(16.dpToPx(), 0, 16.dpToPx(), 8.dpToPx()) // Adjust padding to be closer to the label
-                            })
-
-                            background = ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
+                            if (screen.id != "TF00003"){
+                                background = ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
+                            }
                         }
                     }
                 }
@@ -369,27 +479,49 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
-//                            if (component.id in listOf("CIF04", "D0001", "D0002", "ED001", "B1007", "SD001")) {
-//                                inputType = android.text.InputType.TYPE_NULL
-//                                setOnClickListener {
-//                                    Log.d("FormActivity", "EditText clicked: ${component.id}")
-//                                    showDatePickerDialog(this)
-//                                }
-//                            }
                         }
                         inputValues[component.id] = ""
-                        nikValue = null;
-                        editText.addTextChangedListener {
-                            val inputText = it.toString()
-                            inputValues[component.id] = inputText
-                            if (component.label == "NIK") {
-                                nikValue = inputText
-                                Log.d("FormActivity", "NIK : $nikValue")
+                        nikValue = null
+
+                        editText.addTextChangedListener(object : TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                            override fun afterTextChanged(s: Editable?) {
+                                val inputText = s.toString().replace(".", "")
+                                inputValues[component.id] = inputText
+
+                                // Format input as currency if the label is admin, nominal, or fee
+                                if (component.label.contains("nominal", ignoreCase = true) ||
+                                    component.label.contains("fee", ignoreCase = true)||
+                                    component.label.contains("nilai", ignoreCase = true)) {
+                                    editText.removeTextChangedListener(this)
+
+                                    val formattedText = if (inputText.isNotEmpty()) {
+                                        val reversed = inputText.reversed()
+                                        val chunked = reversed.chunked(3).joinToString(".")
+                                        chunked.reversed()
+                                    } else {
+                                        ""
+                                    }
+
+                                    editText.setText(formattedText)
+                                    editText.setSelection(formattedText.length) // Move cursor to end
+
+                                    editText.addTextChangedListener(this)
+                                }
+
+                                if (component.label == "NIK") {
+                                    nikValue = inputText
+                                    Log.d("FormActivity", "NIK : $nikValue")
+                                }
                             }
-                        }
+                        })
                         addView(editText)
                     }
                 }
+
 
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
@@ -460,7 +592,7 @@ class FormActivity : AppCompatActivity() {
                         })
 
                         val spinner = Spinner(this@FormActivity).apply {
-                            val options = component.values.map { it.first }
+                            val options = mutableListOf("Pilih ${component.label}") + component.values.map { it.first }
                             val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                             this.adapter = adapter
@@ -472,11 +604,24 @@ class FormActivity : AppCompatActivity() {
 
                         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                             override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                                val selectedValue = component.values[position].first
+                                if (position == 0) {
+                                    inputValues[component.id] = ""
+                                    Log.d("FormActivity", "Component ID: ${component.id}, No Value Selected")
+                                    return
+                                }
+
+                                val selectedValue = component.values[position - 1].first
+                                val branchid = component.compValues?.compValue?.find {
+                                    it.print == selectedValue
+                                }?.value?.replace("[OI]", "")
 
                                 Log.d("FormActivity", "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position")
 
                                 when (component.id) {
+                                    "CB001" -> {
+                                        inputValues[component.id] = branchid ?: ""
+                                        Log.d("FormActivity", "Branch Code set to: ${inputValues[component.id]}")
+                                    }
                                     "CR002" -> if (selectedValue == "BSA Lakupandai") {
                                         inputValues[component.id] = "36"
                                         Log.d("FormActivity", "Special case for CR002: Value set to 36")
@@ -579,7 +724,12 @@ class FormActivity : AppCompatActivity() {
                         text = component.label
                         setTextColor(getColor(R.color.white))
                         textSize = 18f
-                        background = getDrawable(R.drawable.button_yellow)
+                        val background = when (component.id) {
+                            "IYA01" -> getDrawable(R.drawable.button_green)
+                            "TDK01" -> getDrawable(R.drawable.button_red)
+                            else -> getDrawable(R.drawable.button_yellow)
+                        }
+                        setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             if (formId == "AU00001") {
@@ -590,7 +740,6 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
@@ -641,6 +790,30 @@ class FormActivity : AppCompatActivity() {
                     otpView
                 }
 
+                16 -> {
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            setTypeface(null, Typeface.BOLD)
+                    })
+                    val editText = EditText(this@FormActivity).apply {
+                        hint = component.label
+                        background = getDrawable(R.drawable.edit_text_background)
+                        id = View.generateViewId()
+                        tag = component.id
+                        inputType = android.text.InputType.TYPE_NULL
+                        setOnClickListener {
+                            Log.d("FormActivity", "EditText clicked: ${component.id}")
+                            showDatePickerDialog(this) { selectedDate ->
+                                inputValues[component.id as String] = selectedDate // Assign selected date to inputValues
+                            }
+                        }
+                    }
+                    addView(editText)
+                }
+            }
+
                 else -> {
                     null
                 }
@@ -684,9 +857,29 @@ class FormActivity : AppCompatActivity() {
     }
 
     fun getComponentValue(component: Component): String {
-        val currentValue = component.compValues?.compValue?.firstOrNull()?.value
+        var currentValue = component.compValues?.compValue?.firstOrNull()?.value
 
         when (component.label) {
+            "No Rekening Agen" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val savedNorekening = sharedPreferences.getString("norekening", "").toString()
+                if (currentValue == "null" && savedNorekening != "0") {
+                    Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $savedNorekening")
+                    component.compValues?.compValue?.firstOrNull()?.value = savedNorekening
+                } else {
+                    Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
+                }
+            }
+            "Nama Rekening Agen" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
+                if (currentValue == "null" && Userfullname != "0") {
+                    Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $Userfullname")
+                    component.compValues?.compValue?.firstOrNull()?.value = Userfullname
+                } else {
+                    Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $Userfullname")
+                }
+            }
             "NIK" -> {
                 if (currentValue == "null" && nikValue != null) {
                     Log.d("FormActivity", "NIK diisi dengan nilai: $nikValue")
@@ -711,7 +904,17 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+        // Ambil nilai di luar [OI] jika comp_id adalah CB001
+        if (component.id == "CB001") {
+            currentValue = currentValue?.let {
+                Regex("""\[(?:OI|oi)\](\d+)""").find(it)?.groupValues?.get(1)
+            }
+        }
+
         return when (component.id) {
+//            "CB001" -> {
+//                if (currentValue != "OI") currentValue ?: "" else ""
+//            }
             "CIF32" -> when (currentValue) {
                 "1" -> "Laki-Laki"
                 "2" -> "Perempuan"
@@ -834,6 +1037,28 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "MN00000")
             })
             finish()
+        }else if (component.id == "OUT00") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "LOG0001")
+            })
+            finish()
+
+        } else if (component.id == "TDK01") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            finish()
+        }else if (component.id == "IYA01") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "AU00001")
+            })
+            finish()
         } else {
             val otpComponent = screen?.comp?.find { it.id == "OTP01" }
             if (otpComponent != null) {
@@ -851,7 +1076,6 @@ class FormActivity : AppCompatActivity() {
                                 lifecycleScope.launch {
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    processResponse(newScreen.toString())
                                     Log.e("FormActivity", "SCREEN ${screen.id} ")
                                     Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                     if (screen.id == "CCIF000" && newScreen.id == "000000F") {
@@ -901,7 +1125,6 @@ class FormActivity : AppCompatActivity() {
                                 Log.e("FormActivity", "")
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                processResponse(newScreen.toString())
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                 if (screen.id == "CCIF000" && newScreen.id == "000000F") {
@@ -990,7 +1213,7 @@ class FormActivity : AppCompatActivity() {
         buttonContainer.addView(button)
     }
 
-    private fun showDatePickerDialog(editText: EditText) {
+    private fun showDatePickerDialog(editText: EditText, onDateSelected: (String) -> Unit) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
@@ -999,7 +1222,7 @@ class FormActivity : AppCompatActivity() {
         val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
             val selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
             editText.setText(selectedDate)
-            inputValues[editText.tag as String] = selectedDate // Set the selected date in inputValues
+            onDateSelected(selectedDate)
         }, year, month, day)
 
         datePickerDialog.show()
@@ -1135,6 +1358,7 @@ class FormActivity : AppCompatActivity() {
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
                     val token = jsonResponse.optString("token")
+                    val fullname = jsonResponse.optJSONObject("data").optString("fullname")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
 
                     if (token.isNotEmpty() && merchantData != null) {
@@ -1144,6 +1368,7 @@ class FormActivity : AppCompatActivity() {
                         // Menyimpan data pengguna
                         editor.putString("username", username)
                         editor.putString("token", token)
+                        editor.putString("fullname", fullname)
 
                         // Menyimpan data merchant
                         editor.putInt("merchant_id", merchantData.optInt("id"))
@@ -1195,34 +1420,44 @@ class FormActivity : AppCompatActivity() {
             putExtra(Constants.KEY_MENU_ID, "MN00000")
         })
     }
-    private fun processResponse(response: String) {
-        if (response.isBlank()) {
-            Log.d("TransactionLog", "Response is empty or blank")
-            return
+
+    fun formatMutasi(mutasiText: String): String {
+        val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
+        val formattedMutasi = StringBuilder()
+
+        for (mutasi in mutasiList) {
+            val parts = mutasi.split(" ")
+            if (parts.size >= 5) {
+                val date = parts[0]
+                val time = parts[1]
+                val description = parts.subList(2, parts.size - 2).joinToString(" ")
+                val amount = parts[parts.size - 2] + " " + parts[parts.size - 1]
+
+                formattedMutasi.append("Tanggal: $date\n")
+                formattedMutasi.append("Waktu: $time\n")
+                formattedMutasi.append("Deskripsi: $description\n")
+                formattedMutasi.append("Jumlah: $amount\n\n")
+            }
         }
-
-        // Pisahkan response berdasarkan '\n'
-        val lines = response.split("\n").filter { it.isNotBlank() } // Filter blank strings
-
-        if (lines.isEmpty()) {
-            Log.d("TransactionLog", "No transactions found after splitting response")
-            return
-        }
-
-        // Define a regex pattern to match transaction lines
-        val transactionPattern = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}""")
-
-        // Filter and log only the lines that match the transaction pattern
-        val transactions = lines.filter { line -> transactionPattern.containsMatchIn(line) }
-
-        if (transactions.isEmpty()) {
-            Log.d("TransactionLog", "No valid transactions found")
-            return
-        }
-
-        // Log each transaction with the desired format
-        transactions.forEachIndexed { index, transaction ->
-            Log.d("TransactionLog", "List ${index + 1} = $transaction")
-        }
+        return formattedMutasi.toString()
     }
+
+    fun parseMutasi(mutasiText: String): List<Mutation> {
+        val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
+        val transactions = mutableListOf<Mutation>()
+
+        for (mutasi in mutasiList) {
+            val parts = mutasi.split(" ")
+            if (parts.size >= 5) {
+                val date = parts[0]
+                val time = parts[1]
+                val description = parts.subList(2, parts.size - 2).joinToString(" ")
+                val amount = parts[parts.size - 2] + " " + parts[parts.size - 1]
+                transactions.add(Mutation(date, time, description, amount))
+            }
+        }
+        return transactions
+    }
+
+
 }

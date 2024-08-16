@@ -18,8 +18,8 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Verify OTP"
-            android:textSize="18sp"
+            android:text="VERIFIKASI OTP"
+            android:textSize="25sp"
             android:textStyle="bold"
             android:layout_gravity="center"
             android:paddingBottom="10dp"
@@ -35,8 +35,8 @@
 
             <EditText
                 android:id="@+id/otpDigit1"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
@@ -48,8 +48,8 @@
 
             <EditText
                 android:id="@+id/otpDigit2"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
@@ -60,8 +60,8 @@
 
             <EditText
                 android:id="@+id/otpDigit3"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
@@ -72,8 +72,8 @@
 
             <EditText
                 android:id="@+id/otpDigit4"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"

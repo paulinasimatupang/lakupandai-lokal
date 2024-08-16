@@ -390,6 +390,14 @@ class FormActivity : AppCompatActivity() {
                                 else -> ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
                             }
 
+                        }else if (component.id == "APY00") {
+                            addView(TextView(this@FormActivity).apply {
+                                text = component.label
+                                textSize = 15f
+                                setTypeface(null, Typeface.BOLD)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
+                            })
                         } else {
                             addView(TextView(this@FormActivity).apply {
                                 text = component.label
@@ -646,7 +654,12 @@ class FormActivity : AppCompatActivity() {
                         text = component.label
                         setTextColor(getColor(R.color.white))
                         textSize = 18f
-                        background = getDrawable(R.drawable.button_yellow)
+                        val background = when (component.id) {
+                            "IYA01" -> getDrawable(R.drawable.button_green)
+                            "TDK01" -> getDrawable(R.drawable.button_red)
+                            else -> getDrawable(R.drawable.button_yellow)
+                        }
+                        setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             if (formId == "AU00001") {
@@ -929,6 +942,28 @@ class FormActivity : AppCompatActivity() {
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            finish()
+        }else if (component.id == "OUT00") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "LOG0001")
+            })
+            finish()
+
+        } else if (component.id == "TDK01") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            finish()
+        }else if (component.id == "IYA01") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "AU00001")
             })
             finish()
         } else {

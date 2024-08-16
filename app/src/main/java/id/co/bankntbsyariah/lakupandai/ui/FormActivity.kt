@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
-import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -45,6 +44,9 @@ import java.util.concurrent.TimeUnit
 import androidx.core.content.ContextCompat
 import android.view.MotionEvent
 import android.view.WindowManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import id.co.bankntbsyariah.lakupandai.common.Mutation
+import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import java.text.NumberFormat
 
 class FormActivity : AppCompatActivity() {
@@ -306,6 +308,22 @@ class FormActivity : AppCompatActivity() {
                 extraText = "Agen"
             }
 
+            for (component in screen.comp) {
+                if (component.id == "D1004") {  // ID komponen untuk jenis mutasi
+                    val originalMutasiValue =
+                        component.compValues?.compValue?.firstOrNull()?.value ?: ""
+                    val formattedMutasi = formatMutasi(originalMutasiValue)
+
+                    val mutasiTextView = TextView(this@FormActivity).apply {
+                        text = formattedMutasi
+                        textSize = 16f
+                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                    }
+
+                    container.addView(mutasiTextView)
+                }
+            }
+
         }
 
         if (norekComponent != null && nominalComponent != null) {
@@ -325,7 +343,7 @@ class FormActivity : AppCompatActivity() {
 
             if (component.id == "TRF27" || component.id == "TFR24" || component.id == "AG001" ||
                 component.id == "AG002" || component.id == "TRF26" || component.id == "AG005" ||
-                (component.id == "ST003" && screen.id == "TF00003")) continue
+                (component.id == "ST003" && screen.id == "TF00003") || component.id == "D1004") continue
 
             if (component.id == "MSG03") {
                 val value = component.compValues?.compValue?.firstOrNull()?.value
@@ -1371,4 +1389,44 @@ class FormActivity : AppCompatActivity() {
             putExtra(Constants.KEY_MENU_ID, "MN00000")
         })
     }
+
+    fun formatMutasi(mutasiText: String): String {
+        val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
+        val formattedMutasi = StringBuilder()
+
+        for (mutasi in mutasiList) {
+            val parts = mutasi.split(" ")
+            if (parts.size >= 5) {
+                val date = parts[0]
+                val time = parts[1]
+                val description = parts.subList(2, parts.size - 2).joinToString(" ")
+                val amount = parts[parts.size - 2] + " " + parts[parts.size - 1]
+
+                formattedMutasi.append("Tanggal: $date\n")
+                formattedMutasi.append("Waktu: $time\n")
+                formattedMutasi.append("Deskripsi: $description\n")
+                formattedMutasi.append("Jumlah: $amount\n\n")
+            }
+        }
+        return formattedMutasi.toString()
+    }
+
+    fun parseMutasi(mutasiText: String): List<Mutation> {
+        val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
+        val transactions = mutableListOf<Mutation>()
+
+        for (mutasi in mutasiList) {
+            val parts = mutasi.split(" ")
+            if (parts.size >= 5) {
+                val date = parts[0]
+                val time = parts[1]
+                val description = parts.subList(2, parts.size - 2).joinToString(" ")
+                val amount = parts[parts.size - 2] + " " + parts[parts.size - 1]
+                transactions.add(Mutation(date, time, description, amount))
+            }
+        }
+        return transactions
+    }
+
+
 }

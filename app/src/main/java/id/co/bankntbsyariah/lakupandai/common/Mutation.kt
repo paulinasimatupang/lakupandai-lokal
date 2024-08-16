@@ -1,6 +1,6 @@
 package id.co.bankntbsyariah.lakupandai.common
 
-data class Transaction(
+data class Mutation(
     val date: String,
     val time: String,
     val description: String,

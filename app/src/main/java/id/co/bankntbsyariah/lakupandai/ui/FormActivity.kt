@@ -411,26 +411,37 @@ class FormActivity : AppCompatActivity() {
                             } else {
                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
                             }
-                            addView(TextView(this@FormActivity).apply {
-                                text = component.label
-                                textSize = 15f
-                                setTypeface(null, Typeface.NORMAL)
-                                if (screen.id == "TF00003") {
-                                    setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
-                                } else {
+
+                            if (component.id == "APY00") {
+                                addView(TextView(this@FormActivity).apply {
+                                    text = component.label
+                                    textSize = 15f
+                                    setTypeface(null, Typeface.BOLD)
                                     setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                }
-                                setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
-                            })
-                            addView(TextView(this@FormActivity).apply {
-                                text = getComponentValue(component)
-                                textSize = 18f
-                                if (screen.id == "TF00003") {
-                                    setPadding(3.dpToPx(), 0, 16.dpToPx(), 2.dpToPx())
-                                } else {
-                                    setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
-                                }
-                            })
+                                    setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
+                                })
+                            }else{
+                                addView(TextView(this@FormActivity).apply {
+                                    text = component.label
+                                    textSize = 15f
+                                    setTypeface(null, Typeface.NORMAL)
+                                    if (screen.id == "TF00003") {
+                                        setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                                    } else {
+                                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                    }
+                                    setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
+                                })
+                                addView(TextView(this@FormActivity).apply {
+                                    text = getComponentValue(component)
+                                    textSize = 18f
+                                    if (screen.id == "TF00003") {
+                                        setPadding(3.dpToPx(), 0, 16.dpToPx(), 2.dpToPx())
+                                    } else {
+                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                    }
+                                })
+                            }
                             if (screen.id != "TF00003"){
                                 background = ContextCompat.getDrawable(this@FormActivity, R.drawable.text_view_background)
                             }
@@ -452,6 +463,8 @@ class FormActivity : AppCompatActivity() {
                             tag = component.id
                         }
                         inputValues[component.id] = ""
+                        nikValue = null
+
                         editText.addTextChangedListener(object : TextWatcher {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -685,7 +698,12 @@ class FormActivity : AppCompatActivity() {
                         text = component.label
                         setTextColor(getColor(R.color.white))
                         textSize = 18f
-                        background = getDrawable(R.drawable.button_yellow)
+                        val background = when (component.id) {
+                            "IYA01" -> getDrawable(R.drawable.button_green)
+                            "TDK01" -> getDrawable(R.drawable.button_red)
+                            else -> getDrawable(R.drawable.button_yellow)
+                        }
+                        setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             if (formId == "AU00001") {
@@ -970,6 +988,28 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "MN00000")
             })
             finish()
+        }else if (component.id == "OUT00") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "LOG0001")
+            })
+            finish()
+
+        } else if (component.id == "TDK01") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            finish()
+        }else if (component.id == "IYA01") {
+
+            startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "AU00001")
+            })
+            finish()
         } else {
             val otpComponent = screen?.comp?.find { it.id == "OTP01" }
             if (otpComponent != null) {
@@ -1148,11 +1188,9 @@ class FormActivity : AppCompatActivity() {
             val savedUsername = sharedPreferences.getString("username", "") ?: ""
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
-            val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             Log.e("FormActivity", "Saved Username: $savedUsername")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
-            Log.e("FormActivity", "Nama Agen: $savedNamaAgen")
 
             // Get device Android ID
 //            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -1190,7 +1228,6 @@ class FormActivity : AppCompatActivity() {
                     }
                     component.type == 1 && component.label == "NIK" -> {
                         // Use nikValue if component label is "NIK"
-                        Log.e("NIK", "NIK $nikValue")
                         componentValues[component.id] = nikValue ?: ""
                         Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
                     }
@@ -1275,7 +1312,6 @@ class FormActivity : AppCompatActivity() {
                     val jsonResponse = JSONObject(responseData)
                     val token = jsonResponse.optString("token")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
-                    val fullname = jsonResponse.optJSONObject("data")?.optString("fullname")
 
                     if (token.isNotEmpty() && merchantData != null) {
                         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -1284,7 +1320,6 @@ class FormActivity : AppCompatActivity() {
                         // Menyimpan data pengguna
                         editor.putString("username", username)
                         editor.putString("token", token)
-                        editor.putString("fullname", fullname)
 
                         // Menyimpan data merchant
                         editor.putInt("merchant_id", merchantData.optInt("id"))

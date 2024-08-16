@@ -263,6 +263,7 @@ class FormActivity : AppCompatActivity() {
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
+        val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -827,24 +828,26 @@ class FormActivity : AppCompatActivity() {
                 params.setMargins(20, 20, 20, 20)
                 it.layoutParams = params
 
-                if (component.type == 7) {
-                    if (buttonContainer == null) {
-                        buttonContainer = LinearLayout(this).apply {
-                            id = View.generateViewId()
-                            orientation = LinearLayout.VERTICAL
+                when {
+                    component.type == 7 && component.id == "KM001" -> {
+                        if (buttonContainer == null) {
+                            val newButtontf = LinearLayout(this).apply {
+                                id = View.generateViewId()
+                                orientation = LinearLayout.VERTICAL
+                            }
+                            container.addView(newButtontf)
+                            buttonContainer = newButtontf
                         }
-                        container.addView(buttonContainer)
+                        if (it is Button) {
+                            buttontf?.addView(it)
+                        } else {
+                            Log.e("FormActivity", "View is not a Button, skipping addition to buttonContainer")
+                        }
                     }
-
-                    if (it is Button) {  // Cek apakah view yang akan ditambahkan adalah Button
-                        buttonContainer!!.addView(it)
-                    } else {
-                        Log.e("FormActivity", "View is not a Button, skipping addition to buttonContainer")
+                    else -> {
+                        container.addView(it)
                     }
-                } else {
-                    container.addView(it)
                 }
-
 
             }
         }

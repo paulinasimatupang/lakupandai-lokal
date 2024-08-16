@@ -493,15 +493,23 @@ class FormActivity : AppCompatActivity() {
                                 inputValues[component.id] = inputText
 
                                 // Format input as currency if the label is admin, nominal, or fee
-                                if (component.label.contains("nominal", ignoreCase = true)) {
-                                    if (inputText.length >= 3) {
-                                        // Formatting input text to currency-like format
-                                        val formattedText = inputText.chunked(3).joinToString(".")
-                                        editText.removeTextChangedListener(this) // Prevent infinite loop
-                                        editText.setText(formattedText)
-                                        editText.setSelection(formattedText.length) // Move cursor to end
-                                        editText.addTextChangedListener(this)
+                                if (component.label.contains("nominal", ignoreCase = true) ||
+                                    component.label.contains("fee", ignoreCase = true)||
+                                    component.label.contains("nilai", ignoreCase = true)) {
+                                    editText.removeTextChangedListener(this)
+
+                                    val formattedText = if (inputText.isNotEmpty()) {
+                                        val reversed = inputText.reversed()
+                                        val chunked = reversed.chunked(3).joinToString(".")
+                                        chunked.reversed()
+                                    } else {
+                                        ""
                                     }
+
+                                    editText.setText(formattedText)
+                                    editText.setSelection(formattedText.length) // Move cursor to end
+
+                                    editText.addTextChangedListener(this)
                                 }
 
                                 if (component.label == "NIK") {
@@ -782,11 +790,12 @@ class FormActivity : AppCompatActivity() {
                     otpView
                 }
 
-                16 -> {LinearLayout(this@FormActivity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    addView(TextView(this@FormActivity).apply {
-                        text = component.label
-                        setTypeface(null, Typeface.BOLD)
+                16 -> {
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@FormActivity).apply {
+                            text = component.label
+                            setTypeface(null, Typeface.BOLD)
                     })
                     val editText = EditText(this@FormActivity).apply {
                         hint = component.label
@@ -796,7 +805,9 @@ class FormActivity : AppCompatActivity() {
                         inputType = android.text.InputType.TYPE_NULL
                         setOnClickListener {
                             Log.d("FormActivity", "EditText clicked: ${component.id}")
-                            showDatePickerDialog(this)
+                            showDatePickerDialog(this) { selectedDate ->
+                                inputValues[component.id as String] = selectedDate // Assign selected date to inputValues
+                            }
                         }
                     }
                     addView(editText)
@@ -849,6 +860,26 @@ class FormActivity : AppCompatActivity() {
         var currentValue = component.compValues?.compValue?.firstOrNull()?.value
 
         when (component.label) {
+            "No Rekening Agen" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val savedNorekening = sharedPreferences.getString("norekening", "").toString()
+                if (currentValue == "null" && savedNorekening != "0") {
+                    Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $savedNorekening")
+                    component.compValues?.compValue?.firstOrNull()?.value = savedNorekening
+                } else {
+                    Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
+                }
+            }
+            "Nama Rekening Agen" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
+                if (currentValue == "null" && Userfullname != "0") {
+                    Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $Userfullname")
+                    component.compValues?.compValue?.firstOrNull()?.value = Userfullname
+                } else {
+                    Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $Userfullname")
+                }
+            }
             "NIK" -> {
                 if (currentValue == "null" && nikValue != null) {
                     Log.d("FormActivity", "NIK diisi dengan nilai: $nikValue")
@@ -1182,9 +1213,7 @@ class FormActivity : AppCompatActivity() {
         buttonContainer.addView(button)
     }
 
-
-
-    private fun showDatePickerDialog(editText: EditText) {
+    private fun showDatePickerDialog(editText: EditText, onDateSelected: (String) -> Unit) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
@@ -1193,7 +1222,7 @@ class FormActivity : AppCompatActivity() {
         val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
             val selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
             editText.setText(selectedDate)
-            inputValues[editText.tag as String] = selectedDate // Set the selected date in inputValues
+            onDateSelected(selectedDate)
         }, year, month, day)
 
         datePickerDialog.show()
@@ -1329,6 +1358,7 @@ class FormActivity : AppCompatActivity() {
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
                     val token = jsonResponse.optString("token")
+                    val fullname = jsonResponse.optJSONObject("data").optString("fullname")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
 
                     if (token.isNotEmpty() && merchantData != null) {
@@ -1338,6 +1368,7 @@ class FormActivity : AppCompatActivity() {
                         // Menyimpan data pengguna
                         editor.putString("username", username)
                         editor.putString("token", token)
+                        editor.putString("fullname", fullname)
 
                         // Menyimpan data merchant
                         editor.putInt("merchant_id", merchantData.optInt("id"))

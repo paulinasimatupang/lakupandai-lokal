@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="5dp"
+    android:gravity="center"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:padding="15dp"
+        android:layout_width="350dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#FFFFFF">
+
+        <ImageView
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:src="@mipmap/warning"/>
+
+        <TextView
+            android:id="@+id/body_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Apakah Anda Yakin Akan Logout?"
+            android:textSize="16sp"
+            android:layout_marginTop="10dp"
+            android:textColor="#000000"
+            android:textStyle="bold"
+            android:gravity="center"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="20dp">
+
+            <Button
+                android:id="@+id/popup_button_tidak"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="#EB3232"
+                android:textColor="#FFFFFF"
+                android:text="TIDAK"/>
+
+            <Button
+                android:id="@+id/popup_button_ya"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="40dp"
+                android:textColor="#FFFFFF"
+                android:background="#0A6E44"
+                android:text="YA"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

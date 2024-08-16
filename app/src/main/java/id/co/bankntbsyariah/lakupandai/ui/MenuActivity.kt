@@ -10,6 +10,7 @@ import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -67,7 +68,7 @@ class MenuActivity : AppCompatActivity() {
         // Set the appropriate layout based on menuId
         setContentView(
             when (menuId) {
-                "HMB0000" -> R.layout.hamburger
+                "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
@@ -244,7 +245,7 @@ class MenuActivity : AppCompatActivity() {
                 }
             }
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
-                // Handle popups or alerts
+                showLogoutPopup()
             }
             Constants.SCREEN_TYPE_POPUP_OTP-> {
                 navigateToFormActivity()
@@ -259,6 +260,44 @@ class MenuActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun showLogoutPopup() {
+        val dialogView = layoutInflater.inflate(R.layout.pop_up_logout, null)
+        val logoutDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        logoutDialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setDimAmount(0.5f)  // Set dim amount to 0
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val buttonYa = dialogView.findViewById<Button>(R.id.popup_button_ya)
+        val buttonTidak = dialogView.findViewById<Button>(R.id.popup_button_tidak)
+
+        buttonYa.setOnClickListener {
+            startActivity(Intent(this, FormActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_FORM_ID, "AU00001")
+            })
+            logoutDialog.dismiss()
+        }
+
+        buttonTidak.setOnClickListener {
+            startActivity(Intent(this, MenuActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_MENU_ID, "MN00000")
+            })
+            logoutDialog.dismiss()
+        }
+
+        logoutDialog.show()
+    }
+
 
     private fun navigateToFormActivity() {
         startActivity(Intent(this@MenuActivity, FormActivity::class.java).apply {

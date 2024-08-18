@@ -588,11 +588,12 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 18f
+                            textSize = 16f
                             setTypeface(null, Typeface.BOLD)
                         })
 
                         val spinner = Spinner(this@FormActivity).apply {
+                            background = getDrawable(R.drawable.combo_box)
                             val options = mutableListOf("Pilih ${component.label}") + component.values.map { it.first }
                             val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)

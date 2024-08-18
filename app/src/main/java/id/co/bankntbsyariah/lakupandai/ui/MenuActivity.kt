@@ -80,7 +80,7 @@ class MenuActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
             Log.d("MenuActivity", "Nama User : $Userfullname")
-            userGreetingTextView.text = "Hi, $Userfullname!"
+            userGreetingTextView.text = "HI, $Userfullname!"
         }
 
         // Initialize Image Slider only if the current layout contains the image slider
@@ -288,10 +288,6 @@ class MenuActivity : AppCompatActivity() {
         }
 
         buttonTidak.setOnClickListener {
-            startActivity(Intent(this, MenuActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                putExtra(Constants.KEY_MENU_ID, "MN00000")
-            })
             logoutDialog.dismiss()
         }
 
@@ -336,11 +332,16 @@ class MenuActivity : AppCompatActivity() {
 
     fun onMenuItemClick(position: Int) {
         val targetScreenId = menuList[position].value
+        Log.d("Menu", "Value = $targetScreenId")
         if (targetScreenId.isNullOrEmpty()) {
             return
         }
-        finish()
-        navigateToScreen(targetScreenId)
+        if(targetScreenId == "LOG0001"){
+            showLogoutPopup()
+        }else{
+            finish()
+            navigateToScreen(targetScreenId)
+        }
     }
 
     private fun navigateToScreen(screenId: String) {

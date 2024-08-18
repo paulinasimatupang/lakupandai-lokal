@@ -4,7 +4,7 @@
     <!--    Check Update-->
     <string name="title_activity_check_update">CheckUpdateActivity</string>
     <string name="version">Ver %s</string>
-    <string name="debug_version">Debug Ver %s</string>
+    <string name="debug_version">Ver %s</string>
     <string name="logo_alt">Laku Pandai NTB Syariah</string>
 
     <string name="process_check_update">Checking for updates</string>

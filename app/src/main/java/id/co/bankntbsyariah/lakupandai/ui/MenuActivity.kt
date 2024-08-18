@@ -391,14 +391,13 @@ class MenuActivity : AppCompatActivity() {
     private fun createMessageBody(): JSONObject? {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val savedUsername = sharedPreferences.getString("username", "") ?: ""
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
+            val username = "lakupandai"
             val msg = JSONObject()
             val msgId = "353471045058692200995" //stan + timestamp
             val msgUi = "353471045058692"
             val msgSi = "N00001"
-            val username = savedUsername
             val accountNumber = norekening
             val name = merchant_name
             val msgDt = "$username|$accountNumber|$name"

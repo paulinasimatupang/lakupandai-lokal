@@ -452,7 +452,7 @@ class FormActivity : AppCompatActivity() {
                                     setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black))
                                 })
                                 addView(TextView(this@FormActivity).apply {
-                                    text = getComponentValue(component)
+                                    text = formattedValue
                                     textSize = 18f
                                     if (screen.id == "TF00003") {
                                         setPadding(3.dpToPx(), 0, 16.dpToPx(), 2.dpToPx())
@@ -808,7 +808,7 @@ class FormActivity : AppCompatActivity() {
                         setOnClickListener {
                             Log.d("FormActivity", "EditText clicked: ${component.id}")
                             showDatePickerDialog(this) { selectedDate ->
-                                inputValues[component.id as String] = selectedDate // Assign selected date to inputValues
+                                inputValues[component.id as String] = selectedDate
                             }
                         }
                     }
@@ -1236,10 +1236,10 @@ class FormActivity : AppCompatActivity() {
         return try {
             val msg = JSONObject()
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val savedUsername = sharedPreferences.getString("username", "") ?: ""
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
-            Log.e("FormActivity", "Saved Username: $savedUsername")
+            val username = "lakupandai"
+            Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
 
@@ -1265,7 +1265,7 @@ class FormActivity : AppCompatActivity() {
 
                 when {
                     component.type == 1 && component.label == "Username" -> {
-                        componentValues[component.id] = savedUsername
+                        componentValues[component.id] = username
                         Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "No Rekening Agen" -> {

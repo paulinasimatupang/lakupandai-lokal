@@ -10,6 +10,7 @@ import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -40,6 +41,8 @@ import okhttp3.OkHttpClient
 import org.json.JSONException
 import org.json.JSONObject
 import android.widget.ImageButton
+import java.text.NumberFormat
+import java.util.Locale
 
 class MenuActivity : AppCompatActivity() {
 
@@ -67,7 +70,7 @@ class MenuActivity : AppCompatActivity() {
         // Set the appropriate layout based on menuId
         setContentView(
             when (menuId) {
-                "HMB0000" -> R.layout.hamburger
+                "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
@@ -79,7 +82,7 @@ class MenuActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
             Log.d("MenuActivity", "Nama User : $Userfullname")
-            userGreetingTextView.text = "Hi, $Userfullname!"
+            userGreetingTextView.text = "HI, $Userfullname!"
         }
 
         // Initialize Image Slider only if the current layout contains the image slider
@@ -244,7 +247,7 @@ class MenuActivity : AppCompatActivity() {
                 }
             }
             Constants.SCREEN_TYPE_POPUP_LOGOUT -> {
-                // Handle popups or alerts
+                showLogoutPopup()
             }
             Constants.SCREEN_TYPE_POPUP_OTP-> {
                 navigateToFormActivity()
@@ -259,6 +262,40 @@ class MenuActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun showLogoutPopup() {
+        val dialogView = layoutInflater.inflate(R.layout.pop_up_logout, null)
+        val logoutDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        logoutDialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setDimAmount(0.5f)  // Set dim amount to 0
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val buttonYa = dialogView.findViewById<Button>(R.id.popup_button_ya)
+        val buttonTidak = dialogView.findViewById<Button>(R.id.popup_button_tidak)
+
+        buttonYa.setOnClickListener {
+            startActivity(Intent(this, FormActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_FORM_ID, "AU00001")
+            })
+            logoutDialog.dismiss()
+        }
+
+        buttonTidak.setOnClickListener {
+            logoutDialog.dismiss()
+        }
+
+        logoutDialog.show()
+    }
+
 
     private fun navigateToFormActivity() {
         startActivity(Intent(this@MenuActivity, FormActivity::class.java).apply {
@@ -297,11 +334,16 @@ class MenuActivity : AppCompatActivity() {
 
     fun onMenuItemClick(position: Int) {
         val targetScreenId = menuList[position].value
+        Log.d("Menu", "Value = $targetScreenId")
         if (targetScreenId.isNullOrEmpty()) {
             return
         }
-        finish()
-        navigateToScreen(targetScreenId)
+        if(targetScreenId == "LOG0001"){
+            showLogoutPopup()
+        }else{
+            finish()
+            navigateToScreen(targetScreenId)
+        }
     }
 
     private fun navigateToScreen(screenId: String) {
@@ -351,14 +393,13 @@ class MenuActivity : AppCompatActivity() {
     private fun createMessageBody(): JSONObject? {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val savedUsername = sharedPreferences.getString("username", "") ?: ""
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
+            val username = "lakupandai"
             val msg = JSONObject()
             val msgId = "353471045058692200995" //stan + timestamp
             val msgUi = "353471045058692"
             val msgSi = "N00001"
-            val username = savedUsername
             val accountNumber = norekening
             val name = merchant_name
             val msgDt = "$username|$accountNumber|$name"
@@ -383,6 +424,13 @@ class MenuActivity : AppCompatActivity() {
             Log.e("MenuActivity", "Failed to create message body", e)
             null
         }
+    }
+
+    fun formatRupiah(amount: Double): String {
+        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        format.minimumFractionDigits = 0
+        format.maximumFractionDigits = 0
+        return format.format(amount)
     }
 
     private fun checkSaldo() {
@@ -413,12 +461,26 @@ class MenuActivity : AppCompatActivity() {
                                         accountNumber = value
                                     } else if (label == "Saldo Akhir") {
                                         saldo = value
+                                        if (saldo != null) {
+                                            if (saldo.contains("-")) {
+                                                saldo = saldo.replace("-", "")
+                                            }
+                                        }
+
+                                        if (saldo != null) {
+                                            if (saldo.contains(",")) {
+                                                saldo = saldo.replace(",", "")
+                                            }
+                                        }
+
+                                        val saldoNumeric = saldo?.toDoubleOrNull() ?: 0.0
+                                        saldo = formatRupiah(saldoNumeric)
                                     }
                                 }
 
                                 runOnUiThread {
                                     findViewById<TextView>(R.id.account_number_text)?.text = "$accountNumber"
-                                    findViewById<TextView>(R.id.saldo_text)?.text = "Rp$saldo"
+                                    findViewById<TextView>(R.id.saldo_text)?.text = "$saldo"
                                     Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
                                     Log.d("MenuActivity", "Updated Saldo text: $saldo")
                                 }

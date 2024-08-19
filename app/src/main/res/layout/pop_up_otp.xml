@@ -3,26 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:padding="20dp"
-    android:background="@color/white"> <!-- Mengganti bg_dialog jika mengandung sudut melengkung -->
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp"
-        android:background="@color/white"> <!-- Mengganti background dari drawable ke warna biasa -->
+        android:padding="5dp"
+        android:background="@color/white">
 
         <!-- Title -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="VERIFIKASI OTP"
-            android:textSize="25sp"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:layout_gravity="center"
-            android:paddingBottom="10dp"
+            android:layout_marginBottom="20dp"
             android:textColor="#000000"/>
 
         <!-- OTP Digits -->
@@ -43,8 +41,7 @@
                 android:inputType="number"
                 android:maxLength="1"
                 android:textColor="#000000"
-                android:textSize="18sp"
-                tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+                android:textSize="18sp"/>
 
             <EditText
                 android:id="@+id/otpDigit2"
@@ -81,20 +78,6 @@
                 android:maxLength="1"
                 android:textSize="18sp"
                 android:textColor="#000000"/>
-
         </LinearLayout>
-
-        <!--        &lt;!&ndash; Verify Button &ndash;&gt;-->
-        <!--        <Button-->
-        <!--            android:id="@+id/verifyButton"-->
-        <!--            android:layout_width="match_parent"-->
-        <!--            android:layout_height="wrap_content"-->
-        <!--            android:text="Verify"-->
-        <!--            android:background="@drawable/button_background"-->
-        <!--            android:textColor="@android:color/white"-->
-        <!--            android:padding="12dp"-->
-        <!--            android:textSize="16sp" />-->
-
     </LinearLayout>
-
 </RelativeLayout>

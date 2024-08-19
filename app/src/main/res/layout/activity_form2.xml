@@ -21,7 +21,7 @@
         <!-- Card 1 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/form"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="-10dp"
@@ -60,10 +60,10 @@
         <!-- Card 2 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/review"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="17dp"
+            android:layout_marginStart="10dp"
             app:cardCornerRadius="10dp"
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp">
@@ -99,10 +99,10 @@
         <!-- Card 3 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/bayar"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="20dp"
+            android:layout_marginStart="10dp"
             android:layout_marginEnd="-10dp"
             app:cardCornerRadius="10dp"
             android:layout_marginTop="5dp"
@@ -128,7 +128,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="10dp"
                     android:text="Bayar"
                     android:textColor="#0A6E44"
                     android:textSize="15sp"

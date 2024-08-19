@@ -305,7 +305,6 @@ class FormActivity : AppCompatActivity() {
                 extraText = "Agen"
             }
 
-            for (component in screen.comp) {
                 if (component.id == "D1004") {  // ID komponen untuk jenis mutasi
                     // Dapatkan nilai mutasi asli dari komponen
                     val originalMutasiValue = component.compValues?.compValue?.firstOrNull()?.value ?: ""
@@ -328,8 +327,6 @@ class FormActivity : AppCompatActivity() {
                     // Tambahkan RecyclerView ke dalam container
                     container.addView(recyclerView)
                 }
-            }
-
         }
 
         if (norekComponent != null && nominalComponent != null) {

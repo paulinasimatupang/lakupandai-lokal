@@ -65,66 +65,24 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    android:layout_marginTop="0dp"
+                    android:layout_marginTop="3dp"
                     android:text="Hi, User!"
                     android:textColor="@android:color/white"
-                    android:textSize="18sp" />
+                    android:textSize="20sp" />
             </LinearLayout>
             <!-- Overlapping Card Views -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_saldo"
-                android:layout_width="185dp"
-                android:layout_height="115dp"
-                android:layout_marginTop="125dp"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="0dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="100dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
                 app:cardBackgroundColor="#0B623E"
                 app:cardCornerRadius="16dp"
-                app:layout_constraintEnd_toStartOf="@id/card_rekening"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintWidth_percent="0.5">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="15dp">
-
-                    <TextView
-                        android:id="@+id/saldo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="Saldo"
-                        android:textColor="@android:color/white"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:id="@+id/saldo_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
-                        android:text="XXXXXXXXX"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"
-                        android:textSize="18sp" />
-
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
-                android:id="@+id/card_rekening"
-                android:layout_width="175dp"
-                android:layout_height="115dp"
-                android:layout_marginTop="125dp"
-                app:cardBackgroundColor="#0B623E"
-                app:cardCornerRadius="16dp"
-                android:layout_marginStart="-10dp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/card_saldo"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintWidth_percent="0.5">
+                app:layout_constraintTop_toTopOf="parent">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
@@ -145,16 +103,60 @@
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
+                        android:id="@+id/saldo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Saldo"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp"
+                        app:layout_constraintBottom_toTopOf="@+id/saldo_text"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/check_saldo_button"/>
+
+                    <TextView
+                        android:id="@+id/saldo_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="XXXXXXXXX"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:textSize="18sp"
+                        app:layout_constraintStart_toStartOf="@+id/saldo"
+                        app:layout_constraintTop_toBottomOf="@+id/saldo"/>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_rekening"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                app:cardBackgroundColor="#0B623E"
+                app:cardCornerRadius="16dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/card_saldo">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <TextView
                         android:id="@+id/account"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="No Rekening"
+                        android:layout_marginTop="20dp"
                         android:textColor="@android:color/white"
-                        android:layout_marginTop="0dp"
                         android:textSize="15sp"
                         app:layout_constraintBottom_toTopOf="@id/account_number_text"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/check_saldo_button" />
+                        app:layout_constraintStart_toStartOf="parent"/>
 
                     <TextView
                         android:id="@+id/account_number_text"
@@ -167,72 +169,64 @@
                         android:textSize="18sp"
                         app:layout_constraintStart_toStartOf="@id/account"
                         app:layout_constraintTop_toBottomOf="@id/account" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                </LinearLayout>
+
             </androidx.cardview.widget.CardView>
-
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                tools:layout_editor_absoluteX="0dp"
-                tools:layout_editor_absoluteY="16dp"
-                tools:ignore="MissingConstraints">
-                <!--                app:layout_constraintTop_toBottomOf="@id/card1">-->
-
-                <!-- Image Slider -->
-
-                <!-- RecyclerView List Menu -->
 
                 <View
                     android:id="@+id/card_yellow"
-                    android:layout_width="422dp"
-                    android:layout_height="100dp"
-                    android:layout_marginTop="320dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="350dp"
                     android:background="@drawable/rounded_corners"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.545"
+                    app:layout_constraintTop_toBottomOf="@+id/card_rekening"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <View
-                    android:id="@+id/card_white"
-                    android:layout_width="447dp"
-                    android:layout_height="700dp"
-                    android:layout_marginTop="50dp"
-                    android:background="@drawable/bg_white"
-                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.486"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/card_yellow"
-                    app:layout_constraintVertical_bias="1.0" />
+                    android:layout_marginTop="25dp" />
 
-                <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/imageSlider"
-                    android:layout_width="350dp"
-                    android:layout_height="150dp"
-                    android:layout_marginBottom="10dp"
-                    android:background="@android:color/black"
-                    app:layout_constraintBottom_toTopOf="@id/menu_container"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent" />
+            <FrameLayout
+                android:id="@+id/card_white"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_white"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:layout_marginTop="20dp"
+                app:layout_constraintTop_toTopOf="@id/card_yellow">
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/menu_container"
-                    android:layout_width="410dp"
-                    android:layout_height="321dp"
-                    android:layout_marginBottom="190dp"
-                    android:padding="20dp"
-                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-                    app:layout_constrainedHeight="true"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.727"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:spanCount="4"
-                    tools:itemCount="8"
-                    tools:listitem="@layout/recycler_view_menu_item" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <androidx.viewpager2.widget.ViewPager2
+                        android:id="@+id/imageSlider"
+                        android:layout_width="match_parent"
+                        android:layout_height="150dp"
+                        android:layout_marginTop="30dp"
+                        android:layout_marginBottom="30dp"
+                        android:layout_marginStart="30dp"
+                        android:layout_marginEnd="30dp"
+                        android:background="@android:color/transparent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/menu_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="20dp"
+                        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                        app:layout_constraintTop_toBottomOf="@+id/imageSlider"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:spanCount="4"
+                        tools:itemCount="8"
+                        tools:listitem="@layout/recycler_view_menu_item" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </FrameLayout>
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 

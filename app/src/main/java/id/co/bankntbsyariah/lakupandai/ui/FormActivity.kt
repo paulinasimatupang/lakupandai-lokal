@@ -1,5 +1,6 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.content.ContentValues.TAG
 import android.content.Context
@@ -221,11 +222,6 @@ class FormActivity : AppCompatActivity() {
 
     }
 
-    private fun getSequenceOptionsForComponent(componentId: String): List<Pair<String, String>> {
-        // Replace with actual logic to fetch sequence options based on componentId
-        return listOf() // Placeholder
-    }
-
     private fun setInitialLayout() {
         when (formId) {
             "AWL0000" -> {
@@ -259,10 +255,11 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("UseCompatLoadingForDrawables")
     private fun setupForm(screen: Screen, containerView: View? = null) {
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
-        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
+        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container)
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -310,17 +307,26 @@ class FormActivity : AppCompatActivity() {
 
             for (component in screen.comp) {
                 if (component.id == "D1004") {  // ID komponen untuk jenis mutasi
-                    val originalMutasiValue =
-                        component.compValues?.compValue?.firstOrNull()?.value ?: ""
-                    val formattedMutasi = formatMutasi(originalMutasiValue)
+                    // Dapatkan nilai mutasi asli dari komponen
+                    val originalMutasiValue = component.compValues?.compValue?.firstOrNull()?.value ?: ""
 
-                    val mutasiTextView = TextView(this@FormActivity).apply {
-                        text = formattedMutasi
-                        textSize = 16f
-                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                    // Parse mutasi menjadi list dari objek Mutation
+                    val mutationList = parseMutasi(originalMutasiValue)
+
+                    // Siapkan RecyclerView untuk menampilkan daftar mutasi
+                    val recyclerView = RecyclerView(this@FormActivity).apply {
+                        layoutManager = LinearLayoutManager(this@FormActivity)
+                        adapter = MutationAdapter(mutationList)
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            setMargins(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                        }
                     }
 
-                    container.addView(mutasiTextView)
+                    // Tambahkan RecyclerView ke dalam container
+                    container.addView(recyclerView)
                 }
             }
 
@@ -1188,31 +1194,6 @@ class FormActivity : AppCompatActivity() {
         return true
     }
 
-    private fun showPopup(screen: Screen, component: Component) {
-        val dialogView = layoutInflater.inflate(R.layout.pop_up, null)
-        val dialog = AlertDialog.Builder(this@FormActivity)
-            .setView(dialogView)
-            .create()
-
-        setupForm(screen, dialogView)
-        dialog.show()
-
-        val buttonContainer = dialogView.findViewById<LinearLayout>(R.id.button_type_7_container)
-        val button = Button(this).apply {
-            text = component.label
-            setTextColor(getColor(R.color.white))
-            textSize = 18f
-            background = getDrawable(R.drawable.button_yellow)
-            setOnClickListener {
-                handleButtonClick(component, screen)
-                if (isOtpValidated) {
-                    dialog.dismiss()
-                }
-            }
-        }
-        buttonContainer.addView(button)
-    }
-
     private fun showDatePickerDialog(editText: EditText, onDateSelected: (String) -> Unit) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
@@ -1279,7 +1260,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label != "NIK" -> {
-                        val value = (component.values.get(0)?.second ?: "") as String
+                        val value = (component.values.get(0)?.second ?: "")
                         componentValues[component.id] = value
                         Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
                     }
@@ -1458,6 +1439,4 @@ class FormActivity : AppCompatActivity() {
         }
         return transactions
     }
-
-
 }

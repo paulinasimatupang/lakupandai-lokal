@@ -1096,6 +1096,7 @@ class FormActivity : AppCompatActivity() {
                 "6" -> "Konghucu"
                 else -> ""
             }
+
             "CIF42" -> when (currentValue) {
                 "0" -> "Tidak Menetap"
                 "1" -> "Menetap"

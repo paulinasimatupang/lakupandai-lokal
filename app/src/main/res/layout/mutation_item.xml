@@ -1,0 +1,32 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- Tanggal Grup -->
+    <TextView
+        android:id="@+id/tv_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#000000"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"/>
+
+    <!-- Kontainer untuk menampung transaksi yang terkait dengan tanggal -->
+    <LinearLayout
+        android:id="@+id/transaction_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+    </LinearLayout>
+
+    <!-- Garis pemisah -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@android:color/darker_gray"
+        android:layout_marginTop="8dp"/>
+</LinearLayout>

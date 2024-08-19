@@ -954,7 +954,7 @@ class FormActivity : AppCompatActivity() {
                     })
                     val editText = EditText(this@FormActivity).apply {
                         hint = component.label
-                        background = getDrawable(R.drawable.edit_text_background)
+                        background = getDrawable(R.drawable.date_input)
                         id = View.generateViewId()
                         tag = component.id
                         inputType = android.text.InputType.TYPE_NULL

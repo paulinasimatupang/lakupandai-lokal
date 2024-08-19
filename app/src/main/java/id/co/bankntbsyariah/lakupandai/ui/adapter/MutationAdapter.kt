@@ -10,33 +10,63 @@ import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Mutation
 
 class MutationAdapter(private val mutations: List<Mutation>) :
-    RecyclerView.Adapter<MutationAdapter.MutationViewHolder>() {
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MutationViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.mutation_item, parent, false)  // Menggunakan layout mutation_item
-        return MutationViewHolder(view)
+    // Define the constants for view types inside the companion object
+    companion object {
+        const val VIEW_TYPE_DATE = 0
+        const val VIEW_TYPE_TRANSACTION = 1
     }
 
-    override fun onBindViewHolder(holder: MutationViewHolder, position: Int) {
-        holder.bind(mutations[position])  // Menghubungkan data ke ViewHolder
+    override fun getItemViewType(position: Int): Int {
+        return if (position == 0 || mutations[position].date != mutations[position - 1].date) {
+            VIEW_TYPE_DATE
+        } else {
+            VIEW_TYPE_TRANSACTION
+        }
     }
 
-    override fun getItemCount(): Int = mutations.size  // Mengembalikan jumlah item mutasi
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_DATE) {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.mutation_date_item, parent, false)
+            DateViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.mutation_transaction_item, parent, false)
+            TransactionViewHolder(view)
+        }
+    }
 
-    class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is DateViewHolder) {
+            holder.bind(mutations[position])
+        } else if (holder is TransactionViewHolder) {
+            holder.bind(mutations[position])
+        }
+    }
+
+    override fun getItemCount(): Int = mutations.size
+
+    class DateViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val mutationDate: TextView = itemView.findViewById(R.id.mutation_date)
+
+        fun bind(mutation: Mutation) {
+            mutationDate.text = mutation.date
+        }
+    }
+
+    class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val mutationTime: TextView = itemView.findViewById(R.id.mutation_time)
         private val mutationDescription: TextView = itemView.findViewById(R.id.mutation_description)
         private val mutationAmount: TextView = itemView.findViewById(R.id.mutation_amount)
 
         fun bind(mutation: Mutation) {
-            mutationDate.text = mutation.date  // Tampilkan tanggal
-            mutationTime.text = mutation.time  // Tampilkan waktu
-            mutationDescription.text = mutation.description  // Tampilkan deskripsi
-            mutationAmount.text = mutation.amount  // Tampilkan jumlah transaksi
+            mutationTime.text = mutation.time
+            mutationDescription.text = mutation.description
+            mutationAmount.text = mutation.amount
 
-            // Penyesuaian warna berdasarkan nilai positif/negatif
+            // Adjust color based on the transaction amount
             val amount = mutation.amount.replace(",", "").toDoubleOrNull()
             if (amount != null && amount < 0) {
                 mutationAmount.setTextColor(itemView.context.getColor(R.color.yellow))
@@ -46,4 +76,3 @@ class MutationAdapter(private val mutations: List<Mutation>) :
         }
     }
 }
-

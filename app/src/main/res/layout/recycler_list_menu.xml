@@ -47,7 +47,8 @@
                 android:textSize="15dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintRight_toRightOf="@id/header_image" />
+                app:layout_constraintRight_toRightOf="@id/header_image"
+                tools:ignore="TextSizeCheck" />
 
             <TextView
                 android:id="@+id/subhead"
@@ -59,7 +60,8 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.769"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/title" />
+                app:layout_constraintTop_toBottomOf="@id/title"
+                tools:ignore="TextSizeCheck" />
 
             <TextView
                 android:id="@+id/body"

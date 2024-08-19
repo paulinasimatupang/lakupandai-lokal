@@ -1000,6 +1000,7 @@ class FormActivity : AppCompatActivity() {
 
         val inputValue = inputValues[component.id] ?: ""
         val mandatory = component.opt.substring(0, 1).toIntOrNull() ?: 0
+        val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
         val minLength = component.opt.substring(3, 6).toIntOrNull() ?: 0
         val maxLength = component.opt.substring(6).toIntOrNull() ?: Int.MAX_VALUE
 
@@ -1013,6 +1014,35 @@ class FormActivity : AppCompatActivity() {
             errors.add("${component.label} Maksimal $maxLength karakter")
         }
 
+        when (conType) {
+            0 -> {
+                if (!inputValue.matches(Regex("[a-zA-Z0-9]*"))) {
+                    errors.add("${component.label} Harus terdiri dari huruf dan angka")
+                }
+            }
+            1 -> {
+                if (!inputValue.matches(Regex("[a-zA-Z]*"))) {
+                    errors.add("${component.label} Harus terdiri dari huruf saja")
+                }
+            }
+            2 -> {
+                if (!inputValue.matches(Regex("[0-9]*"))) {
+                    errors.add("${component.label} Harus terdiri dari angka saja")
+                }
+            }
+            4 -> {
+                if (!inputValue.matches(Regex("\\d+(\\.\\d{1,2})?"))) {
+                    errors.add("${component.label} Format uang tidak valid")
+                }
+            }
+            3 -> {
+                // No Constraint
+            }
+            else -> {
+                errors.add("${component.label} Tipe validasi tidak dikenali")
+            }
+        }
+
         editText.error = null
 
         if (errors.isNotEmpty()) {
@@ -1024,6 +1054,7 @@ class FormActivity : AppCompatActivity() {
             return emptyList()
         }
     }
+
 
     private fun handleButtonClick(component: Component, screen: Screen?) {
 //        val isComponentValid = validateComponent(component)

@@ -41,6 +41,8 @@ import okhttp3.OkHttpClient
 import org.json.JSONException
 import org.json.JSONObject
 import android.widget.ImageButton
+import java.text.NumberFormat
+import java.util.Locale
 
 class MenuActivity : AppCompatActivity() {
 
@@ -424,6 +426,13 @@ class MenuActivity : AppCompatActivity() {
         }
     }
 
+    fun formatRupiah(amount: Double): String {
+        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        format.minimumFractionDigits = 0
+        format.maximumFractionDigits = 0
+        return format.format(amount)
+    }
+
     private fun checkSaldo() {
         val messageBody = createMessageBody()
         if (messageBody != null) {
@@ -452,12 +461,26 @@ class MenuActivity : AppCompatActivity() {
                                         accountNumber = value
                                     } else if (label == "Saldo Akhir") {
                                         saldo = value
+                                        if (saldo != null) {
+                                            if (saldo.contains("-")) {
+                                                saldo = saldo.replace("-", "")
+                                            }
+                                        }
+
+                                        if (saldo != null) {
+                                            if (saldo.contains(",")) {
+                                                saldo = saldo.replace(",", "")
+                                            }
+                                        }
+
+                                        val saldoNumeric = saldo?.toDoubleOrNull() ?: 0.0
+                                        saldo = formatRupiah(saldoNumeric)
                                     }
                                 }
 
                                 runOnUiThread {
                                     findViewById<TextView>(R.id.account_number_text)?.text = "$accountNumber"
-                                    findViewById<TextView>(R.id.saldo_text)?.text = "Rp$saldo"
+                                    findViewById<TextView>(R.id.saldo_text)?.text = "$saldo"
                                     Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
                                     Log.d("MenuActivity", "Updated Saldo text: $saldo")
                                 }

@@ -47,6 +47,7 @@ import android.view.WindowManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import id.co.bankntbsyariah.lakupandai.common.Mutation
 import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
+import okhttp3.internal.format
 import java.text.NumberFormat
 
 class FormActivity : AppCompatActivity() {
@@ -395,7 +396,7 @@ class FormActivity : AppCompatActivity() {
                             val componentValue = getComponentValue(component)
                             val numericValue = componentValue.toDoubleOrNull() ?: 0.0
                             val formattedValue = when {
-                                component.label.contains("nominal", ignoreCase = true) -> {
+                                component.label.contains("nominal", ignoreCase = true)|| component.label.contains("nilai transfer", ignoreCase = true) -> {
                                     nominalValue = numericValue
                                     formatRupiah(nominalValue)
                                 }
@@ -404,7 +405,19 @@ class FormActivity : AppCompatActivity() {
                                     formatRupiah(feeValue)
                                 }
                                 component.label.contains("saldo", ignoreCase = true) -> {
-                                    formatRupiah(getComponentValue(component).toDoubleOrNull() ?: 0.0)
+                                    var saldoStr = getComponentValue(component)
+
+                                    if (saldoStr.contains("-")) {
+                                        saldoStr = saldoStr.replace("-", "")
+                                    }
+
+                                    if (saldoStr.contains(",")) {
+                                        saldoStr = saldoStr.replace(",", "")
+                                    }
+
+                                    val saldo = saldoStr.toDoubleOrNull()?: 0.0
+
+                                    formatRupiah(saldo)
                                 }
                                 else -> componentValue
                             }

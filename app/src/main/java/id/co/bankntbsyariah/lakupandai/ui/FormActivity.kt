@@ -673,146 +673,148 @@ class FormActivity : AppCompatActivity() {
                             setTypeface(null, Typeface.BOLD)
                         })
 
-                        val spinner = Spinner(this@FormActivity).apply {
-                            background = getDrawable(R.drawable.combo_box)
-                            val options = mutableListOf("Pilih ${component.label}") + component.values.map { it.first }
-                            val adapter = ArrayAdapter(this@FormActivity, android.R.layout.simple_spinner_item, options)
-                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                            this.adapter = adapter
-                            layoutParams = LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                LinearLayout.LayoutParams.WRAP_CONTENT
-                            )
-                        }
+                        var compOption = component.compValues?.compValue
 
-                        spinner.onItemSelectedListener =
-                            object : AdapterView.OnItemSelectedListener {
-                                override fun onItemSelected(
-                                    parent: AdapterView<*>,
-                                    view: View,
-                                    position: Int,
-                                    id: Long
-                                ) {
-                                    if (position == 0) {
-                                        inputValues[component.id] = ""
-                                        Log.d(
-                                            "FormActivity",
-                                            "Component ID: ${component.id}, No Value Selected"
-                                        )
-                                        return
+                        lifecycleScope.launch {
+                            val options: List<Pair<String?, String?>> = if (compOption.isNullOrEmpty() ||
+                                compOption.all { it.value == "" }) {
+
+                                var formValue = StorageImpl(applicationContext).fetchForm(screen.id)
+
+                                if (formValue.isNullOrEmpty()) {
+                                    formValue = withContext(Dispatchers.IO) {
+                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
                                     }
-
-                                    val selectedValue = component.values[position - 1].first
-                                    val branchid = component.compValues?.compValue?.find {
-                                        it.print == selectedValue
-                                    }?.value?.replace("[OI]", "")
-
-                                    Log.d(
-                                        "FormActivity",
-                                        "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
-                                    )
-
-                                    when (component.id) {
-                                        "CB001" -> {
-                                            inputValues[component.id] = branchid ?: ""
-                                            Log.d(
-                                                "FormActivity",
-                                                "Branch Code set to: ${inputValues[component.id]}"
-                                            )
-                                        }
-
-                                        "CR002" -> if (selectedValue == "BSA Lakupandai") {
-                                            inputValues[component.id] = "36"
-                                            Log.d(
-                                                "FormActivity",
-                                                "Special case for CR002: Value set to 36"
-                                            )
-                                        }
-
-                                        "Cif13" -> {
-                                            val cif13Codes = mapOf(
-                                                0 to "5201",
-                                                1 to "5202",
-                                                2 to "5203",
-                                                3 to "5204",
-                                                4 to "5205",
-                                                5 to "5206",
-                                                6 to "5207",
-                                                7 to "5208",
-                                                8 to "5271",
-                                                9 to "5272"
-                                            )
-                                            inputValues[component.id] =
-                                                cif13Codes[position] ?: "5201"
-                                            Log.d(
-                                                "FormActivity",
-                                                "Value set to: ${cif13Codes[position] ?: "5201"}"
-                                            )
-                                        }
-
-                                        "CIF06", "CIF25" -> inputValues[component.id] =
-                                            (position + 1).toString()
-
-                                        "CIF14" -> {
-                                            val provinceCodes = mapOf(
-                                                0 to "11",
-                                                1 to "12",
-                                                2 to "13",
-                                                3 to "14",
-                                                4 to "15",
-                                                5 to "16",
-                                                6 to "17",
-                                                7 to "18",
-                                                8 to "19",
-                                                9 to "21",
-                                                10 to "31",
-                                                11 to "32",
-                                                12 to "33",
-                                                13 to "34",
-                                                14 to "35",
-                                                15 to "36",
-                                                16 to "51",
-                                                17 to "52",
-                                                18 to "53",
-                                                19 to "61",
-                                                20 to "62",
-                                                21 to "63",
-                                                22 to "64",
-                                                23 to "65",
-                                                24 to "71",
-                                                25 to "72",
-                                                26 to "73",
-                                                27 to "74",
-                                                28 to "75",
-                                                29 to "76",
-                                                30 to "81",
-                                                31 to "82",
-                                                32 to "91",
-                                                33 to "94",
-                                                34 to "99"
-                                            )
-                                            inputValues[component.id] =
-                                                provinceCodes[position] ?: "99"
-                                            Log.d(
-                                                "FormActivity",
-                                                "Value set to: ${provinceCodes[position] ?: "99"}"
-                                            )
-                                        }
-
-                                        else -> inputValues[component.id] = position.toString()
-                                    }
+                                    Log.i("FormActivity", "Fetched formValue: $formValue")
                                 }
 
-                                override fun onNothingSelected(parent: AdapterView<*>) {
-                                    Log.d(
+                                if (formValue.isNullOrEmpty()) {
+                                    Log.e(
                                         "FormActivity",
-                                        "Nothing selected for Component ID: ${component.id}"
+                                        "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
                                     )
+                                    mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                } else {
+                                    try {
+                                        val screenJson = JSONObject(formValue)
+                                        val screen: Screen = ScreenParser.parseJSON(screenJson)
+                                        val selectedOptions = screen.comp.firstOrNull { it.id == component.id }
+                                            ?.compValues?.compValue?.mapNotNull { Pair(it.print, it.value) }
+                                            ?: emptyList()
+
+                                        Log.d("FormActivity", "SELECTED OPTIONS : $selectedOptions")
+                                        mutableListOf(Pair("Pilih ${component.label}", "")) + selectedOptions
+                                    } catch (e: JSONException) {
+                                        Log.e("FormActivity", "JSON Parsing error: ${e.message}")
+                                        mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                    }
                                 }
+                            } else {
+                                mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
                             }
 
+                            val spinner = Spinner(this@FormActivity).apply {
+                                background = getDrawable(R.drawable.combo_box)
+                                val adapter = ArrayAdapter(
+                                    this@FormActivity,
+                                    android.R.layout.simple_spinner_item,
+                                    options.map { it.first } // Display only the 'print' value
+                                )
+                                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                this.adapter = adapter
+                                layoutParams = LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                )
+                            }
 
-                        addView(spinner)
+                            spinner.onItemSelectedListener =
+                                object : AdapterView.OnItemSelectedListener {
+                                    override fun onItemSelected(
+                                        parent: AdapterView<*>,
+                                        view: View,
+                                        position: Int,
+                                        id: Long
+                                    ) {
+                                        if (position == 0) {
+                                            inputValues[component.id] = ""
+                                            Log.d(
+                                                "FormActivity",
+                                                "Component ID: ${component.id}, No Value Selected"
+                                            )
+                                            return
+                                        }
+
+                                        val selectedPair = options[position]
+                                        val selectedValue = selectedPair.first
+                                        val selectedCompValue = selectedPair.second
+
+                                        Log.d(
+                                            "FormActivity",
+                                            "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
+                                        )
+
+                                        Log.d(
+                                            "FormActivity",
+                                            "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
+                                        )
+
+                                        when (component.id) {
+                                            "CB001" -> {
+                                                if (selectedCompValue != null) {
+                                                    inputValues[component.id] = selectedCompValue.replace("[OI]", "")
+                                                }
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Branch Code set to: ${inputValues[component.id]}"
+                                                )
+                                            }
+
+                                            "CR002" -> if (selectedValue == "BSA Lakupandai") {
+                                                inputValues[component.id] = "36"
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Special case for CR002: Value set to 36"
+                                                )
+                                            }
+
+                                            "CIF13" -> {
+                                                if (selectedCompValue != null) {
+                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CK", "")
+                                                }
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Kab Kota set to: ${inputValues[component.id]}"
+                                                )
+                                            }
+
+                                            "CIF23" -> inputValues[component.id] =
+                                                (position - 1).toString()
+
+                                            "CIF14" -> {
+                                                if (selectedCompValue != null) {
+                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CIFP", "")
+                                                }
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Provinsi set to: ${inputValues[component.id]}"
+                                                )
+                                            }
+                                            else -> inputValues[component.id] = (position ?: selectedValue).toString()
+                                        }
+
+                                    }
+
+                                    override fun onNothingSelected(parent: AdapterView<*>) {
+                                        Log.d(
+                                            "FormActivity",
+                                            "Nothing selected for Component ID: ${component.id}"
+                                        )
+                                    }
+                                }
+
+                            addView(spinner)
+                        }
                     }
                 }
                 5 -> {
@@ -820,7 +822,7 @@ class FormActivity : AppCompatActivity() {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 18f
+                            textSize = 16f
                             setTypeface(null, Typeface.BOLD)
                         })
 
@@ -845,7 +847,7 @@ class FormActivity : AppCompatActivity() {
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 18f
+                            textSize = 16f
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {

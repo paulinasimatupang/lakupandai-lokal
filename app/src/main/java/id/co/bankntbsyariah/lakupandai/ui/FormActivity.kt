@@ -1137,72 +1137,6 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-
-    private fun validateInput(component: Component): List<String> {
-        val container = findViewById<LinearLayout>(R.id.menu_container)
-        val editText = container.findViewWithTag<EditText>(component.id)
-
-        if (editText == null) {
-            return listOf("Input field for ${component.label} tidak ditemukan.")
-        }
-
-        val inputValue = inputValues[component.id] ?: ""
-        val mandatory = component.opt.substring(0, 1).toIntOrNull() ?: 0
-        val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
-        val minLength = component.opt.substring(3, 6).toIntOrNull() ?: 0
-        val maxLength = component.opt.substring(6).toIntOrNull() ?: Int.MAX_VALUE
-
-        val errors = mutableListOf<String>()
-
-        if (mandatory == 1 && inputValue.isEmpty()) {
-            errors.add("${component.label} Wajib Diisi")
-        } else if (inputValue.length < minLength) {
-            errors.add("${component.label} Minimal $minLength karakter")
-        } else if (inputValue.length > maxLength) {
-            errors.add("${component.label} Maksimal $maxLength karakter")
-        }
-
-        when (conType) {
-            0 -> {
-                if (!inputValue.matches(Regex("[a-zA-Z0-9]*"))) {
-                    errors.add("${component.label} Harus terdiri dari huruf dan angka")
-                }
-            }
-            1 -> {
-                if (!inputValue.matches(Regex("[a-zA-Z]*"))) {
-                    errors.add("${component.label} Harus terdiri dari huruf saja")
-                }
-            }
-            2 -> {
-                if (!inputValue.matches(Regex("[0-9]*"))) {
-                    errors.add("${component.label} Harus terdiri dari angka saja")
-                }
-            }
-            4 -> {
-                if (!inputValue.matches(Regex("\\d+(\\.\\d{1,2})?"))) {
-                    errors.add("${component.label} Format uang tidak valid")
-                }
-            }
-            3 -> {
-                // No Constraint
-            }
-            else -> {
-                errors.add("${component.label} Tipe validasi tidak dikenali")
-            }
-        }
-
-        editText.error = null
-
-        if (errors.isNotEmpty()) {
-            editText.error = errors.first()
-            editText.background = ContextCompat.getDrawable(this, R.drawable.edit_text_wrong)
-            return errors
-        } else {
-            editText.background = ContextCompat.getDrawable(this, R.drawable.edit_text_background)
-            return emptyList()
-        }
-    }
-
     private fun handleButtonClick(component: Component, screen: Screen?) {
 //        val isComponentValid = validateComponent(component)
 
@@ -1622,6 +1556,70 @@ class FormActivity : AppCompatActivity() {
 //            putExtra(Constants.KEY_MENU_ID, "CCIF004")
 //        })
 //    }
+    private fun validateInput(component: Component): List<String> {
+        val container = findViewById<LinearLayout>(R.id.menu_container)
+        val editText = container.findViewWithTag<EditText>(component.id)
+
+        if (editText == null) {
+            return listOf("Input field for ${component.label} tidak ditemukan.")
+        }
+
+        val inputValue = inputValues[component.id] ?: ""
+        val mandatory = component.opt.substring(0, 1).toIntOrNull() ?: 0
+        val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
+        val minLength = component.opt.substring(3, 6).toIntOrNull() ?: 0
+        val maxLength = component.opt.substring(6).toIntOrNull() ?: Int.MAX_VALUE
+
+        val errors = mutableListOf<String>()
+
+        if (mandatory == 1 && inputValue.isEmpty()) {
+            errors.add("${component.label} Wajib Diisi")
+        } else if (inputValue.length < minLength) {
+            errors.add("${component.label} Minimal $minLength karakter")
+        } else if (inputValue.length > maxLength) {
+            errors.add("${component.label} Maksimal $maxLength karakter")
+        }
+
+        when (conType) {
+            0 -> {
+                if (!inputValue.matches(Regex("[a-zA-Z0-9]*"))) {
+                    errors.add("${component.label} Harus terdiri dari huruf dan angka")
+                }
+            }
+            1 -> {
+                if (!inputValue.matches(Regex("[a-zA-Z]*"))) {
+                    errors.add("${component.label} Harus terdiri dari huruf saja")
+                }
+            }
+            2 -> {
+                if (!inputValue.matches(Regex("[0-9]*"))) {
+                    errors.add("${component.label} Harus terdiri dari angka saja")
+                }
+            }
+            4 -> {
+                if (!inputValue.matches(Regex("\\d+(\\.\\d{1,2})?"))) {
+                    errors.add("${component.label} Format uang tidak valid")
+                }
+            }
+            3 -> {
+                // No Constraint
+            }
+            else -> {
+                errors.add("${component.label} Tipe validasi tidak dikenali")
+            }
+        }
+
+        editText.error = null
+
+        if (errors.isNotEmpty()) {
+            editText.error = errors.first()
+            editText.background = ContextCompat.getDrawable(this, R.drawable.edit_text_wrong)
+            return errors
+        } else {
+            editText.background = ContextCompat.getDrawable(this, R.drawable.edit_text_background)
+            return emptyList()
+        }
+    }
 
     private fun navigateToScreen() {
         startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {

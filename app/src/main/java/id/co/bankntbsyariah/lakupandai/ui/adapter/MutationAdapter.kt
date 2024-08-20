@@ -8,6 +8,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Mutation
+import java.text.NumberFormat
+import java.util.Locale
 
 class MutationAdapter(private val mutations: List<Mutation>) :
     RecyclerView.Adapter<MutationAdapter.MutationViewHolder>() {
@@ -29,34 +31,47 @@ class MutationAdapter(private val mutations: List<Mutation>) :
 
     class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dateTextView: TextView = itemView.findViewById(R.id.tv_date)
-        private val transactionContainer: LinearLayout = itemView.findViewById(R.id.transaction_container)
+        private val transactionContainer: LinearLayout =
+            itemView.findViewById(R.id.transaction_container)
 
         fun bind(date: String, transactions: List<Mutation>) {
             dateTextView.text = date
-            transactionContainer.removeAllViews() // Menghapus transaksi sebelumnya
+            transactionContainer.removeAllViews()
 
             transactions.forEach { mutation ->
                 val transactionView = LayoutInflater.from(itemView.context)
                     .inflate(R.layout.transaction_item, transactionContainer, false)
 
-                val descriptionTextView: TextView = transactionView.findViewById(R.id.tv_description)
+                val descriptionTextView: TextView =
+                    transactionView.findViewById(R.id.tv_description)
                 val amountTextView: TextView = transactionView.findViewById(R.id.tv_amount)
+                val transactionTypeTextView: TextView = transactionView.findViewById(R.id.tv_transaction_type)
                 val timeTextView: TextView = transactionView.findViewById(R.id.tv_time)
 
                 descriptionTextView.text = mutation.description
-                amountTextView.text = mutation.amount
+                amountTextView.text = formatRupiah(mutation.amount)
                 timeTextView.text = mutation.time
 
-                // Atur warna teks berdasarkan jumlah transaksi
-                val amount = mutation.amount.replace(",", "").replace("Rp ", "").toDoubleOrNull()
-                if (amount != null && amount < 0) {
+                // Set transaction type text (DB or CR)
+                transactionTypeTextView.text = if (mutation.transactionType == "DEBIT") "DB" else "CR"
+
+                // Set text color based on transaction type
+                if (mutation.transactionType == "DEBIT") {
                     amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_red_dark))
                 } else {
-                    amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_green_dark))
+                    amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_blue_dark))
                 }
 
                 transactionContainer.addView(transactionView)
             }
+        }
+
+        // Utility function to format amount
+        private fun formatRupiah(amount: String): String {
+            val amountValue = amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0
+            val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+            format.maximumFractionDigits = 0
+            return format.format(amountValue)
         }
     }
 }

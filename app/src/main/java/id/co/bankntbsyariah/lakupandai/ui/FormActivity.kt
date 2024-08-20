@@ -1646,12 +1646,13 @@ class FormActivity : AppCompatActivity() {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
         val transactions = mutableListOf<Mutation>()
 
-        val regex = Regex("""(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.+?) (Rp \d+.\d{2})""")
+        // Updated regex pattern to capture CREDIT/DEBIT
+        val regex = Regex("""(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.+?) (Rp \d+.\d{2}) (CREDIT|DEBIT)""")
         for (mutasi in mutasiList) {
             val match = regex.find(mutasi)
             if (match != null) {
-                val (date, time, description, amount) = match.destructured
-                transactions.add(Mutation(date, time, description, amount))
+                val (date, time, description, amount, transactionType) = match.destructured
+                transactions.add(Mutation(date, time, description, amount, transactionType))
             }
         }
         return transactions

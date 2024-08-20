@@ -3,7 +3,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:padding="0dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
     <!-- Tanggal Grup -->
     <TextView
@@ -20,7 +22,11 @@
         android:id="@+id/transaction_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp"
+        android:paddingLeft="0dp"
+        android:paddingRight="0dp">
     </LinearLayout>
 
     <!-- Garis pemisah -->

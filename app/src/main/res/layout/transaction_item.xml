@@ -3,7 +3,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingBottom="8dp">
+    android:paddingBottom="8dp"
+    android:paddingStart="0dp"
+    android:paddingEnd="0dp"
+    android:paddingLeft="0dp"
+    android:paddingRight="0dp">
 
     <TextView
         android:id="@+id/tv_description"
@@ -26,6 +30,15 @@
             android:layout_height="wrap_content"
             android:textSize="16sp"
             android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tv_transaction_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:layout_marginTop="4dp"/>
 
         <TextView
             android:id="@+id/tv_time"

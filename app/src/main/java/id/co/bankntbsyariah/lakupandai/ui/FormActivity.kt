@@ -1501,7 +1501,21 @@ class FormActivity : AppCompatActivity() {
                     val jsonResponse = JSONObject(responseData)
                     val token = jsonResponse.optString("token")
                     val fullname = jsonResponse.optJSONObject("data").optString("fullname")
+                    val status = jsonResponse.optJSONObject("data").optString("status")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
+
+                    if (status == "0") {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+                    else if (status == "2"){
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
 
                     if (token.isNotEmpty() && merchantData != null) {
                         val sharedPreferences =

@@ -381,18 +381,20 @@ class MenuActivity : AppCompatActivity() {
                 Log.d("BOTTOM1", "Parsed screen JSON: ${screenJson.toString()}")
                 Log.d("BOTTOM1", "Parsed screen object: ${screen.toString()}")
 
-                val menuListForBottomSheet = ArrayList<MenuItem>()
+                menuList.clear()
                 screen.comp.forEach { comp ->
                     if (comp.visible) {
-                        menuListForBottomSheet.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                        menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
                     }
                 }
 
-                val menuAdapter = RecyclerViewMenuAdapter(menuListForBottomSheet, this@MenuActivity, false)
+                Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
+
+                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false)
                 recyclerView.adapter = menuAdapter
 
                menuAdapter.notifyDataSetChanged()
-                Log.d("BOTTOM1", "Loaded ${menuListForBottomSheet.size} menu items into BottomSheet RecyclerView")
+                Log.d("BOTTOM1", "Loaded ${menuList.size} menu items into BottomSheet RecyclerView")
 
             } catch (e: JSONException) {
                 Log.e("BOTTOM1", "Error parsing menu JSON: ${e.message}", e)

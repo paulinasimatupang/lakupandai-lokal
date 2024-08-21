@@ -41,6 +41,7 @@ import okhttp3.OkHttpClient
 import org.json.JSONException
 import org.json.JSONObject
 import android.widget.ImageButton
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -340,9 +341,64 @@ class MenuActivity : AppCompatActivity() {
         }
         if(targetScreenId == "LOG0001"){
             showLogoutPopup()
+        }else if(targetScreenId == "MN00002"){
+            showMenuInBottomSheet("MN00002")
         }else{
             finish()
             navigateToScreen(targetScreenId)
+        }
+    }
+
+    private fun showMenuInBottomSheet(menuId: String) {
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val bottomSheetView = layoutInflater.inflate(R.layout.activity_menu_lainnya, null)
+        bottomSheetDialog.setContentView(bottomSheetView)
+
+        val menuContainer = bottomSheetView.findViewById<RecyclerView>(R.id.menu_container)
+        menuContainer?.let {
+            setupMenuRecyclerViewForBottomSheet(menuId, it)
+        }
+
+        bottomSheetDialog.show()
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private fun setupMenuRecyclerViewForBottomSheet(menuId: String, recyclerView: RecyclerView) {
+        lifecycleScope.launch {
+            try {
+                var menuValue: String? = StorageImpl(applicationContext).fetchMenu(menuId)
+                if (menuValue.isNullOrEmpty()) {
+                    menuValue = withContext(Dispatchers.IO) {
+                        ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
+                    }
+                    Log.d("MenuActivity", "Fetched menu value from server: $menuValue")
+                }
+
+                val screenJson = JSONObject(menuValue)
+                val screen: Screen = ScreenParser.parseJSON(screenJson)
+
+                // Debug output for parsed data
+                Log.d("BOTTOM1", "Parsed screen JSON: ${screenJson.toString()}")
+                Log.d("BOTTOM1", "Parsed screen object: ${screen.toString()}")
+
+                val menuListForBottomSheet = ArrayList<MenuItem>()
+                screen.comp.forEach { comp ->
+                    if (comp.visible) {
+                        menuListForBottomSheet.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                    }
+                }
+
+                val menuAdapter = RecyclerViewMenuAdapter(menuListForBottomSheet, this@MenuActivity, false)
+                recyclerView.adapter = menuAdapter
+
+               menuAdapter.notifyDataSetChanged()
+                Log.d("BOTTOM1", "Loaded ${menuListForBottomSheet.size} menu items into BottomSheet RecyclerView")
+
+            } catch (e: JSONException) {
+                Log.e("BOTTOM1", "Error parsing menu JSON: ${e.message}", e)
+            } catch (e: Exception) {
+                Log.e("BOTTOM1", "Error fetching menu: ${e.message}", e)
+            }
         }
     }
 

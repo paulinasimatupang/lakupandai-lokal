@@ -1571,7 +1571,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Token atau data merchant tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {

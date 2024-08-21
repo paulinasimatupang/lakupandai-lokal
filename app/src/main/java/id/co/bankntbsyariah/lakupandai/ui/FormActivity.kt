@@ -261,12 +261,37 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
+            screenTitle.contains("Berhasil", ignoreCase = true) ->
+            {
+                showSuccessPopup(screenTitle)
+                R.layout.activity_berhasil
+            }
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
+        if (screenTitle.contains("Berhasil", ignoreCase = true)) {
+            val formattedTitle = screenTitle.replace("Berhasil", "").trim()
+            Log.d("FormActivity", "Formatted title: $formattedTitle")
+
+            val cardTitleTextView = findViewById<TextView>(R.id.card_title)
+            if (cardTitleTextView != null) {
+                cardTitleTextView.text = formattedTitle
+                Log.d("FormActivity", "card_title successfully updated: ${cardTitleTextView.text}")
+            } else {
+                Log.e("FormActivity", "Error: TextView with ID card_title not found.")
+            }
+        }
+    }
+
+    private fun showSuccessPopup(message: String) {
+        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+            putExtra("MESSAGE_BODY", message)
+        }
+        startActivity(intent)
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -539,7 +564,6 @@ class FormActivity : AppCompatActivity() {
                             tag = component.id
                         }
                         inputValues[component.id] = ""
-                        nikValue = null
 
                         editText.addTextChangedListener(object : TextWatcher {
                             override fun beforeTextChanged(

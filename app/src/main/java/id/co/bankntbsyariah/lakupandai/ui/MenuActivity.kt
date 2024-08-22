@@ -334,6 +334,10 @@ class MenuActivity : AppCompatActivity() {
     }
 
     fun onMenuItemClick(position: Int) {
+        if (position > menuList.size) {
+            Log.e("MenuActivity", "Invalid menu item click. Position: $position, MenuList size: ${menuList.size}")
+            return
+        }
         val targetScreenId = menuList[position].value
         Log.d("Menu", "Value = $targetScreenId")
         if (targetScreenId.isNullOrEmpty()) {
@@ -354,9 +358,21 @@ class MenuActivity : AppCompatActivity() {
         val bottomSheetView = layoutInflater.inflate(R.layout.activity_menu_lainnya, null)
         bottomSheetDialog.setContentView(bottomSheetView)
 
+        // Simpan menuList awal sebelum perubahan
+        val originalMenuList = ArrayList(menuList)
+
+        // Clear and re-fetch menu list for the BottomSheetDialog
+        menuList.clear()
         val menuContainer = bottomSheetView.findViewById<RecyclerView>(R.id.menu_container)
         menuContainer?.let {
             setupMenuRecyclerViewForBottomSheet(menuId, it)
+        }
+
+        bottomSheetDialog.setOnDismissListener {
+            menuList.clear()
+            menuList.addAll(originalMenuList)
+
+           // navigateToScreen("MN00000")
         }
 
         bottomSheetDialog.show()

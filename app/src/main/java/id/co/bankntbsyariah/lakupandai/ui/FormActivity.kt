@@ -937,37 +937,29 @@ class FormActivity : AppCompatActivity() {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
-                                inputValues["OTP"] = otpValue
-
-                                s?.let {
+                                if (s != null) {
                                     when {
-                                        it.length == 1 -> {
+                                        count > 0 -> {
                                             val nextIndex = index + 1
                                             if (nextIndex < otpDigits.size) {
                                                 otpDigits[nextIndex].requestFocus()
                                             }
                                         }
-                                        it.length == 0 -> {
+
+                                        before > 0 -> {
                                             val prevIndex = index - 1
                                             if (prevIndex >= 0) {
                                                 otpDigits[prevIndex].requestFocus()
                                             }
                                         }
-                                        it.length > 1 -> {
-                                            val nextIndex = index + 1
-                                            if (nextIndex < otpDigits.size) {
-                                                otpDigits[nextIndex].requestFocus()
-                                            }
-                                        }
                                     }
+                                    val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
+                                    inputValues["OTP"] = otpValue
                                 }
                             }
-
                             override fun afterTextChanged(s: Editable?) {}
                         })
                     }
-
                     otpView
                 }
 
@@ -1620,13 +1612,13 @@ class FormActivity : AppCompatActivity() {
 
         when (conType) {
             0 -> {
-                if (!inputValue.matches(Regex("[a-zA-Z0-9]*"))) {
-                    errors.add("${component.label} Harus terdiri dari huruf dan angka")
+                if (!inputValue.matches(Regex("[\\w\\s\\p{Punct}]*"))) {
+                    errors.add("${component.label} Harus terdiri dari huruf, angka,dan simbol")
                 }
             }
             1 -> {
-                if (!inputValue.matches(Regex("[a-zA-Z]*"))) {
-                    errors.add("${component.label} Harus terdiri dari huruf saja")
+                if (!inputValue.matches(Regex("[a-zA-Z\\s]*"))) {
+                    errors.add("${component.label} Harus terdiri dari huruf")
                 }
             }
             2 -> {

@@ -5,17 +5,27 @@
     android:orientation="vertical"
     android:padding="0dp"
     android:paddingTop="8dp"
+    android:background="#FFFFFF"
     android:paddingBottom="8dp">
 
     <!-- Tanggal Grup -->
     <TextView
         android:id="@+id/tv_date"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="14sp"
+        android:textColor="#434242"
+        android:textSize="18sp"
+        android:background="#C7C8CC"
         android:textStyle="bold"
-        android:paddingBottom="8dp"/>
+        android:text="2024-01-05"
+        android:padding="10dp"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC"
+        android:layout_marginTop="0dp"
+        android:layout_marginBottom="0dp"/>
 
     <!-- Kontainer untuk menampung transaksi yang terkait dengan tanggal -->
     <LinearLayout
@@ -28,11 +38,4 @@
         android:paddingLeft="0dp"
         android:paddingRight="0dp">
     </LinearLayout>
-
-    <!-- Garis pemisah -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@android:color/darker_gray"
-        android:layout_marginTop="8dp"/>
 </LinearLayout>

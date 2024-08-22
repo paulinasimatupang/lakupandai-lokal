@@ -324,7 +324,7 @@ class FormActivity : AppCompatActivity() {
                     namaDepan = fullName?.split(" ")?.firstOrNull()?.take(1) ?: ""
                 }
             }
-            if (screen.id == "TF00003" && component.id == "ST003") {
+            if (screen.title.contains("Transfer") && component.id == "ST003") {
                 val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
 
                 transaksiBerhasilTextView?.let {
@@ -391,7 +391,7 @@ class FormActivity : AppCompatActivity() {
 
             if (component.id == "TRF27" || component.id == "TFR24" || component.id == "AG001" ||
                 component.id == "AG002" || component.id == "TRF26" || component.id == "AG005" ||
-                (component.id == "ST003" && screen.id == "TF00003") || component.id == "D1004"
+                (component.id == "ST003" && screen.title.contains("Transfer") ) || component.id == "D1004"
             ) continue
 
             if (component.id == "MSG03") {

@@ -358,10 +358,8 @@ class MenuActivity : AppCompatActivity() {
         val bottomSheetView = layoutInflater.inflate(R.layout.activity_menu_lainnya, null)
         bottomSheetDialog.setContentView(bottomSheetView)
 
-        // Simpan menuList awal sebelum perubahan
         val originalMenuList = ArrayList(menuList)
 
-        // Clear and re-fetch menu list for the BottomSheetDialog
         menuList.clear()
         val menuContainer = bottomSheetView.findViewById<RecyclerView>(R.id.menu_container)
         menuContainer?.let {

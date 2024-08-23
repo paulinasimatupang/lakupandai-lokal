@@ -61,6 +61,7 @@ class FormActivity : AppCompatActivity() {
     private var nikValue: String? = null
     private var nominalValue = 0.0
     private var feeValue = 0.0
+    private var branchid = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -171,6 +172,7 @@ class FormActivity : AppCompatActivity() {
                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                             putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                             putExtra("MESSAGE_BODY", failureMessage)
+                            putExtra("RETURN_TO_ROOT", false)
                         }
                         startActivity(intent)
                     }
@@ -188,6 +190,7 @@ class FormActivity : AppCompatActivity() {
                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                             putExtra("MESSAGE_BODY", "Operation successful.")
+                            putExtra("RETURN_TO_ROOT", false)
                         }
                         startActivity(intent)
                     }
@@ -915,6 +918,23 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             if (formId == "AU00001") {
                                 loginUser()
+                                Log.d("LOGIN" , "SCREEN LOGIN : $screen")
+                                val messageBody = createMessageBody(screen)
+                                if (messageBody != null) {
+                                    Log.d("FormActivity", "Message Body Login: $messageBody")
+                                    var responseResult: String? = null
+
+                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                        responseResult = responseBody
+                                        responseResult?.let { body ->
+                                            Log.d("FormActivity", "Response POST: $body")
+
+                                            // Simpan respons 
+                                        } ?: run {
+                                            Log.e("FormActivity", "Failed to fetch response body")
+                                        }
+                                    }
+                                }
                             }else{
                                 handleButtonClick(component, screen)
                             }
@@ -1154,15 +1174,6 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun handleButtonClick(component: Component, screen: Screen?) {
-//        val isComponentValid = validateComponent(component)
-
-//        if (screen?.actionUrl == "CC0000" && component.id == "CF001" && !isComponentValid) {
-//            Log.d("FormActivity", "Service ID CC0000, Component CF001 invalid, but proceeding to next screen")
-//            navigateToCreate()
-//            return
-//        } else {
-//            Toast.makeText(this, "Validasi gagal", Toast.LENGTH_SHORT).show()
-//        }
         val allErrors = mutableListOf<String>()
 
         screen?.comp?.forEach { comp ->
@@ -1267,7 +1278,15 @@ class FormActivity : AppCompatActivity() {
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                     Log.e("FormActivity", "SCREEN ${screen.id} ")
                                     Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                    if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                    if (screen.id == "CCIF003" && newScreen.id == "RCCIF01") {
+                                        newScreen.id = "000000D"
+                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", "Sedang di proses")
+                                            putExtra("RETURN_TO_ROOT", true)
+                                        }
+                                        startActivity(intent)
+                                    } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
                                         newScreen.id = "CCIF001"
                                         var newScreenId = newScreen.id
                                         var formValue =
@@ -1323,7 +1342,15 @@ class FormActivity : AppCompatActivity() {
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                if (screen.id == "CCIF003" && newScreen.id == "RCCIF01") {
+                                    newScreen.id = "000000D"
+                                    val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                        putExtra("MESSAGE_BODY", "Sedang di proses")
+                                        putExtra("RETURN_TO_ROOT", true)
+                                    }
+                                    startActivity(intent)
+                                } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
                                     newScreen.id = "CCIF001"
                                     var newScreenId = newScreen.id
                                     var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
@@ -1335,7 +1362,6 @@ class FormActivity : AppCompatActivity() {
                                     }
                                     setupScreen(formValue)
                                 } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                    // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
                                     val intent =
                                         Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
@@ -1379,11 +1405,13 @@ class FormActivity : AppCompatActivity() {
             val msg = JSONObject()
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
+            val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
+            Log.e("FormActivity", "Saved Nama Agen: $savedNamaAgen")
 
             // Get device Android ID
 //            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -1448,10 +1476,16 @@ class FormActivity : AppCompatActivity() {
                 }
             }
 
-            val msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
-                .joinToString("|") { component ->
-                    componentValues[component.id] ?: ""
-                }
+            var msgDt = ""
+            Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
+            if(screen.id == "AU00001"){
+                msgDt = "$username|$savedNorekening|$savedNamaAgen"
+            }else{
+                msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
+                    .joinToString("|") { component ->
+                        componentValues[component.id] ?: ""
+                    }
+            }
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)

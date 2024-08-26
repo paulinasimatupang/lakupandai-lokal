@@ -24,18 +24,29 @@ class MutationAdapter(private val mutations: List<Mutation>) :
 
     override fun onBindViewHolder(holder: MutationViewHolder, position: Int) {
         val (date, transactions) = groupedMutations[position]
-        holder.bind(date, transactions)
+
+        val totalCredit = transactions.filter { it.transactionType == "CREDIT" }
+            .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
+
+        val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
+            .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
+
+        val netMutation = totalCredit - totalDebit
+        holder.bind(date, transactions, netMutation)
     }
 
     override fun getItemCount(): Int = groupedMutations.size
 
     class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dateTextView: TextView = itemView.findViewById(R.id.tv_date)
+        private val mutasiTextView: TextView = itemView.findViewById(R.id.tv_mutasi)
         private val transactionContainer: LinearLayout =
             itemView.findViewById(R.id.transaction_container)
 
-        fun bind(date: String, transactions: List<Mutation>) {
+        fun bind(date: String, transactions: List<Mutation>, netMutation: Double) {
             dateTextView.text = date
+            val formattedNetMutation = formatRupiah(netMutation)
+            mutasiTextView.text = if (netMutation < 0) "$formattedNetMutation" else formattedNetMutation
             transactionContainer.removeAllViews()
 
             transactions.forEach { mutation ->
@@ -49,10 +60,8 @@ class MutationAdapter(private val mutations: List<Mutation>) :
                 val timeTextView: TextView = transactionView.findViewById(R.id.tv_time)
 
                 descriptionTextView.text = mutation.description
-                amountTextView.text = formatRupiah(mutation.amount)
+                amountTextView.text = formatRupiah(mutation.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0)
                 timeTextView.text = mutation.time
-
-                // Set transaction type text (DB or CR)
                 transactionTypeTextView.text = if (mutation.transactionType == "DEBIT") "DB" else "CR"
 
                 // Set text color based on transaction type
@@ -67,11 +76,10 @@ class MutationAdapter(private val mutations: List<Mutation>) :
         }
 
         // Utility function to format amount
-        private fun formatRupiah(amount: String): String {
-            val amountValue = amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0
+        private fun formatRupiah(amount: Double): String {
             val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
             format.maximumFractionDigits = 0
-            return format.format(amountValue)
+            return format.format(amount)
         }
     }
 }

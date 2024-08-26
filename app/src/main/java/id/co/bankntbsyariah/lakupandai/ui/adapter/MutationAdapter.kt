@@ -12,24 +12,42 @@ import java.text.NumberFormat
 import java.util.Locale
 
 class MutationAdapter(private val mutations: List<Mutation>) :
-    RecyclerView.Adapter<MutationAdapter.MutationViewHolder>() {
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val groupedMutations = mutations.groupBy { it.date }.toList()
+    private val archiveNumber = mutations.lastOrNull()?.archiveNumber // Assuming archive number is from the last mutation
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MutationViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.mutation_item, parent, false)
-        return MutationViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return if (position < itemCount - 1) R.layout.mutation_item else R.layout.archive_number_item
     }
 
-    override fun onBindViewHolder(holder: MutationViewHolder, position: Int) {
-        val (date, transactions) = groupedMutations[position]
-        holder.bind(date, transactions)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == R.layout.mutation_item) {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(viewType, parent, false)
+            MutationViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(viewType, parent, false)
+            ArchiveNumberViewHolder(view)
+        }
     }
 
-    override fun getItemCount(): Int = groupedMutations.size
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is MutationViewHolder) {
+            val index = position
+            val (date, transactions) = groupedMutations[index]
+            holder.bind(date, transactions)
+        } else if (holder is ArchiveNumberViewHolder) {
+            holder.bind(archiveNumber)
+        }
+    }
 
-    class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    override fun getItemCount(): Int {
+        return groupedMutations.size + 0 // Adding one for the archive number item
+    }
+
+    inner class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dateTextView: TextView = itemView.findViewById(R.id.tv_date)
         private val transactionContainer: LinearLayout =
             itemView.findViewById(R.id.transaction_container)
@@ -66,12 +84,23 @@ class MutationAdapter(private val mutations: List<Mutation>) :
             }
         }
 
-        // Utility function to format amount
         private fun formatRupiah(amount: String): String {
             val amountValue = amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0
             val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
             format.maximumFractionDigits = 0
             return format.format(amountValue)
+        }
+    }
+
+    inner class ArchiveNumberViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val archiveNumberTextView: TextView = itemView.findViewById(R.id.tv_archive_number)
+
+        fun bind(archiveNumber: String?) {
+            if (archiveNumber == null) {
+                archiveNumberTextView.visibility = View.VISIBLE
+            } else {
+                archiveNumberTextView.visibility = View.GONE
+            }
         }
     }
 }

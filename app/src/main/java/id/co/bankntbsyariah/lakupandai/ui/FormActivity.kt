@@ -51,6 +51,7 @@ import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import okhttp3.internal.format
 import java.text.NumberFormat
 
+
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
@@ -61,7 +62,7 @@ class FormActivity : AppCompatActivity() {
     private var nikValue: String? = null
     private var nominalValue = 0.0
     private var feeValue = 0.0
-    private var branchid = null
+    private var kodeCabang: String? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -918,24 +919,25 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             if (formId == "AU00001") {
                                 loginUser()
-                                Log.d("LOGIN" , "SCREEN LOGIN : $screen")
+                                Log.d("LOGIN", "SCREEN LOGIN : $screen")
                                 val messageBody = createMessageBody(screen)
                                 if (messageBody != null) {
                                     Log.d("FormActivity", "Message Body Login: $messageBody")
-                                    var responseResult: String? = null
 
                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                        responseResult = responseBody
-                                        responseResult?.let { body ->
+                                        responseBody?.let { body ->
                                             Log.d("FormActivity", "Response POST: $body")
 
-                                            // Simpan respons 
+                                            // Extract and store the branch code
+                                            kodeCabang = parseKodeCabangFromResponse(body)
+                                            Log.d("FormActivity", "Kode Cabang: $kodeCabang")
+
                                         } ?: run {
                                             Log.e("FormActivity", "Failed to fetch response body")
                                         }
                                     }
                                 }
-                            }else{
+                            } else {
                                 handleButtonClick(component, screen)
                             }
                         }
@@ -1170,6 +1172,35 @@ class FormActivity : AppCompatActivity() {
                 else -> ""
             }
             else -> currentValue ?: ""
+        }
+    }
+
+    private fun parseKodeCabangFromResponse(response: String): String? {
+        return try {
+            val jsonObject = JSONObject(response)
+            val screenObject = jsonObject.getJSONObject("screen")
+            val compsObject = screenObject.getJSONObject("comps")
+            val compsArray = compsObject.getJSONArray("comp")
+
+            for (i in 0 until compsArray.length()) {
+                val compObject = compsArray.getJSONObject(i)
+                val compId = compObject.getString("comp_id")
+
+                // Check if the component is Kode Cabang
+                if (compId == "KC001") {
+                    val compValues = compObject.getJSONObject("comp_values")
+                    val compValueArray = compValues.getJSONArray("comp_value")
+                    if (compValueArray.length() > 0) {
+                        return compValueArray.getJSONObject(0).getString("value")
+                    }
+                    // Return null if no value is present
+                    return null
+                }
+            }
+            null
+        } catch (e: JSONException) {
+            Log.e("FormActivity", "Failed to parse response for Kode Cabang", e)
+            null
         }
     }
 
@@ -1559,8 +1590,7 @@ class FormActivity : AppCompatActivity() {
                             Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
                         }
                         return@launch
-                    }
-                    else if (status == "2"){
+                    } else if (status == "2") {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
                         }
@@ -1568,19 +1598,19 @@ class FormActivity : AppCompatActivity() {
                     }
 
                     if (token.isNotEmpty() && merchantData != null) {
-                        val sharedPreferences =
-                            getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                         val editor = sharedPreferences.edit()
 
-                        // Menyimpan data pengguna
+                        // Save user data
                         editor.putString("username", username)
                         editor.putString("token", token)
                         editor.putString("fullname", fullname)
 
-                        // Menyimpan data merchant
+                        // Save merchant data
                         editor.putInt("merchant_id", merchantData.optInt("id"))
                         editor.putString("merchant_name", merchantData.optString("name"))
-                        editor.putString("norekening", merchantData.optString("no")) // Menyimpan "no" sebagai "norekening"
+                        editor.putString("norekening", merchantData.optString("no"))
                         editor.putString("merchant_code", merchantData.optString("code"))
                         editor.putString("merchant_address", merchantData.optString("address"))
                         editor.putString("merchant_phone", merchantData.optString("phone"))
@@ -1614,7 +1644,8 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-//    private fun navigateToCreate() {
+
+    //    private fun navigateToCreate() {
 //        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
 //            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 //            putExtra(Constants.KEY_MENU_ID, "CCIF004")
@@ -1713,17 +1744,47 @@ class FormActivity : AppCompatActivity() {
         return formattedMutasi.toString()
     }
 
+    fun extractArchiveNumber(mutasi: String): String {
+        return try {
+            // Parse the JSON string
+            val jsonObject = JSONObject(mutasi)
+
+            // Retrieve the array of comp_values
+            val compValues = jsonObject.getJSONObject("comp_values")
+            val compValueArray = compValues.getJSONArray("comp_value")
+
+            // Loop through the array to find the object with the specified comp_id
+            for (i in 0 until compValueArray.length()) {
+                val compValueObject = compValueArray.getJSONObject(i)
+                val compId = jsonObject.optString("comp_id", "")
+
+                // Check if the comp_id matches TF008
+                if (compId == "TF008") {
+                    return compValueObject.optString("value", "")
+                }
+            }
+
+            // Return empty string if not found
+            ""
+        } catch (e: JSONException) {
+            e.printStackTrace()
+            ""
+        }
+    }
+
+    // Modifikasi parseMutasi untuk mengambil 'no arsip'
     fun parseMutasi(mutasiText: String): List<Mutation> {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
         val transactions = mutableListOf<Mutation>()
 
-        // Updated regex pattern to capture CREDIT/DEBIT
+        // Sesuaikan regex untuk menangkap 'no arsip' jika diperlukan
         val regex = Regex("""(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.+?) (Rp \d+.\d{2}) (CREDIT|DEBIT)""")
         for (mutasi in mutasiList) {
             val match = regex.find(mutasi)
             if (match != null) {
                 val (date, time, description, amount, transactionType) = match.destructured
-                transactions.add(Mutation(date, time, description, amount, transactionType))
+                val archiveNumber = extractArchiveNumber(mutasi) // Fungsi untuk mengekstrak 'no arsip'
+                transactions.add(Mutation(date, time, description, amount, transactionType, archiveNumber))
             }
         }
         return transactions

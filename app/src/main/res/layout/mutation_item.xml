@@ -1,3 +1,4 @@
+<!-- mutation_item.xml -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -15,9 +16,8 @@
         android:layout_height="wrap_content"
         android:textColor="#434242"
         android:textSize="18sp"
-        android:background="#C7C8CC"
+        android:background="#FFFFFF"
         android:textStyle="bold"
-        android:text="2024-01-05"
         android:padding="10dp"/>
 
     <View
@@ -30,6 +30,7 @@
     <!-- Kontainer untuk menampung transaksi yang terkait dengan tanggal -->
     <LinearLayout
         android:id="@+id/transaction_container"
+        android:layout_marginTop="5dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -38,4 +39,5 @@
         android:paddingLeft="0dp"
         android:paddingRight="0dp">
     </LinearLayout>
+
 </LinearLayout>

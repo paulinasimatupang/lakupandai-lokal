@@ -330,11 +330,15 @@ class FormActivity : AppCompatActivity() {
             }
             if (screen.title.contains("Transfer") && component.id == "ST003") {
                 val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
+                val dateTransferTextView = findViewById<TextView>(R.id.dateTransfer)
+                val timeTransferTextView = findViewById<TextView>(R.id.timeTransfer)
 
                 transaksiBerhasilTextView?.let {
                     val newText = getComponentValue(component)
                     if (!newText.isNullOrEmpty()) {
                         it.text = newText
+                        dateTransferTextView?.text = getCurrentDate()
+                        timeTransferTextView?.text = getCurrentTime()
                     } else {
                         Log.e("FormActivity", "Value for component ST003 is null or empty")
                     }
@@ -1047,6 +1051,16 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    private fun getCurrentTime(): String {
+        val timeFormat = SimpleDateFormat("h:mm:ss a", Locale.getDefault())
+        return timeFormat.format(Date())
+    }
+
+    private fun getCurrentDate(): String {
+        val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        return dateFormat.format(Date())
     }
 
     fun Int.dpToPx(): Int {

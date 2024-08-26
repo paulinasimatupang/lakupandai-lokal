@@ -15,6 +15,7 @@ class MutationAdapter(private val mutations: List<Mutation>) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val groupedMutations = mutations.groupBy { it.date }.toList()
+    private val archiveNumber: String? = mutations.lastOrNull()?.archiveNumber // Replace with actual logic if needed
 
     override fun getItemViewType(position: Int): Int {
         return if (position < itemCount - 1) R.layout.mutation_item else R.layout.archive_number_item
@@ -34,27 +35,22 @@ class MutationAdapter(private val mutations: List<Mutation>) :
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         if (holder is MutationViewHolder) {
-            val index = position
-            val (date, transactions) = groupedMutations[index]
-            holder.bind(date, transactions)
+            val (date, transactions) = groupedMutations[position]
+            val totalCredit = transactions.filter { it.transactionType == "CREDIT" }
+                .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
+
+            val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
+                .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
+
+            val netMutation = totalCredit - totalDebit
+            holder.bind(date, transactions, netMutation)
         } else if (holder is ArchiveNumberViewHolder) {
             holder.bind(archiveNumber)
         }
-    override fun onBindViewHolder(holder: MutationViewHolder, position: Int) {
-        val (date, transactions) = groupedMutations[position]
-
-        val totalCredit = transactions.filter { it.transactionType == "CREDIT" }
-            .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
-
-        val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
-            .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
-
-        val netMutation = totalCredit - totalDebit
-        holder.bind(date, transactions, netMutation)
     }
 
     override fun getItemCount(): Int {
-        return groupedMutations.size + 0 // Adding one for the archive number item
+        return groupedMutations.size + 1 // Adding one for the archive number item
     }
 
     inner class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -85,19 +81,17 @@ class MutationAdapter(private val mutations: List<Mutation>) :
                 transactionTypeTextView.text = if (mutation.transactionType == "DEBIT") "DB" else "CR"
 
                 // Set text color based on transaction type
-                if (mutation.transactionType == "DEBIT") {
-                    amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_red_dark))
-                } else {
-                    amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_blue_dark))
-                }
+                amountTextView.setTextColor(
+                    if (mutation.transactionType == "DEBIT")
+                        itemView.context.getColor(android.R.color.holo_red_dark)
+                    else
+                        itemView.context.getColor(android.R.color.holo_blue_dark)
+                )
 
                 transactionContainer.addView(transactionView)
             }
         }
 
-        private fun formatRupiah(amount: String): String {
-            val amountValue = amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0
-        // Utility function to format amount
         private fun formatRupiah(amount: Double): String {
             val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
             format.maximumFractionDigits = 0
@@ -109,11 +103,7 @@ class MutationAdapter(private val mutations: List<Mutation>) :
         private val archiveNumberTextView: TextView = itemView.findViewById(R.id.tv_archive_number)
 
         fun bind(archiveNumber: String?) {
-            if (archiveNumber == null) {
-                archiveNumberTextView.visibility = View.VISIBLE
-            } else {
-                archiveNumberTextView.visibility = View.GONE
-            }
+            archiveNumberTextView.text = archiveNumber?.let { "No Arsip: $it" } ?: "No Arsip"
         }
     }
 }

@@ -4,9 +4,9 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:paddingBottom="8dp"
-    android:paddingStart="10dp"
+    android:paddingStart="5dp"
     android:layout_marginTop="10dp"
-    android:paddingEnd="10dp"
+    android:paddingEnd="5dp"
     android:gravity="center_vertical">
 
     <!-- Section 1: Description -->
@@ -49,9 +49,9 @@
             android:id="@+id/tv_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
+            android:gravity="center|right"
             android:text="Rp 50.000"
-            android:textSize="15sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
@@ -59,7 +59,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:gravity="center"
+            android:gravity="center|right"
             android:text="13:29:24"
             android:textColor="#777777"
             android:textSize="12sp" />

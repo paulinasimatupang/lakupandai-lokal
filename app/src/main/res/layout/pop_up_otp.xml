@@ -33,51 +33,75 @@
 
             <EditText
                 android:id="@+id/otpDigit1"
-                android:layout_width="45dp"
-                android:layout_height="45dp"
+                android:layout_width="30dp"
+                android:layout_height="40dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
                 android:inputType="number"
                 android:maxLength="1"
                 android:textColor="#000000"
-                android:textSize="18sp"/>
+                android:textSize="15sp"/>
 
             <EditText
                 android:id="@+id/otpDigit2"
-                android:layout_width="45dp"
-                android:layout_height="45dp"
+                android:layout_width="30dp"
+                android:layout_height="40dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
                 android:inputType="number"
                 android:maxLength="1"
-                android:textSize="18sp"
-                android:textColor="#000000"/>
+                android:textColor="#000000"
+                android:textSize="15sp"/>
 
             <EditText
                 android:id="@+id/otpDigit3"
-                android:layout_width="45dp"
-                android:layout_height="45dp"
+                android:layout_width="30dp"
+                android:layout_height="40dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
                 android:inputType="number"
                 android:maxLength="1"
-                android:textSize="18sp"
-                android:textColor="#000000"/>
+                android:textColor="#000000"
+                android:textSize="15sp"/>
 
             <EditText
                 android:id="@+id/otpDigit4"
-                android:layout_width="45dp"
-                android:layout_height="45dp"
+                android:layout_width="30dp"
+                android:layout_height="40dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/otp_edit_text_background"
                 android:gravity="center"
                 android:inputType="number"
                 android:maxLength="1"
-                android:textSize="18sp"
-                android:textColor="#000000"/>
+                android:textColor="#000000"
+                android:textSize="15sp"/>
+
+            <EditText
+                android:id="@+id/otpDigit5"
+                android:layout_width="30dp"
+                android:layout_height="40dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/otp_edit_text_background"
+                android:gravity="center"
+                android:inputType="number"
+                android:maxLength="1"
+                android:textColor="#000000"
+                android:textSize="15sp"/>
+
+            <EditText
+                android:id="@+id/otpDigit6"
+                android:layout_width="30dp"
+                android:layout_height="40dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/otp_edit_text_background"
+                android:gravity="center"
+                android:inputType="number"
+                android:maxLength="1"
+                android:textColor="#000000"
+                android:textSize="15sp"/>
         </LinearLayout>
     </LinearLayout>
 </RelativeLayout>

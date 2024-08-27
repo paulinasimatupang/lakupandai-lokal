@@ -982,8 +982,11 @@ class FormActivity : AppCompatActivity() {
                     val otpDigit2 = otpView.findViewById<EditText>(R.id.otpDigit2)
                     val otpDigit3 = otpView.findViewById<EditText>(R.id.otpDigit3)
                     val otpDigit4 = otpView.findViewById<EditText>(R.id.otpDigit4)
+                    val otpDigit5 = otpView.findViewById<EditText>(R.id.otpDigit5)
+                    val otpDigit6 = otpView.findViewById<EditText>(R.id.otpDigit6)
 
-                    val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4)
+
+                    val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4, otpDigit5, otpDigit6)
 
                     otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {

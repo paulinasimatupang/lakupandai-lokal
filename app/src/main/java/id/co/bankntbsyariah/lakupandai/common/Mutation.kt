@@ -5,5 +5,6 @@ data class Mutation(
     val time: String,
     val description: String,
     val amount: String,
-    val transactionType: String // Add transaction type to store CREDIT or DEBIT
+    var transactionType: String,
+    val archiveNumber: String
 )

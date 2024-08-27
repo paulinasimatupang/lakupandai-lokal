@@ -1,0 +1,19 @@
+<!-- archive_number_item.xml -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="#FFFFFF">
+
+    <!-- TextView untuk Archive Number -->
+    <TextView
+        android:id="@+id/tv_archive_number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#000000"
+        android:text="No Arsip: XXXXXX"
+        android:visibility="gone" />
+</LinearLayout>

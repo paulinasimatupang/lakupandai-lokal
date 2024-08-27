@@ -12,32 +12,59 @@ import java.text.NumberFormat
 import java.util.Locale
 
 class MutationAdapter(private val mutations: List<Mutation>) :
-    RecyclerView.Adapter<MutationAdapter.MutationViewHolder>() {
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val groupedMutations = mutations.groupBy { it.date }.toList()
+    private val archiveNumber: String? = mutations.lastOrNull()?.archiveNumber // Replace with actual logic if needed
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MutationViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.mutation_item, parent, false)
-        return MutationViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return if (position < itemCount - 1) R.layout.mutation_item else R.layout.archive_number_item
     }
 
-    override fun onBindViewHolder(holder: MutationViewHolder, position: Int) {
-        val (date, transactions) = groupedMutations[position]
-
-        val totalCredit = transactions.filter { it.transactionType == "CREDIT" }
-            .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
-
-        val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
-            .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
-
-        val netMutation = totalCredit - totalDebit
-        holder.bind(date, transactions, netMutation)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == R.layout.mutation_item) {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(viewType, parent, false)
+            MutationViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(viewType, parent, false)
+            ArchiveNumberViewHolder(view)
+        }
     }
 
-    override fun getItemCount(): Int = groupedMutations.size
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is MutationViewHolder) {
+            val (date, transactions) = groupedMutations[position]
 
-    class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            // Adjust transaction types: Any "FEE" transaction should be considered as DEBIT
+            transactions.forEach { transaction ->
+                if (transaction.description.contains("FEE", ignoreCase = true)) {
+                    transaction.transactionType = "DEBIT"
+                }
+            }
+
+            // Calculate total credit
+            val totalCredit = transactions.filter { it.transactionType == "CREDIT" }
+                .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
+
+            // Calculate total debit
+            val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
+                .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
+
+            val netMutation = totalCredit - totalDebit
+            holder.bind(date, transactions, netMutation)
+        } else if (holder is ArchiveNumberViewHolder) {
+            holder.bind(archiveNumber)
+        }
+    }
+
+
+    override fun getItemCount(): Int {
+        return groupedMutations.size + 1 // Adding one for the archive number item
+    }
+
+    inner class MutationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dateTextView: TextView = itemView.findViewById(R.id.tv_date)
         private val mutasiTextView: TextView = itemView.findViewById(R.id.tv_mutasi)
         private val transactionContainer: LinearLayout =
@@ -65,21 +92,29 @@ class MutationAdapter(private val mutations: List<Mutation>) :
                 transactionTypeTextView.text = if (mutation.transactionType == "DEBIT") "DB" else "CR"
 
                 // Set text color based on transaction type
-                if (mutation.transactionType == "DEBIT") {
-                    amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_red_dark))
-                } else {
-                    amountTextView.setTextColor(itemView.context.getColor(android.R.color.holo_blue_dark))
-                }
+                amountTextView.setTextColor(
+                    if (mutation.transactionType == "DEBIT")
+                        itemView.context.getColor(android.R.color.holo_red_dark)
+                    else
+                        itemView.context.getColor(android.R.color.holo_blue_dark)
+                )
 
                 transactionContainer.addView(transactionView)
             }
         }
 
-        // Utility function to format amount
         private fun formatRupiah(amount: Double): String {
             val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
             format.maximumFractionDigits = 0
             return format.format(amount)
+        }
+    }
+
+    inner class ArchiveNumberViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val archiveNumberTextView: TextView = itemView.findViewById(R.id.tv_archive_number)
+
+        fun bind(archiveNumber: String?) {
+            archiveNumberTextView.text = archiveNumber?.let { "No Arsip: $it" } ?: "No Arsip"
         }
     }
 }

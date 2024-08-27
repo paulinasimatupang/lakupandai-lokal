@@ -51,6 +51,7 @@ import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import okhttp3.internal.format
 import java.text.NumberFormat
 
+
 class FormActivity : AppCompatActivity() {
 
     private var formId = Constants.DEFAULT_ROOT_ID
@@ -61,7 +62,8 @@ class FormActivity : AppCompatActivity() {
     private var nikValue: String? = null
     private var nominalValue = 0.0
     private var feeValue = 0.0
-    private var branchid = null
+    private var kodeCabang: String? = null
+    private var inputRekening = mutableMapOf<String, String>()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -312,11 +314,11 @@ class FormActivity : AppCompatActivity() {
         container.removeAllViews()
         buttonContainer?.removeAllViews()
 
-        // lia
         var norekComponent: Component? = null
         var nominalComponent: Component? = null
         var namaDepan: String? = null
         var extraText = ""
+        var inputRekeningIndex = 0
 
         for (component in screen.comp) {
             when (component.id) {
@@ -449,8 +451,13 @@ class FormActivity : AppCompatActivity() {
                     } else {
                         LinearLayout(this@FormActivity).apply {
                             orientation = LinearLayout.VERTICAL
-                            //aul
+
                             val componentValue = getComponentValue(component)
+
+                            if (screen.id == "CCIF001") {
+                                inputRekening[component.id] = componentValue
+                            }
+
                             val numericValue = componentValue.toDoubleOrNull() ?: 0.0
                             val formattedValue = when {
                                 component.label.contains("nominal", ignoreCase = true)|| component.label.contains("nilai transfer", ignoreCase = true) -> {
@@ -537,15 +544,23 @@ class FormActivity : AppCompatActivity() {
                                         )
                                     )
                                 })
-                                addView(TextView(this@FormActivity).apply {
-                                    text = formattedValue
-                                    textSize = 18f
-                                    if (screen.id == "TF00003") {
-                                        setPadding(3.dpToPx(), 0, 16.dpToPx(), 2.dpToPx())
-                                    } else {
+                                if (screen.id == "RCCIF02") {
+                                    val rekeningIndex = inputRekeningIndex.coerceAtMost(inputRekening.size - 1) // Pastikan tidak melebihi ukuran inputRekening
+                                    val rekeningValue = inputRekening.values.elementAtOrNull(rekeningIndex) ?: formattedValue
+                                    inputRekeningIndex++ // Update ke index berikutnya
+                                    addView(TextView(this@FormActivity).apply {
+                                        text = rekeningValue
+                                        textSize = 18f
                                         setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
-                                    }
-                                })
+                                    })
+                                } else {
+                                    addView(TextView(this@FormActivity).apply {
+                                        text = formattedValue
+                                        textSize = 18f
+                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                    })
+                                }
+
                             }
                             if (screen.id != "TF00003") {
                                 background = ContextCompat.getDrawable(
@@ -612,6 +627,11 @@ class FormActivity : AppCompatActivity() {
                                     editText.setSelection(formattedText.length) // Move cursor to end
 
                                     editText.addTextChangedListener(this)
+                                }
+
+                                if (screen.id == "CCIF001") {
+                                    inputRekening[component.id] = inputText
+                                    Log.d("FormActivity", "inputRekening[${component.id}] set to: $inputText")
                                 }
 
                                 if (component.label == "NIK") {
@@ -780,6 +800,10 @@ class FormActivity : AppCompatActivity() {
                                         val selectedValue = selectedPair.first
                                         val selectedCompValue = selectedPair.second
 
+                                        if (screen.id == "CCIF001") {
+                                            inputRekening[component.id] = selectedValue ?: "" // Now storing selectedValue
+                                        }
+
                                         Log.d(
                                             "FormActivity",
                                             "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
@@ -848,6 +872,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
+
                 5 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -862,6 +887,9 @@ class FormActivity : AppCompatActivity() {
                                 text = value.first
                             }
                             checkBox.setOnCheckedChangeListener { _, isChecked ->
+                                if (screen.id == "CCIF001") {
+                                    inputRekening[component.id] = inputValues[component.id] ?: ""
+                                }
                                 if (isChecked) {
                                     inputValues[component.id] = index.toString()
                                 } else {
@@ -891,12 +919,18 @@ class FormActivity : AppCompatActivity() {
                                 textSize = 18f
                             }
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
-                                val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
-                                    (index + 1).toString()
-                                } else {
-                                    index.toString()
-                                }
                                 if (isChecked) {
+                                    val selectedValue = value.first
+
+                                    if (screen.id == "CCIF001") {
+                                        inputRekening[component.id] = selectedValue 
+                                    }
+
+                                    val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
+                                        (index + 1).toString()
+                                    } else {
+                                        index.toString()
+                                    }
                                     inputValues[component.id] = valueToSave
                                 }
                             }
@@ -922,24 +956,19 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             if (formId == "AU00001") {
                                 loginUser()
-                                Log.d("LOGIN" , "SCREEN LOGIN : $screen")
-                                val messageBody = createMessageBody(screen)
-                                if (messageBody != null) {
-                                    Log.d("FormActivity", "Message Body Login: $messageBody")
-                                    var responseResult: String? = null
+                                requestAndHandleKodeCabang(screen) { kodeCabangResult ->
+                                    if (kodeCabangResult != null) {
+                                        // Perbarui properti kelas kodeCabang
+                                        saveKodeCabangToPreferences(kodeCabangResult)
+                                        Log.d("FORM", "KODE CABANG : $kodeCabangResult")
 
-                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                        responseResult = responseBody
-                                        responseResult?.let { body ->
-                                            Log.d("FormActivity", "Response POST: $body")
-
-                                            // Simpan respons 
-                                        } ?: run {
-                                            Log.e("FormActivity", "Failed to fetch response body")
-                                        }
+                                        // Lakukan sesuatu dengan kodeCabang yang baru
+                                        Log.e("FORM", "KODE CABANGSS : $kodeCabangResult")
+                                    } else {
+                                        Log.e("FORM", "Failed to retrieve kodeCabang")
                                     }
                                 }
-                            }else{
+                            } else {
                                 handleButtonClick(component, screen)
                             }
                         }
@@ -1004,6 +1033,9 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "EditText clicked: ${component.id}")
                             showDatePickerDialog(this) { selectedDate ->
                                 inputValues[component.id as String] = selectedDate
+                                if (screen.id == "CCIF001") {
+                                    inputRekening[component.id] = inputValues[component.id] ?: ""
+                                }
                             }
                         }
                     }
@@ -1014,6 +1046,7 @@ class FormActivity : AppCompatActivity() {
                 else -> {
                     null
                 }
+
             }
 
             view?.let {
@@ -1047,8 +1080,34 @@ class FormActivity : AppCompatActivity() {
 
 
             }
+
+            Log.d("INPUT REKENING", "INPUT REKENING : $inputRekening")
         }
 
+    }
+
+    private fun requestAndHandleKodeCabang(screen: Screen, callback: (String?) -> Unit) {
+        val messageBody = createMessageBody(screen)
+        if (messageBody != null) {
+            Log.d("FormActivity", "Message Body Login: $messageBody")
+
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let { body ->
+                    Log.d("FormActivity", "Response POST: $body")
+
+                    val kodeCabangResult = parseKodeCabangFromResponse(body)
+                    Log.d("FormActivity", "Kode Cabang: $kodeCabangResult")
+
+                    // Call the callback with the updated kodeCabang
+                    callback(kodeCabangResult)
+                } ?: run {
+                    Log.e("FormActivity", "Failed to fetch response body")
+                    callback(null)
+                }
+            }
+        } else {
+            callback(null)
+        }
     }
 
     private fun getCurrentTime(): String {
@@ -1185,6 +1244,36 @@ class FormActivity : AppCompatActivity() {
             }
             else -> currentValue ?: ""
         }
+
+    }
+
+    private fun parseKodeCabangFromResponse(response: String): String? {
+        return try {
+            val jsonObject = JSONObject(response)
+            val screenObject = jsonObject.getJSONObject("screen")
+            val compsObject = screenObject.getJSONObject("comps")
+            val compsArray = compsObject.getJSONArray("comp")
+
+            for (i in 0 until compsArray.length()) {
+                val compObject = compsArray.getJSONObject(i)
+                val compId = compObject.getString("comp_id")
+
+                // Check if the component is Kode Cabang
+                if (compId == "KC001") {
+                    val compValues = compObject.getJSONObject("comp_values")
+                    val compValueArray = compValues.getJSONArray("comp_value")
+                    if (compValueArray.length() > 0) {
+                        return compValueArray.getJSONObject(0).getString("value")
+                    }
+                    // Return null if no value is present
+                    return null
+                }
+            }
+            null
+        } catch (e: JSONException) {
+            Log.e("FormActivity", "Failed to parse response for Kode Cabang", e)
+            null
+        }
     }
 
     private fun handleButtonClick(component: Component, screen: Screen?) {
@@ -1293,11 +1382,23 @@ class FormActivity : AppCompatActivity() {
                                     Log.e("FormActivity", "SCREEN ${screen.id} ")
                                     Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                     if (screen.id == "CCIF003" && newScreen.id == "RCCIF01") {
-                                        newScreen.id = "000000D"
+                                        newScreen.id = "RCCIF02"
+                                        var newScreenId = newScreen.id
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                    newScreenId
+                                                )
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                                             putExtra("MESSAGE_BODY", "Sedang di proses")
-                                            putExtra("RETURN_TO_ROOT", true)
+                                            putExtra("RETURN_TO_ROOT", false)
                                         }
                                         startActivity(intent)
                                     } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
@@ -1357,7 +1458,19 @@ class FormActivity : AppCompatActivity() {
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                 if (screen.id == "CCIF003" && newScreen.id == "RCCIF01") {
-                                    newScreen.id = "000000D"
+                                    newScreen.id = "RCCIF02"
+                                    var newScreenId = newScreen.id
+                                    var formValue =
+                                        StorageImpl(applicationContext).fetchForm(newScreenId)
+                                    if (formValue.isNullOrEmpty()) {
+                                        formValue = withContext(Dispatchers.IO) {
+                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                newScreenId
+                                            )
+                                        }
+                                        Log.i("FormActivity", "Fetched formValue: $formValue")
+                                    }
+                                    setupScreen(formValue)
                                     val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                         putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                                         putExtra("MESSAGE_BODY", "Sedang di proses")
@@ -1414,6 +1527,20 @@ class FormActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
+    private fun getKodeCabangFromPreferences(): String? {
+        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("KODE_CABANG", null)
+    }
+
+    private fun saveKodeCabangToPreferences(kodeCabang: String) {
+        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("KODE_CABANG", kodeCabang)
+        editor.apply() // atau editor.commit()
+    }
+
+
+
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
@@ -1426,6 +1553,8 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
             Log.e("FormActivity", "Saved Nama Agen: $savedNamaAgen")
+            val branchid = getKodeCabangFromPreferences()
+            Log.e("FormActivity", "Saved Kode Cabang: $branchid")
 
             // Get device Android ID
 //            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -1475,6 +1604,14 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with nikValue for Component ID: ${component.id}"
                         )
                     }
+                    component.type == 1 && component.label == "Kode Cabang" -> {
+                        val branchid = getKodeCabangFromPreferences()
+                        componentValues[component.id] = branchid ?: ""
+                        Log.d(
+                            "FormActivity",
+                            "Updated componentValues with branchid : ${branchid}"
+                        )
+                    }
                     component.type == 1 && component.label != "NIK" -> {
                         val value = (component.values.get(0)?.second ?: "") as String
                         componentValues[component.id] = value
@@ -1483,11 +1620,11 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with value for Component ID: ${component.id}"
                         )
                     }
-
                     else -> {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }
                 }
+
             }
 
             var msgDt = ""
@@ -1500,6 +1637,8 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] ?: ""
                     }
             }
+
+            Log.d("Form", "Component : ${componentValues}")
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)
@@ -1573,8 +1712,7 @@ class FormActivity : AppCompatActivity() {
                             Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
                         }
                         return@launch
-                    }
-                    else if (status == "2"){
+                    } else if (status == "2") {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
                         }
@@ -1582,19 +1720,19 @@ class FormActivity : AppCompatActivity() {
                     }
 
                     if (token.isNotEmpty() && merchantData != null) {
-                        val sharedPreferences =
-                            getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                         val editor = sharedPreferences.edit()
 
-                        // Menyimpan data pengguna
+                        // Save user data
                         editor.putString("username", username)
                         editor.putString("token", token)
                         editor.putString("fullname", fullname)
 
-                        // Menyimpan data merchant
+                        // Save merchant data
                         editor.putInt("merchant_id", merchantData.optInt("id"))
                         editor.putString("merchant_name", merchantData.optString("name"))
-                        editor.putString("norekening", merchantData.optString("no")) // Menyimpan "no" sebagai "norekening"
+                        editor.putString("norekening", merchantData.optString("no"))
                         editor.putString("merchant_code", merchantData.optString("code"))
                         editor.putString("merchant_address", merchantData.optString("address"))
                         editor.putString("merchant_phone", merchantData.optString("phone"))
@@ -1628,7 +1766,8 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-//    private fun navigateToCreate() {
+
+    //    private fun navigateToCreate() {
 //        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
 //            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 //            putExtra(Constants.KEY_MENU_ID, "CCIF004")
@@ -1727,17 +1866,47 @@ class FormActivity : AppCompatActivity() {
         return formattedMutasi.toString()
     }
 
+    fun extractArchiveNumber(mutasi: String): String {
+        return try {
+            // Parse the JSON string
+            val jsonObject = JSONObject(mutasi)
+
+            // Retrieve the array of comp_values
+            val compValues = jsonObject.getJSONObject("comp_values")
+            val compValueArray = compValues.getJSONArray("comp_value")
+
+            // Loop through the array to find the object with the specified comp_id
+            for (i in 0 until compValueArray.length()) {
+                val compValueObject = compValueArray.getJSONObject(i)
+                val compId = jsonObject.optString("comp_id", "")
+
+                // Check if the comp_id matches TF008
+                if (compId == "TF008") {
+                    return compValueObject.optString("value", "")
+                }
+            }
+
+            // Return empty string if not found
+            ""
+        } catch (e: JSONException) {
+            e.printStackTrace()
+            ""
+        }
+    }
+
+    // Modifikasi parseMutasi untuk mengambil 'no arsip'
     fun parseMutasi(mutasiText: String): List<Mutation> {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
         val transactions = mutableListOf<Mutation>()
 
-        // Updated regex pattern to capture CREDIT/DEBIT
+        // Sesuaikan regex untuk menangkap 'no arsip' jika diperlukan
         val regex = Regex("""(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.+?) (Rp \d+.\d{2}) (CREDIT|DEBIT)""")
         for (mutasi in mutasiList) {
             val match = regex.find(mutasi)
             if (match != null) {
                 val (date, time, description, amount, transactionType) = match.destructured
-                transactions.add(Mutation(date, time, description, amount, transactionType))
+                val archiveNumber = extractArchiveNumber(mutasi) // Fungsi untuk mengekstrak 'no arsip'
+                transactions.add(Mutation(date, time, description, amount, transactionType, archiveNumber))
             }
         }
         return transactions

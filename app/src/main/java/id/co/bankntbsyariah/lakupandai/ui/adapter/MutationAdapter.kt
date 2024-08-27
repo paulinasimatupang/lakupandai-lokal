@@ -36,9 +36,19 @@ class MutationAdapter(private val mutations: List<Mutation>) :
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         if (holder is MutationViewHolder) {
             val (date, transactions) = groupedMutations[position]
+
+            // Adjust transaction types: Any "FEE" transaction should be considered as DEBIT
+            transactions.forEach { transaction ->
+                if (transaction.description.contains("FEE", ignoreCase = true)) {
+                    transaction.transactionType = "DEBIT"
+                }
+            }
+
+            // Calculate total credit
             val totalCredit = transactions.filter { it.transactionType == "CREDIT" }
                 .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
 
+            // Calculate total debit
             val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
                 .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
 
@@ -48,6 +58,7 @@ class MutationAdapter(private val mutations: List<Mutation>) :
             holder.bind(archiveNumber)
         }
     }
+
 
     override fun getItemCount(): Int {
         return groupedMutations.size + 1 // Adding one for the archive number item

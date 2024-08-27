@@ -5,6 +5,6 @@ data class Mutation(
     val time: String,
     val description: String,
     val amount: String,
-    val transactionType: String,
+    var transactionType: String,
     val archiveNumber: String
 )

@@ -474,7 +474,7 @@ class MenuActivity : AppCompatActivity() {
             val msgSi = "N00001"
             val accountNumber = norekening
             val name = merchant_name
-            val msgDt = "$username|$accountNumber|$name"
+            val msgDt = "$username|$accountNumber|$name|null"
 
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)

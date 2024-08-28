@@ -954,6 +954,7 @@ class FormActivity : AppCompatActivity() {
                             "IYA01" -> getDrawable(R.drawable.button_green)
                             "TDK01" -> getDrawable(R.drawable.button_red)
                             "OTP10" -> getDrawable(R.drawable.button_green)
+                            "MSG10" -> getDrawable(R.drawable.button_green)
                             else -> getDrawable(R.drawable.button_yellow)
                         }
                         setBackground(background)
@@ -1575,7 +1576,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Kode Cabang: $branchid")
 
             // Get device Android ID
-            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
@@ -1586,7 +1587,7 @@ class FormActivity : AppCompatActivity() {
 //            // Use actionUrl from screen; if null, msg_si will be nul
 
 //            val msgId = "353471045058692200995"
-//            val msgUi = "353471045058692"
+            val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
 
@@ -1758,21 +1759,21 @@ class FormActivity : AppCompatActivity() {
                     val fullname = jsonResponse.optJSONObject("data").optString("fullname")
                     val status = jsonResponse.optJSONObject("data").optString("status")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
-                    val terminalData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")?.optJSONObject("terminal")
-
-                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-                    Log.d("FormActivity", "msg_ui: $msg_ui")
-                    val imeiFromTerminalData = terminalData?.optString("imei")
-
-                    if (imeiFromTerminalData == msg_ui) {
-                        Log.d("FormActivity", "IMEI sesuai dengan msg_ui.")
-                    } else {
-                        Log.d("FormActivity", "IMEI tidak sesuai dengan msg_ui.")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
-                        }
-                        return@launch
-                    }
+//                    val terminalData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")?.optJSONObject("terminal")
+//
+//                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//                    Log.d("FormActivity", "msg_ui: $msg_ui")
+//                    val imeiFromTerminalData = terminalData?.optString("imei")
+//
+//                    if (imeiFromTerminalData == msg_ui) {
+//                        Log.d("FormActivity", "IMEI sesuai dengan msg_ui.")
+//                    } else {
+//                        Log.d("FormActivity", "IMEI tidak sesuai dengan msg_ui.")
+//                        withContext(Dispatchers.Main) {
+//                            Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+//                        }
+//                        return@launch
+//                    }
 
                     if (status == "0") {
                         withContext(Dispatchers.Main) {

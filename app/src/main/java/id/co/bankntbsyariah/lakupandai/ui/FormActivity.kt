@@ -1670,7 +1670,7 @@ class FormActivity : AppCompatActivity() {
             if(screen.id == "AU00001"){
                 msgDt = "$username|$savedNorekening|$savedNamaAgen"
             }else{
-                msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" }
+                msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03"}
                     .joinToString("|") { component ->
                         componentValues[component.id] ?: ""
                     }

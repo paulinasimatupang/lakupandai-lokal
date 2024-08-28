@@ -953,6 +953,7 @@ class FormActivity : AppCompatActivity() {
                         val background = when (component.id) {
                             "IYA01" -> getDrawable(R.drawable.button_green)
                             "TDK01" -> getDrawable(R.drawable.button_red)
+                            "OTP10" -> getDrawable(R.drawable.button_green)
                             else -> getDrawable(R.drawable.button_yellow)
                         }
                         setBackground(background)
@@ -966,7 +967,6 @@ class FormActivity : AppCompatActivity() {
                                         saveKodeCabangToPreferences(kodeCabangResult)
                                         Log.d("FORM", "KODE CABANG : $kodeCabangResult")
 
-                                        // Lakukan sesuatu dengan kodeCabang yang baru
                                         Log.e("FORM", "KODE CABANGSS : $kodeCabangResult")
                                     } else {
                                         Log.e("FORM", "Failed to retrieve kodeCabang")
@@ -1065,7 +1065,7 @@ class FormActivity : AppCompatActivity() {
                 it.layoutParams = params
 
                 when {
-                    component.type == 7 && (component.id == "KM001" || component.id == "MSG10") -> {
+                    component.type == 7 && (component.id == "KM001" || component.id == "MSG10" ||component.id == "G0001" ||component.id == "OTP09") -> {
                         if (buttonContainer == null) {
                             val newButtontf = LinearLayout(this).apply {
                                 id = View.generateViewId()
@@ -1668,6 +1668,9 @@ class FormActivity : AppCompatActivity() {
                 }
 
             }
+            val unf03Value = componentValues["UNF03"] ?: ""
+            val rnr02Value = componentValues["RNR02"] ?: ""
+            componentValues["MSG05"] = "$unf03Value. Sisa saldo anda adalah $rnr02Value."
 
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")

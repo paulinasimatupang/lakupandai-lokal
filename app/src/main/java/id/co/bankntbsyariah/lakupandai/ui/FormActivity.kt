@@ -1506,7 +1506,14 @@ class FormActivity : AppCompatActivity() {
                                             putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
                                         }
                                     startActivity(intent)
-                                } else {
+                                } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
+                                    val intent =
+                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                        }
+                                    startActivity(intent)
+                                }else {
                                     handleScreenType(newScreen)
                                 }
                             }

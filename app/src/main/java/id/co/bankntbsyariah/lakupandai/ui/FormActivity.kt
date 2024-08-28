@@ -62,8 +62,8 @@ class FormActivity : AppCompatActivity() {
     private var nikValue: String? = null
     private var nominalValue = 0.0
     private var feeValue = 0.0
-    private var kodeCabang: String? = null
     private var inputRekening = mutableMapOf<String, String>()
+    private var pickOTP: String? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -815,6 +815,10 @@ class FormActivity : AppCompatActivity() {
                                         )
 
                                         when (component.id) {
+                                            "PIL03"-> {
+                                                pickOTP = selectedValue
+                                                Log.d("Form", "PICK OTP : $selectedValue")
+                                            }
                                             "CB001" -> {
                                                 if (selectedCompValue != null) {
                                                     inputValues[component.id] = selectedCompValue.replace("[OI]", "")
@@ -1573,7 +1577,38 @@ class FormActivity : AppCompatActivity() {
 //            val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
-            val msgSi = screen.actionUrl
+            var msgSi = screen.actionUrl
+
+            Log.d("FormActivity", "msgSi: $msgSi")
+
+            Log.d("FormActivity", "PICK OTP: $pickOTP")
+            if (screen.comp.any { it.id == "PIL03" } && pickOTP == "SMS") {
+                when(screen.id){
+                    // cek saldo
+                    "CS00004"->{
+                        msgSi = "N00002"
+                    }
+                    // cek mutasi
+                    "MB81124"->{
+                        msgSi = "E81122"
+                    }
+                    "TF00002"->{
+                        msgSi = "T00003"
+                    }
+                    "CCIF001"->{
+                        msgSi = "OTN002"
+                    }
+                    "RT001"->{
+                        msgSi = "RTT002"
+                    }
+                    "RS001"->{
+                        msgSi = "OTN002"
+                    }
+                    else->{
+                        msgSi = screen.actionUrl
+                    }
+                }
+            }
 
             val componentValues = mutableMapOf<String, String>()
             screen.comp.filter { it.type != 7 && it.type != 15 }.forEach { component ->

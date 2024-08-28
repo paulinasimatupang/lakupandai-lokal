@@ -1388,7 +1388,9 @@ class FormActivity : AppCompatActivity() {
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                     Log.e("FormActivity", "SCREEN ${screen.id} ")
                                     Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                    if (screen.id == "CCIF003" && newScreen.id == "RCCIF01") {
+                                    if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                        val message = newScreen?.comp?.find { it.id == "0000A" }
+                                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
                                         newScreen.id = "RCCIF02"
                                         var newScreenId = newScreen.id
                                         var formValue =
@@ -1404,7 +1406,7 @@ class FormActivity : AppCompatActivity() {
                                         setupScreen(formValue)
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", "Sedang di proses")
+                                            putExtra("MESSAGE_BODY", message)
                                             putExtra("RETURN_TO_ROOT", false)
                                         }
                                         startActivity(intent)
@@ -1464,7 +1466,9 @@ class FormActivity : AppCompatActivity() {
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                if (screen.id == "CCIF003" && newScreen.id == "RCCIF01") {
+                                if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                    val message = newScreen?.comp?.find { it.id == "0000A" }
+                                        ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
                                     newScreen.id = "RCCIF02"
                                     var newScreenId = newScreen.id
                                     var formValue =
@@ -1480,8 +1484,8 @@ class FormActivity : AppCompatActivity() {
                                     setupScreen(formValue)
                                     val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                         putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                        putExtra("MESSAGE_BODY", "Sedang di proses")
-                                        putExtra("RETURN_TO_ROOT", true)
+                                        putExtra("MESSAGE_BODY", message)
+                                        putExtra("RETURN_TO_ROOT", false)
                                     }
                                     startActivity(intent)
                                 } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
@@ -1596,7 +1600,7 @@ class FormActivity : AppCompatActivity() {
                         msgSi = "T00003"
                     }
                     "CCIF001"->{
-                        msgSi = "OTN002"
+                        msgSi = "CC0002"
                     }
                     "RT001"->{
                         msgSi = "RTT002"

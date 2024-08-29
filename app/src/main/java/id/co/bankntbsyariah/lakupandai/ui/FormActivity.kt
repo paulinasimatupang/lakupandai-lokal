@@ -1126,7 +1126,7 @@ class FormActivity : AppCompatActivity() {
                 it.layoutParams = params
 
                 when {
-                    component.type == 7 && (component.id == "KM005") -> {
+                    component.type == 7 && (component.id == "KM005"||component.id == "MSG10") -> {
                         if (buttonContainer == null) {
                             val newButtontf = LinearLayout(this).apply {
                                 id = View.generateViewId()

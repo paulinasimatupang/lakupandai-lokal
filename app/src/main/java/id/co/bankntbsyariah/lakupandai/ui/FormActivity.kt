@@ -1,59 +1,80 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
+
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Base64
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.LayoutInflater
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import id.co.bankntbsyariah.lakupandai.ui.SignatureActivity
+import com.github.gcacace.signaturepad.views.SignaturePad
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.Constants
+import id.co.bankntbsyariah.lakupandai.common.Mutation
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
+import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.appcompat.app.AlertDialog
 import okhttp3.FormBody
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONException
-import java.util.Calendar
-import java.util.concurrent.TimeUnit
-import androidx.core.content.ContextCompat
-import android.view.MotionEvent
-import android.view.WindowManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import id.co.bankntbsyariah.lakupandai.common.Mutation
-import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
-import okhttp3.internal.format
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
-import android.provider.Settings
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import android.view.ViewGroup
+import okhttp3.RequestBody
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.Toast
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
 
 class FormActivity : AppCompatActivity() {
 
+    private val signaturePad: SignaturePad? = null
     private var formId = Constants.DEFAULT_ROOT_ID
     private val inputValues = mutableMapOf<String, String>()
     private var msg03Value: String? = null
@@ -310,6 +331,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Container is null.")
             return
         }
+
 
         container.removeAllViews()
         buttonContainer?.removeAllViews()
@@ -1050,6 +1072,44 @@ class FormActivity : AppCompatActivity() {
                 }
             }
 
+                17 -> {
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(16, 16, 16, 16)
+
+                        val layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        this.layoutParams = layoutParams
+
+                        val signaturePadView = layoutInflater.inflate(R.layout.activity_signature, this, false)
+                        val signaturePad = signaturePadView.findViewById<SignaturePad>(R.id.signature_pad)
+                        val clearButton = signaturePadView.findViewById<Button>(R.id.clear_button)
+                        val saveButton = signaturePadView.findViewById<Button>(R.id.save_button)
+
+                        addView(signaturePadView)
+
+                        clearButton.setOnClickListener {
+                            signaturePad.clear()
+                            Log.d("FormActivity", "SignaturePad cleared")
+                        }
+
+                        saveButton.setOnClickListener {
+                            if (!signaturePad.isEmpty) {
+                                val signatureBitmap = signaturePad.signatureBitmap
+                                Log.d("FormActivity", "Signature bitmap width: ${signatureBitmap.width}, height: ${signatureBitmap.height}")
+
+                                val file = createFileFromBitmap(signatureBitmap, "coba1.png")
+                                saveSignatureToServer(file)
+                            } else {
+                                Toast.makeText(this@FormActivity, "Please provide a signature.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+
+
                 else -> {
                     null
                 }
@@ -1065,7 +1125,7 @@ class FormActivity : AppCompatActivity() {
                 it.layoutParams = params
 
                 when {
-                    component.type == 7 && (component.id == "KM001" || component.id == "MSG10" ||component.id == "G0001" ||component.id == "OTP09") -> {
+                    component.type == 7 && (component.id == "KM005") -> {
                         if (buttonContainer == null) {
                             val newButtontf = LinearLayout(this).apply {
                                 id = View.generateViewId()
@@ -1081,7 +1141,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                     else -> {
-                        container.addView(it)
+                        container.addView(it as View?)
                     }
                 }
 
@@ -1092,6 +1152,96 @@ class FormActivity : AppCompatActivity() {
         }
 
     }
+
+    private fun saveSignatureToDatabase(signatureString: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val requestBody = RequestBody.create(
+                    "application/octet-stream".toMediaTypeOrNull(),
+                    Base64.decode(signatureString, Base64.DEFAULT)
+                )
+
+                val request = Request.Builder()
+                    .url("http://108.137.154.8:8081/ARRest/images")
+                    .post(requestBody)
+                    .build()
+
+                val response = OkHttpClient().newCall(request).execute()
+                if (response.isSuccessful) {
+                    Log.d("FormActivity", "Signature uploaded successfully")
+                } else {
+                    Log.e("FormActivity", "Failed to upload signature: ${response.message}")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error saving signature: ${e.message}")
+            }
+        }
+    }
+
+    private fun saveSignatureToServer(file: File) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS) // Increase connection timeout
+                .writeTimeout(30, TimeUnit.SECONDS) // Increase write timeout
+                .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
+                .build()
+
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", file.name,
+                    RequestBody.create("image/png".toMediaTypeOrNull(), file))
+                .build()
+
+            val request = Request.Builder()
+                .url("http://108.137.154.8:8081/ARRest/images")
+                .post(requestBody)
+                .build()
+
+            try {
+                val response = client.newCall(request).execute()
+                Log.d("FormActivity", "Response code: ${response.code}")
+                Log.d("FormActivity", "Response body: ${response.body?.string()}")
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Log.d("FormActivity", "Signature uploaded successfully")
+                        Toast.makeText(this@FormActivity, "Signature uploaded successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Log.e("FormActivity", "Failed to upload signature: ${response.message}")
+                        Toast.makeText(this@FormActivity, "Failed to upload signature", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error uploading signature: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Error uploading signature", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+
+
+    private fun createFileFromBitmap(bitmap: Bitmap, fileName: String): File {
+        val file = File(cacheDir, fileName)
+        try {
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            Log.d("FormActivity", "File created at: ${file.absolutePath}")
+        } catch (e: IOException) {
+            Log.e("FormActivity", "Error saving bitmap to file: ${e.message}")
+        }
+        return file
+    }
+
+
+    private fun convertBitmapToBase64(bitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
+
 
     private fun requestAndHandleKodeCabang(screen: Screen, callback: (String?) -> Unit) {
         val messageBody = createMessageBody(screen)
@@ -1341,7 +1491,7 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
-        if (component.id == "KM001") {
+        if (component.id == "KM001"|| component.id =="KM005") {
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 putExtra(Constants.KEY_MENU_ID, "MN00000")
@@ -1575,7 +1725,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Kode Cabang: $branchid")
 
             // Get device Android ID
-            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
@@ -1586,7 +1736,7 @@ class FormActivity : AppCompatActivity() {
 //            // Use actionUrl from screen; if null, msg_si will be nul
 
 //            val msgId = "353471045058692200995"
-//            val msgUi = "353471045058692"
+            val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
 
@@ -1758,21 +1908,21 @@ class FormActivity : AppCompatActivity() {
                     val fullname = jsonResponse.optJSONObject("data").optString("fullname")
                     val status = jsonResponse.optJSONObject("data").optString("status")
                     val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
-                    val terminalData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")?.optJSONObject("terminal")
-
-                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-                    Log.d("FormActivity", "msg_ui: $msg_ui")
-                    val imeiFromTerminalData = terminalData?.optString("imei")
-
-                    if (imeiFromTerminalData == msg_ui) {
-                        Log.d("FormActivity", "IMEI sesuai dengan msg_ui.")
-                    } else {
-                        Log.d("FormActivity", "IMEI tidak sesuai dengan msg_ui.")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
-                        }
-                        return@launch
-                    }
+//                    val terminalData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")?.optJSONObject("terminal")
+//
+//                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//                    Log.d("FormActivity", "msg_ui: $msg_ui")
+//                    val imeiFromTerminalData = terminalData?.optString("imei")
+//
+//                    if (imeiFromTerminalData == msg_ui) {
+//                        Log.d("FormActivity", "IMEI sesuai dengan msg_ui.")
+//                    } else {
+//                        Log.d("FormActivity", "IMEI tidak sesuai dengan msg_ui.")
+//                        withContext(Dispatchers.Main) {
+//                            Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+//                        }
+//                        return@launch
+                   // }
 
                     if (status == "0") {
                         withContext(Dispatchers.Main) {

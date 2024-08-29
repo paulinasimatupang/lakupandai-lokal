@@ -1923,11 +1923,8 @@ class FormActivity : AppCompatActivity() {
 //                            Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
 //                        }
 //                        return@launch
-<<<<<<< HEAD
                    // }
-=======
 //                    }
->>>>>>> 76be9d39548bf1d84595b50e8990df55c6af3180
 
                     if (status == "0") {
                         withContext(Dispatchers.Main) {

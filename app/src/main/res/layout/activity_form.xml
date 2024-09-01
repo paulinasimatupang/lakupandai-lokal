@@ -98,6 +98,26 @@
         android:text="@string/invalid_form_id"
         />
 
+    <ImageView
+        android:id="@+id/imageViewKTP"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="Foto KTP"
+        android:scaleType="centerCrop"
+        android:background="#cccccc"
+        app:layout_constraintTop_toBottomOf="@id/imageViewOrang"/>
+
+    <ImageView
+        android:id="@+id/imageViewOrang"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="Foto Orang"
+        android:scaleType="centerCrop"
+        android:background="#cccccc"
+        app:layout_constraintTop_toBottomOf="@id/imageViewKTP"/>
+
     <LinearLayout
         android:id="@+id/footer_container"
         android:layout_width="match_parent"

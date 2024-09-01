@@ -56,10 +56,11 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import android.view.ViewGroup
-import okhttp3.RequestBody
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -90,6 +91,12 @@ class FormActivity : AppCompatActivity() {
     private var feeValue = 0.0
     private var inputRekening = mutableMapOf<String, String>()
     private var pickOTP: String? = null
+    private val CAMERA_REQUEST_CODE = 1001
+    private val CAMERA_PERMISSION_CODE = 1002
+    private var photo: Bitmap? = null
+    private lateinit var imageViewKTP: ImageView
+    private lateinit var imageViewOrang: ImageView
+    private var photoType: String? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -104,6 +111,9 @@ class FormActivity : AppCompatActivity() {
         // Retrieve formId from intent extras
         formId = intent.extras?.getString(Constants.KEY_FORM_ID) ?: Constants.DEFAULT_ROOT_ID
         Log.d("FormActivity", "formId: $formId")
+
+        imageViewKTP = findViewById(R.id.imageViewKTP)
+        imageViewOrang = findViewById(R.id.imageViewOrang)
 
         setInitialLayout()
 
@@ -1218,7 +1228,7 @@ class FormActivity : AppCompatActivity() {
                     it.layoutParams = params
 
                     when {
-                        component.type == 7 && (component.id == "KM001" || component.id == "MSG10" || component.id == "G0001" || component.id == "OTP09") -> {
+                        component.type == 7 && (component.id == "KM005"||component.id == "MSG10") -> {
                             if (buttonContainer == null) {
                                 val newButtontf = LinearLayout(this@FormActivity).apply {
                                     id = View.generateViewId()
@@ -1260,10 +1270,11 @@ class FormActivity : AppCompatActivity() {
                 .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
                 .build()
 
+            val mediaType = "image/png".toMediaTypeOrNull()
             val requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("file", file.name,
-                    RequestBody.create("image/png".toMediaTypeOrNull(), file))
+                    RequestBody.create(mediaType, file))
                 .build()
 
             val request = Request.Builder()

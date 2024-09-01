@@ -8,60 +8,75 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Base64
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.LayoutInflater
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import id.co.bankntbsyariah.lakupandai.ui.SignatureActivity
+import com.github.gcacace.signaturepad.views.SignaturePad
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Component
 import id.co.bankntbsyariah.lakupandai.common.Constants
+import id.co.bankntbsyariah.lakupandai.common.Mutation
 import id.co.bankntbsyariah.lakupandai.common.Screen
 import id.co.bankntbsyariah.lakupandai.iface.ArrestCallerImpl
 import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
+import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.appcompat.app.AlertDialog
 import okhttp3.FormBody
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONException
-import java.util.Calendar
-import java.util.concurrent.TimeUnit
-import androidx.core.content.ContextCompat
-import android.view.MotionEvent
-import android.view.WindowManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import id.co.bankntbsyariah.lakupandai.common.Mutation
-import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
-import okhttp3.internal.format
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
-import android.provider.Settings
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import android.view.ViewGroup
+import okhttp3.RequestBody
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.Toast
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
+import okhttp3.internal.format
 import android.Manifest
 import android.content.pm.PackageManager
 import android.provider.MediaStore
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import java.io.ByteArrayOutputStream
-import java.io.IOException
 
 class FormActivity : AppCompatActivity() {
 
@@ -75,13 +90,6 @@ class FormActivity : AppCompatActivity() {
     private var feeValue = 0.0
     private var inputRekening = mutableMapOf<String, String>()
     private var pickOTP: String? = null
-
-    private val CAMERA_REQUEST_CODE = 1001
-    private val CAMERA_PERMISSION_CODE = 1002
-    private var photo: Bitmap? = null
-    private lateinit var imageViewKTP: ImageView
-    private lateinit var imageViewOrang: ImageView
-    private var photoType: String? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -265,12 +273,10 @@ class FormActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_awal)
                 Log.d("FormActivity", "Displaying activity_awal")
             }
-
             "AU00001" -> {
                 setContentView(R.layout.activity_form_login)
                 Log.d("FormActivity", "Displaying activity_form_login")
             }
-
             else -> {
                 // Optionally handle the case where none of the keywords match
                 setContentView(R.layout.activity_form)
@@ -286,16 +292,19 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
-            screenTitle.contains("Berhasil", ignoreCase = true) -> {
+            screenTitle.contains("Berhasil", ignoreCase = true) ->
+            {
                 showSuccessPopup(screenTitle)
                 R.layout.activity_berhasil
             }
-
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
+        }
+        if (layoutId == R.layout.activity_transfer) {
+            titleTransaction()
         }
         if (screenTitle.contains("Berhasil", ignoreCase = true)) {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
@@ -311,6 +320,33 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun titleTransaction() {
+        val titleView = findViewById<TextView>(R.id.titleTransaction)
+        if (titleView != null) {
+            when (formId) {
+                "TF00003" -> {
+                    titleView.text = getString(R.string.transfer)
+                    Log.d("FormActivity", "Transfer Transaction")
+                }
+                "BS001" -> {
+                    titleView.text = getString(R.string.setor_tunai)
+                    Log.d("FormActivity", "Setor Tunai Transaction")
+                }
+                "BR001" -> {
+                    titleView.text = getString(R.string.tarik_tunai)
+                    Log.d("FormActivity", "Tarik Tunai Transaction")
+                }
+                else -> {
+                    titleView.text = getString(R.string.default_title)  // Optional default title
+                    Log.d("FormActivity", "Unknown Transaction - using default title")
+                }
+            }
+            Log.d("FormActivity", "transaction_title successfully updated: ${titleView.text}")
+        } else {
+            Log.e("FormActivity", "Error: TextView with ID titleTransaction not found.")
+        }
+    }
+
     private fun showSuccessPopup(message: String) {
         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
@@ -323,8 +359,7 @@ class FormActivity : AppCompatActivity() {
     private fun setupForm(screen: Screen, containerView: View? = null) {
         val container = containerView?.findViewById<LinearLayout>(R.id.menu_container)
             ?: findViewById(R.id.menu_container)
-        var buttonContainer =
-            containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
+        var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
         val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
 
         if (container == null) {
@@ -421,7 +456,7 @@ class FormActivity : AppCompatActivity() {
 
             if (component.id == "TRF27" || component.id == "TFR24" || component.id == "AG001" ||
                 component.id == "AG002" || component.id == "TRF26" || component.id == "AG005" ||
-                (component.id == "ST003" && screen.title.contains("Transfer")) || component.id == "D1004"
+                (component.id == "ST003" && screen.title.contains("Transfer") ) || component.id == "D1004"
             ) continue
 
             if (component.id == "MSG03") {
@@ -481,13 +516,7 @@ class FormActivity : AppCompatActivity() {
 
                             val numericValue = componentValue.toDoubleOrNull() ?: 0.0
                             val formattedValue = when {
-                                component.label.contains(
-                                    "nominal",
-                                    ignoreCase = true
-                                ) || component.label.contains(
-                                    "nilai transfer",
-                                    ignoreCase = true
-                                ) -> {
+                                component.label.contains("nominal", ignoreCase = true)|| component.label.contains("nilai transfer", ignoreCase = true) -> {
                                     nominalValue = numericValue
                                     formatRupiah(nominalValue)
                                 }
@@ -499,7 +528,6 @@ class FormActivity : AppCompatActivity() {
                                     feeValue = numericValue
                                     formatRupiah(feeValue)
                                 }
-
                                 component.label.contains("saldo", ignoreCase = true) -> {
                                     var saldoStr = getComponentValue(component)
 
@@ -511,7 +539,7 @@ class FormActivity : AppCompatActivity() {
                                         saldoStr = saldoStr.replace(",", "")
                                     }
 
-                                    val saldo = saldoStr.toDoubleOrNull() ?: 0.0
+                                    val saldo = saldoStr.toDoubleOrNull()?: 0.0
 
                                     formatRupiah(saldo)
                                 }
@@ -573,11 +601,8 @@ class FormActivity : AppCompatActivity() {
                                     )
                                 })
                                 if (screen.id == "RCCIF02") {
-                                    val rekeningIndex =
-                                        inputRekeningIndex.coerceAtMost(inputRekening.size - 1) // Pastikan tidak melebihi ukuran inputRekening
-                                    val rekeningValue =
-                                        inputRekening.values.elementAtOrNull(rekeningIndex)
-                                            ?: formattedValue
+                                    val rekeningIndex = inputRekeningIndex.coerceAtMost(inputRekening.size - 1) // Pastikan tidak melebihi ukuran inputRekening
+                                    val rekeningValue = inputRekening.values.elementAtOrNull(rekeningIndex) ?: formattedValue
                                     inputRekeningIndex++ // Update ke index berikutnya
                                     addView(TextView(this@FormActivity).apply {
                                         text = rekeningValue
@@ -662,10 +687,7 @@ class FormActivity : AppCompatActivity() {
 
                                 if (screen.id == "CCIF001") {
                                     inputRekening[component.id] = inputText
-                                    Log.d(
-                                        "FormActivity",
-                                        "inputRekening[${component.id}] set to: $inputText"
-                                    )
+                                    Log.d("FormActivity", "inputRekening[${component.id}] set to: $inputText")
                                 }
 
                                 if (component.label == "NIK") {
@@ -718,23 +740,11 @@ class FormActivity : AppCompatActivity() {
                                 if (event.action == MotionEvent.ACTION_UP) {
                                     if (event.rawX >= (right - compoundDrawables[2].bounds.width() - paddingRight)) {
                                         if (inputType == android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) {
-                                            inputType =
-                                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                                            setCompoundDrawablesWithIntrinsicBounds(
-                                                0,
-                                                0,
-                                                R.drawable.ic_eye_open,
-                                                0
-                                            )
+                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_open, 0)
                                         } else {
-                                            inputType =
-                                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-                                            setCompoundDrawablesWithIntrinsicBounds(
-                                                0,
-                                                0,
-                                                R.drawable.ic_eye_closed,
-                                                0
-                                            )
+                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
                                         }
                                         setSelection(text.length)  // Move cursor to end
                                         return@setOnTouchListener true
@@ -760,7 +770,6 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
-
                 4 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -774,77 +783,42 @@ class FormActivity : AppCompatActivity() {
                         var compOption = component.compValues?.compValue
 
                         lifecycleScope.launch {
-                            val options: List<Pair<String?, String?>> =
-                                if (compOption.isNullOrEmpty() ||
-                                    compOption.all { it.value == "" }
-                                ) {
+                            val options: List<Pair<String?, String?>> = if (compOption.isNullOrEmpty() ||
+                                compOption.all { it.value == "" }) {
 
-                                    var formValue =
-                                        StorageImpl(applicationContext).fetchForm(screen.id)
+                                var formValue = StorageImpl(applicationContext).fetchForm(screen.id)
 
-                                    if (formValue.isNullOrEmpty()) {
-                                        formValue = withContext(Dispatchers.IO) {
-                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
-                                        }
-                                        Log.i("FormActivity", "Fetched formValue: $formValue")
+                                if (formValue.isNullOrEmpty()) {
+                                    formValue = withContext(Dispatchers.IO) {
+                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
                                     }
-
-                                    if (formValue.isNullOrEmpty()) {
-                                        Log.e(
-                                            "FormActivity",
-                                            "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
-                                        )
-                                        mutableListOf(
-                                            Pair(
-                                                "Pilih ${component.label}",
-                                                ""
-                                            )
-                                        ) // Return a list with default placeholder
-                                    } else {
-                                        try {
-                                            val screenJson = JSONObject(formValue)
-                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                            val selectedOptions =
-                                                screen.comp.firstOrNull { it.id == component.id }
-                                                    ?.compValues?.compValue?.mapNotNull {
-                                                        Pair(
-                                                            it.print,
-                                                            it.value
-                                                        )
-                                                    }
-                                                    ?: emptyList()
-
-                                            Log.d(
-                                                "FormActivity",
-                                                "SELECTED OPTIONS : $selectedOptions"
-                                            )
-                                            mutableListOf(
-                                                Pair(
-                                                    "Pilih ${component.label}",
-                                                    ""
-                                                )
-                                            ) + selectedOptions
-                                        } catch (e: JSONException) {
-                                            Log.e(
-                                                "FormActivity",
-                                                "JSON Parsing error: ${e.message}"
-                                            )
-                                            mutableListOf(
-                                                Pair(
-                                                    "Pilih ${component.label}",
-                                                    ""
-                                                )
-                                            ) // Return a list with default placeholder
-                                        }
-                                    }
-                                } else {
-                                    mutableListOf(
-                                        Pair(
-                                            "Pilih ${component.label}",
-                                            ""
-                                        )
-                                    ) + compOption.map { Pair(it.print, it.value) }
+                                    Log.i("FormActivity", "Fetched formValue: $formValue")
                                 }
+
+                                if (formValue.isNullOrEmpty()) {
+                                    Log.e(
+                                        "FormActivity",
+                                        "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
+                                    )
+                                    mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                } else {
+                                    try {
+                                        val screenJson = JSONObject(formValue)
+                                        val screen: Screen = ScreenParser.parseJSON(screenJson)
+                                        val selectedOptions = screen.comp.firstOrNull { it.id == component.id }
+                                            ?.compValues?.compValue?.mapNotNull { Pair(it.print, it.value) }
+                                            ?: emptyList()
+
+                                        Log.d("FormActivity", "SELECTED OPTIONS : $selectedOptions")
+                                        mutableListOf(Pair("Pilih ${component.label}", "")) + selectedOptions
+                                    } catch (e: JSONException) {
+                                        Log.e("FormActivity", "JSON Parsing error: ${e.message}")
+                                        mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                    }
+                                }
+                            } else {
+                                mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
+                            }
 
                             val spinner = Spinner(this@FormActivity).apply {
                                 background = getDrawable(R.drawable.combo_box)
@@ -883,8 +857,7 @@ class FormActivity : AppCompatActivity() {
                                         val selectedCompValue = selectedPair.second
 
                                         if (screen.id == "CCIF001") {
-                                            inputRekening[component.id] =
-                                                selectedValue ?: "" // Now storing selectedValue
+                                            inputRekening[component.id] = selectedValue ?: "" // Now storing selectedValue
                                         }
 
                                         Log.d(
@@ -898,15 +871,13 @@ class FormActivity : AppCompatActivity() {
                                         )
 
                                         when (component.id) {
-                                            "PIL03" -> {
+                                            "PIL03"-> {
                                                 pickOTP = selectedValue
                                                 Log.d("Form", "PICK OTP : $selectedValue")
                                             }
-
                                             "CB001" -> {
                                                 if (selectedCompValue != null) {
-                                                    inputValues[component.id] =
-                                                        selectedCompValue.replace("[OI]", "")
+                                                    inputValues[component.id] = selectedCompValue.replace("[OI]", "")
                                                 }
                                                 Log.d(
                                                     "FormActivity",
@@ -924,8 +895,7 @@ class FormActivity : AppCompatActivity() {
 
                                             "CIF13" -> {
                                                 if (selectedCompValue != null) {
-                                                    inputValues[component.id] =
-                                                        selectedCompValue.replace("[OI]CK", "")
+                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CK", "")
                                                 }
                                                 Log.d(
                                                     "FormActivity",
@@ -938,17 +908,14 @@ class FormActivity : AppCompatActivity() {
 
                                             "CIF14" -> {
                                                 if (selectedCompValue != null) {
-                                                    inputValues[component.id] =
-                                                        selectedCompValue.replace("[OI]CIFP", "")
+                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CIFP", "")
                                                 }
                                                 Log.d(
                                                     "FormActivity",
                                                     "Provinsi set to: ${inputValues[component.id]}"
                                                 )
                                             }
-
-                                            else -> inputValues[component.id] =
-                                                (position ?: selectedValue).toString()
+                                            else -> inputValues[component.id] = (position ?: selectedValue).toString()
                                         }
 
                                     }
@@ -993,7 +960,6 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 6 -> {
                     LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
@@ -1017,16 +983,10 @@ class FormActivity : AppCompatActivity() {
                                     val selectedValue = value.first
 
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] = selectedValue
+                                        inputRekening[component.id] = selectedValue 
                                     }
 
-                                    val valueToSave = if (component.id in listOf(
-                                            "CIF05",
-                                            "CIF17",
-                                            "CIF07",
-                                            "CIF21"
-                                        )
-                                    ) {
+                                    val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
                                         (index + 1).toString()
                                     } else {
                                         index.toString()
@@ -1060,8 +1020,10 @@ class FormActivity : AppCompatActivity() {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
+                                        // Perbarui properti kelas kodeCabang
                                         saveKodeCabangToPreferences(kodeCabangResult)
                                         Log.d("FORM", "KODE CABANG : $kodeCabangResult")
+
                                         Log.e("FORM", "KODE CABANGSS : $kodeCabangResult")
                                     } else {
                                         Log.e("FORM", "Failed to retrieve kodeCabang")
@@ -1081,7 +1043,6 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
-
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
@@ -1093,26 +1054,15 @@ class FormActivity : AppCompatActivity() {
                     val otpDigit5 = otpView.findViewById<EditText>(R.id.otpDigit5)
                     val otpDigit6 = otpView.findViewById<EditText>(R.id.otpDigit6)
 
-                    val otpDigits =
-                        listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4, otpDigit5, otpDigit6)
+
+                    val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4, otpDigit5, otpDigit6)
 
                     otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
-                            override fun beforeTextChanged(
-                                s: CharSequence?,
-                                start: Int,
-                                count: Int,
-                                after: Int
-                            ) {
-                            }
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
-                            override fun onTextChanged(
-                                s: CharSequence?,
-                                start: Int,
-                                before: Int,
-                                count: Int
-                            ) {
-                                s?.let {
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                                if (s != null) {
                                     when {
                                         count > 0 -> {
                                             val nextIndex = index + 1
@@ -1128,12 +1078,10 @@ class FormActivity : AppCompatActivity() {
                                             }
                                         }
                                     }
-                                    val otpValue =
-                                        otpDigits.joinToString(separator = "") { it.text.toString() }
+                                    val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
                                     inputValues["OTP"] = otpValue
                                 }
                             }
-
                             override fun afterTextChanged(s: Editable?) {}
                         })
                     }
@@ -1175,7 +1123,42 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
+                17 -> {
+                    LinearLayout(this@FormActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(16, 16, 16, 16)
 
+                        val layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        this.layoutParams = layoutParams
+
+                        val signaturePadView = layoutInflater.inflate(R.layout.activity_signature, this, false)
+                        val signaturePad = signaturePadView.findViewById<SignaturePad>(R.id.signature_pad)
+                        val clearButton = signaturePadView.findViewById<Button>(R.id.clear_button)
+                        val saveButton = signaturePadView.findViewById<Button>(R.id.save_button)
+
+                        addView(signaturePadView)
+
+                        clearButton.setOnClickListener {
+                            signaturePad.clear()
+                            Log.d("FormActivity", "SignaturePad cleared")
+                        }
+
+                        saveButton.setOnClickListener {
+                            if (!signaturePad.isEmpty) {
+                                val signatureBitmap = signaturePad.signatureBitmap
+                                Log.d("FormActivity", "Signature bitmap width: ${signatureBitmap.width}, height: ${signatureBitmap.height}")
+
+                                val file = createFileFromBitmap(signatureBitmap, "coba1.png")
+                                saveSignatureToServer(file)
+                            } else {
+                                Toast.makeText(this@FormActivity, "Please provide a signature.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
                 18 -> {
                     val buttonContainer = LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -1222,7 +1205,6 @@ class FormActivity : AppCompatActivity() {
                     })
                 }
                 else -> {
-                    // Handle other cases
                     null
                 }
             }.let { view ->
@@ -1260,11 +1242,80 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+
             }
 
             Log.d("INPUT REKENING", "INPUT REKENING : $inputRekening")
         }
+
     }
+
+
+    private fun saveSignatureToServer(file: File) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS) // Increase connection timeout
+                .writeTimeout(30, TimeUnit.SECONDS) // Increase write timeout
+                .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
+                .build()
+
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", file.name,
+                    RequestBody.create("image/png".toMediaTypeOrNull(), file))
+                .build()
+
+            val request = Request.Builder()
+                .url("http://108.137.154.8:8081/ARRest/images")
+                .post(requestBody)
+                .build()
+
+            try {
+                val response = client.newCall(request).execute()
+                Log.d("FormActivity", "Response code: ${response.code}")
+                Log.d("FormActivity", "Response body: ${response.body?.string()}")
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Log.d("FormActivity", "Signature uploaded successfully")
+                        Toast.makeText(this@FormActivity, "Signature uploaded successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Log.e("FormActivity", "Failed to upload signature: ${response.message}")
+                        Toast.makeText(this@FormActivity, "Failed to upload signature", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error uploading signature: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Error uploading signature", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+
+
+    private fun createFileFromBitmap(bitmap: Bitmap, fileName: String): File {
+        val file = File(cacheDir, fileName)
+        try {
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            Log.d("FormActivity", "File created at: ${file.absolutePath}")
+        } catch (e: IOException) {
+            Log.e("FormActivity", "Error saving bitmap to file: ${e.message}")
+        }
+        return file
+    }
+
+
+    private fun convertBitmapToBase64(bitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
+
 
     private fun requestAndHandleKodeCabang(screen: Screen, callback: (String?) -> Unit) {
         val messageBody = createMessageBody(screen)
@@ -1320,7 +1371,6 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
                 }
             }
-
             "Nama Rekening Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -1332,7 +1382,6 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $Userfullname")
                 }
             }
-
             "NIK" -> {
                 if (currentValue == "null" && nikValue != null) {
                     Log.d("FormActivity", "NIK diisi dengan nilai: $nikValue")
@@ -1341,7 +1390,6 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "NIK sudah terisi dengan: $currentValue")
                 }
             }
-
             "Kode Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -1353,7 +1401,6 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "Kode Agen sudah terisi dengan: $savedKodeAgen")
                 }
             }
-
             else -> {
                 component.compValues?.compValue?.firstOrNull()?.value ?: ""
                 Log.d("FormActivity", "Komponen tidak memerlukan pembaruan")
@@ -1376,14 +1423,12 @@ class FormActivity : AppCompatActivity() {
                 "2" -> "Perempuan"
                 else -> ""
             }
-
             "CIF34" -> when (currentValue) {
                 "1" -> "Kawin"
                 "2" -> "Belum Kawin"
                 "3" -> "Janda/Duda"
                 else -> ""
             }
-
             "CIF33" -> when (currentValue) {
                 "1" -> "Islam"
                 "2" -> "Kristen Protestan"
@@ -1399,19 +1444,16 @@ class FormActivity : AppCompatActivity() {
                 "1" -> "Menetap"
                 else -> ""
             }
-
             "CIF43" -> when (currentValue) {
                 "1" -> "WNI"
                 "2" -> "WNA"
                 else -> ""
             }
-
             "CIF47" -> when (currentValue) {
                 "1" -> "KTP"
                 "2" -> "PASSPORT"
                 else -> ""
             }
-
             "CIF49" -> when (currentValue) {
                 "0" -> "A"
                 "1" -> "AB"
@@ -1420,7 +1462,6 @@ class FormActivity : AppCompatActivity() {
                 "4" -> "-"
                 else -> ""
             }
-
             "CIF51" -> when (currentValue) {
                 "1" -> "SD"
                 "2" -> "SLTP"
@@ -1432,7 +1473,6 @@ class FormActivity : AppCompatActivity() {
                 "8" -> "OTHERS"
                 else -> ""
             }
-
             else -> currentValue ?: ""
         }
 
@@ -1578,8 +1618,7 @@ class FormActivity : AppCompatActivity() {
                                     Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                     if (screen.id == "CCIF003" && newScreen.id == "000000D") {
                                         val message = newScreen?.comp?.find { it.id == "0000A" }
-                                            ?.compValues?.compValue?.firstOrNull()?.value
-                                            ?: "Unknown error"
+                                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
                                         newScreen.id = "RCCIF02"
                                         var newScreenId = newScreen.id
                                         var formValue =
@@ -1593,10 +1632,7 @@ class FormActivity : AppCompatActivity() {
                                             Log.i("FormActivity", "Fetched formValue: $formValue")
                                         }
                                         setupScreen(formValue)
-                                        val intent = Intent(
-                                            this@FormActivity,
-                                            PopupActivity::class.java
-                                        ).apply {
+                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                                             putExtra("MESSAGE_BODY", message)
                                             putExtra("RETURN_TO_ROOT", false)
@@ -1618,10 +1654,7 @@ class FormActivity : AppCompatActivity() {
                                         setupScreen(formValue)
                                     } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
                                         // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
-                                        val intent = Intent(
-                                            this@FormActivity,
-                                            PopupActivity::class.java
-                                        ).apply {
+                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                                             putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
                                         }
@@ -1663,8 +1696,7 @@ class FormActivity : AppCompatActivity() {
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
                                 if (screen.id == "CCIF003" && newScreen.id == "000000D") {
                                     val message = newScreen?.comp?.find { it.id == "0000A" }
-                                        ?.compValues?.compValue?.firstOrNull()?.value
-                                        ?: "Unknown error"
+                                        ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
                                     newScreen.id = "RCCIF02"
                                     var newScreenId = newScreen.id
                                     var formValue =
@@ -1678,18 +1710,16 @@ class FormActivity : AppCompatActivity() {
                                         Log.i("FormActivity", "Fetched formValue: $formValue")
                                     }
                                     setupScreen(formValue)
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", message)
-                                            putExtra("RETURN_TO_ROOT", false)
-                                        }
+                                    val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                        putExtra("MESSAGE_BODY", message)
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
                                     startActivity(intent)
                                 } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
                                     newScreen.id = "CCIF001"
                                     var newScreenId = newScreen.id
-                                    var formValue =
-                                        StorageImpl(applicationContext).fetchForm(newScreenId)
+                                    var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
                                     if (formValue.isNullOrEmpty()) {
                                         formValue = withContext(Dispatchers.IO) {
                                             ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
@@ -1711,7 +1741,7 @@ class FormActivity : AppCompatActivity() {
                                             putExtra("MESSAGE_BODY", "Pesan sudah teririm")
                                         }
                                     startActivity(intent)
-                                } else {
+                                }else {
                                     handleScreenType(newScreen)
                                 }
                             }
@@ -1756,6 +1786,7 @@ class FormActivity : AppCompatActivity() {
     }
 
 
+
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
@@ -1791,33 +1822,28 @@ class FormActivity : AppCompatActivity() {
 
             Log.d("FormActivity", "PICK OTP: $pickOTP")
             if (screen.comp.any { it.id == "PIL03" } && pickOTP == "SMS") {
-                when (screen.id) {
+                when(screen.id){
                     // cek saldo
-                    "CS00004" -> {
+                    "CS00004"->{
                         msgSi = "N00002"
                     }
                     // cek mutasi
-                    "MB81124" -> {
+                    "MB81124"->{
                         msgSi = "E81122"
                     }
-
-                    "TF00002" -> {
+                    "TF00002"->{
                         msgSi = "T00003"
                     }
-
-                    "CCIF001" -> {
+                    "CCIF001"->{
                         msgSi = "CC0002"
                     }
-
-                    "RT001" -> {
+                    "RT001"->{
                         msgSi = "RTT002"
                     }
-
-                    "RS001" -> {
+                    "RS001"->{
                         msgSi = "OTN002"
                     }
-
-                    else -> {
+                    else->{
                         msgSi = screen.actionUrl
                     }
                 }
@@ -1830,12 +1856,8 @@ class FormActivity : AppCompatActivity() {
                 when {
                     component.type == 1 && component.label == "Username" -> {
                         componentValues[component.id] = username
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with savedUsername for Component ID: ${component.id}"
-                        )
+                        Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
                     }
-
                     component.type == 1 && component.label == "No Rekening Agen" -> {
                         componentValues[component.id] = savedNorekening
                         Log.d(
@@ -1843,7 +1865,6 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with savedNorekening for Component ID: ${component.id}"
                         )
                     }
-
                     component.type == 1 && component.label == "Kode Agen" -> {
                         componentValues[component.id] = savedKodeAgen.toString()
                         Log.d("FormActivity", "Kode Agen : $savedKodeAgen")
@@ -1852,7 +1873,6 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with savedKodeAgen for Component ID: ${component.id}"
                         )
                     }
-
                     component.type == 1 && component.label == "NIK" -> {
                         // Use nikValue if component label is "NIK"
                         componentValues[component.id] = nikValue ?: ""
@@ -1861,7 +1881,6 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with nikValue for Component ID: ${component.id}"
                         )
                     }
-
                     component.type == 1 && component.label == "Kode Cabang" -> {
                         val branchid = getKodeCabangFromPreferences()
                         componentValues[component.id] = branchid ?: ""
@@ -1870,7 +1889,6 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with branchid : ${branchid}"
                         )
                     }
-
                     component.type == 1 && component.label != "NIK" -> {
                         val value = (component.values.get(0)?.second ?: "") as String
                         componentValues[component.id] = value
@@ -1879,7 +1897,6 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with value for Component ID: ${component.id}"
                         )
                     }
-
                     else -> {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }
@@ -1892,14 +1909,13 @@ class FormActivity : AppCompatActivity() {
 
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
-            if (screen.id == "AU00001") {
+            if(screen.id == "AU00001"){
                 msgDt = "$username|$savedNorekening|$savedNamaAgen"
-            } else {
-                msgDt =
-                    screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03" }
-                        .joinToString("|") { component ->
-                            componentValues[component.id] ?: ""
-                        }
+            }else{
+                msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03"}
+                    .joinToString("|") { component ->
+                        componentValues[component.id] ?: ""
+                    }
             }
 
             Log.d("Form", "Component : ${componentValues}")
@@ -1939,12 +1955,10 @@ class FormActivity : AppCompatActivity() {
                         username = value
                         formBodyBuilder.add("username", value)
                     }
-
                     "A0002" -> {
                         password = value
                         formBodyBuilder.add("password", value)
                     }
-
                     else -> formBodyBuilder.add(key, value)
                 }
             }
@@ -1964,10 +1978,7 @@ class FormActivity : AppCompatActivity() {
                 val response = client.newCall(request).execute()
                 val responseData = response.body?.string()
 
-                Log.d(
-                    TAG,
-                    "Received response from server. Response code: ${response.code}, Response body: $responseData"
-                )
+                Log.d(TAG, "Received response from server. Response code: ${response.code}, Response body: $responseData")
 
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
@@ -1993,28 +2004,19 @@ class FormActivity : AppCompatActivity() {
 
                     if (status == "0") {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@FormActivity,
-                                "Akun Anda belum diaktivasi",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
                         }
                         return@launch
                     } else if (status == "2") {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@FormActivity,
-                                "Akun Anda telah dinonaktifkan",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
                         }
                         return@launch
                     }
 
                     if (token.isNotEmpty() && merchantData != null) {
 
-                        val sharedPreferences =
-                            getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                         val editor = sharedPreferences.edit()
 
                         // Save user data
@@ -2037,36 +2039,23 @@ class FormActivity : AppCompatActivity() {
                         editor.apply()
 
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT)
-                                .show()
+                            Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
                             navigateToScreen()
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@FormActivity,
-                                "Data User tidak ditemukan",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@FormActivity,
-                            "Username atau password salah",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception occurred while logging in", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@FormActivity,
-                        "Terjadi kesalahan: ${e.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -2109,29 +2098,24 @@ class FormActivity : AppCompatActivity() {
                     errors.add("${component.label} Harus terdiri dari huruf, angka,dan simbol")
                 }
             }
-
             1 -> {
                 if (!inputValue.matches(Regex("[a-zA-Z\\s]*"))) {
                     errors.add("${component.label} Harus terdiri dari huruf")
                 }
             }
-
             2 -> {
                 if (!inputValue.matches(Regex("[0-9]*"))) {
                     errors.add("${component.label} Harus terdiri dari angka saja")
                 }
             }
-
             4 -> {
                 if (!inputValue.matches(Regex("\\d+(\\.\\d{1,2})?"))) {
                     errors.add("${component.label} Format uang tidak valid")
                 }
             }
-
             3 -> {
                 // No Constraint
             }
-
             else -> {
                 errors.add("${component.label} Tipe validasi tidak dikenali")
             }
@@ -2211,24 +2195,13 @@ class FormActivity : AppCompatActivity() {
         val transactions = mutableListOf<Mutation>()
 
         // Sesuaikan regex untuk menangkap 'no arsip' jika diperlukan
-        val regex =
-            Regex("""(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.+?) (Rp \d+.\d{2}) (CREDIT|DEBIT)""")
+        val regex = Regex("""(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.+?) (Rp \d+.\d{2}) (CREDIT|DEBIT)""")
         for (mutasi in mutasiList) {
             val match = regex.find(mutasi)
             if (match != null) {
                 val (date, time, description, amount, transactionType) = match.destructured
-                val archiveNumber =
-                    extractArchiveNumber(mutasi) // Fungsi untuk mengekstrak 'no arsip'
-                transactions.add(
-                    Mutation(
-                        date,
-                        time,
-                        description,
-                        amount,
-                        transactionType,
-                        archiveNumber
-                    )
-                )
+                val archiveNumber = extractArchiveNumber(mutasi) // Fungsi untuk mengekstrak 'no arsip'
+                transactions.add(Mutation(date, time, description, amount, transactionType, archiveNumber))
             }
         }
         return transactions

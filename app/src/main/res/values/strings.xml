@@ -22,6 +22,12 @@
 
     <string name="back_to_exit_info">Tekan lagi tombol kembali untuk keluar dari aplikasi</string>
 
+    <string name="transfer">Transfer</string>
+    <string name="setor_tunai">Setor Tunai</string>
+    <string name="tarik_tunai">Tarik Tunai</string>
+    <string name="default_title">Default Title</string> <!-- Optional default title -->
+
+
     <!--    Templates-->
     <string name="footer_text">Laku Pandai - NTB Syariah</string>
     <string name="check_saldo_desc">Check your balance</string>

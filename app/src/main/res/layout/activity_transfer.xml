@@ -189,6 +189,17 @@
                         android:textSize="25sp"
                         android:textStyle="bold" />
 
+                    <TextView
+                        android:id="@+id/titleTransaction"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:text="Transfer Berhasil"
+                        android:layout_marginTop="10dp"
+                        android:textColor="#000000"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

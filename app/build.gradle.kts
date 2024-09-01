@@ -45,7 +45,10 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        dataBinding = true
+
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
@@ -63,6 +66,7 @@ android {
 }
 
 dependencies {
+    implementation ("com.github.gcacace:signature-pad:1.3.1")
     implementation ("com.github.bumptech.glide:glide:4.12.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.cardview:cardview:1.0.0")

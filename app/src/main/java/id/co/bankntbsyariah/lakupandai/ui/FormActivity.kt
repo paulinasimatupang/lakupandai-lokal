@@ -298,6 +298,9 @@ class FormActivity : AppCompatActivity() {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
+        if (layoutId == R.layout.activity_transfer) {
+            titleTransaction()
+        }
         if (screenTitle.contains("Berhasil", ignoreCase = true)) {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
             Log.d("FormActivity", "Formatted title: $formattedTitle")
@@ -309,6 +312,33 @@ class FormActivity : AppCompatActivity() {
             } else {
                 Log.e("FormActivity", "Error: TextView with ID card_title not found.")
             }
+        }
+    }
+
+    private fun titleTransaction() {
+        val titleView = findViewById<TextView>(R.id.titleTransaction)
+        if (titleView != null) {
+            when (formId) {
+                "TF00003" -> {
+                    titleView.text = getString(R.string.transfer)
+                    Log.d("FormActivity", "Transfer Transaction")
+                }
+                "BS001" -> {
+                    titleView.text = getString(R.string.setor_tunai)
+                    Log.d("FormActivity", "Setor Tunai Transaction")
+                }
+                "BR001" -> {
+                    titleView.text = getString(R.string.tarik_tunai)
+                    Log.d("FormActivity", "Tarik Tunai Transaction")
+                }
+                else -> {
+                    titleView.text = getString(R.string.default_title)  // Optional default title
+                    Log.d("FormActivity", "Unknown Transaction - using default title")
+                }
+            }
+            Log.d("FormActivity", "transaction_title successfully updated: ${titleView.text}")
+        } else {
+            Log.e("FormActivity", "Error: TextView with ID titleTransaction not found.")
         }
     }
 
@@ -1154,30 +1184,6 @@ class FormActivity : AppCompatActivity() {
 
     }
 
-    private fun saveSignatureToDatabase(signatureString: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val requestBody = RequestBody.create(
-                    "application/octet-stream".toMediaTypeOrNull(),
-                    Base64.decode(signatureString, Base64.DEFAULT)
-                )
-
-                val request = Request.Builder()
-                    .url("http://108.137.154.8:8081/ARRest/images")
-                    .post(requestBody)
-                    .build()
-
-                val response = OkHttpClient().newCall(request).execute()
-                if (response.isSuccessful) {
-                    Log.d("FormActivity", "Signature uploaded successfully")
-                } else {
-                    Log.e("FormActivity", "Failed to upload signature: ${response.message}")
-                }
-            } catch (e: Exception) {
-                Log.e("FormActivity", "Error saving signature: ${e.message}")
-            }
-        }
-    }
 
     private fun saveSignatureToServer(file: File) {
         CoroutineScope(Dispatchers.IO).launch {

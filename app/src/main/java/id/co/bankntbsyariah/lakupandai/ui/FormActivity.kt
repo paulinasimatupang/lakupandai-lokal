@@ -76,6 +76,7 @@ import android.content.pm.PackageManager
 import android.provider.MediaStore
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
+import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
@@ -112,8 +113,15 @@ class FormActivity : AppCompatActivity() {
         formId = intent.extras?.getString(Constants.KEY_FORM_ID) ?: Constants.DEFAULT_ROOT_ID
         Log.d("FormActivity", "formId: $formId")
 
-        imageViewKTP = findViewById(R.id.imageViewKTP)
-        imageViewOrang = findViewById(R.id.imageViewOrang)
+        val imageViewKTP = findViewById<ImageView?>(R.id.imageViewKTP)
+        if (imageViewKTP != null) {
+            this.imageViewKTP = imageViewKTP
+        }
+
+        val imageViewOrang = findViewById<ImageView?>(R.id.imageViewOrang)
+        if (imageViewOrang != null) {
+            this.imageViewOrang = imageViewOrang
+        }
 
         setInitialLayout()
 
@@ -387,9 +395,15 @@ class FormActivity : AppCompatActivity() {
         var inputRekeningIndex = 0
 
         for (component in screen.comp) {
-            when (component.id) {
-                "TRF27", "AG001", "TRF26" -> norekComponent = component
-                "TFR24", "AG002", "AG005" -> {
+            when {
+                component.id == "TRF27" ||
+                        (component.id == "AG001" && screen.title.contains("Form")) ||
+                        component.id == "TRF26" -> {
+                    norekComponent = component
+                }
+                component.id == "TFR24" ||
+                        (component.id == "AG002" && screen.title.contains("Form") ||
+                                (component.id == "AG005" && screen.title.contains("Form"))) -> {
                     nominalComponent = component
                     val fullName = getComponentValue(component)
                     namaDepan = fullName?.split(" ")?.firstOrNull()?.take(1) ?: ""
@@ -464,9 +478,9 @@ class FormActivity : AppCompatActivity() {
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
 
-            if (component.id == "TRF27" || component.id == "TFR24" || component.id == "AG001" ||
-                component.id == "AG002" || component.id == "TRF26" || component.id == "AG005" ||
-                (component.id == "ST003" && screen.title.contains("Transfer") ) || component.id == "D1004"
+            if (component.id == "TRF27" || component.id == "TFR24" || (component.id == "AG001" && screen.title.contains("Form")) ||
+                (component.id == "AG002" && screen.title.contains("Form")) || component.id == "TRF26" || (component.id == "AG005" && screen.title.contains("Form")) ||
+                (component.id == "ST003" && screen.title.contains("Transfer")) || component.id == "D1004"
             ) continue
 
             if (component.id == "MSG03") {
@@ -513,6 +527,135 @@ class FormActivity : AppCompatActivity() {
                                 getComponentValue(component)
                             findViewById<TextView>(R.id.nominalTextView).text =
                                 getComponentValue(component)
+                        }
+                    } else if (component.id == "HR002") {
+                        val context = this@FormActivity
+                        LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            addView(TextView(context).apply {
+                                text = component.label
+                                textSize = 15f
+                                setTypeface(null, Typeface.BOLD)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setTextColor(ContextCompat.getColor(context, R.color.black))
+                            })
+                            // Placeholder view until the data is fetched
+                            addView(TextView(context).apply {
+                                text = "Loading..."
+                                textSize = 18f
+                                setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                            })
+                        }.also { layout ->
+                            // Perform the data fetching asynchronously
+                            lifecycleScope.launch {
+                                val webCaller = WebCallerImpl()
+                                val fetchedValue = withContext(Dispatchers.IO) {
+                                    val branchid = getKodeCabangFromPreferences()
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val token = sharedPreferences.getString("token", "") ?: ""
+                                    val response = branchid?.let { webCaller.fetchNasabahList(it, token) }
+                                    response?.string()
+                                }
+
+                                if (fetchedValue.isNullOrEmpty()) {
+                                    Log.e("FormActivity", "Failed to fetch nasabah list")
+                                } else {
+                                    val jsonResponse = JSONObject(fetchedValue)
+                                    val dataArray = jsonResponse.getJSONArray("data")
+
+                                    // Clear the existing layout before adding new data
+                                    layout.removeAllViews()
+
+                                    // Group data by date
+                                    val groupedData = mutableMapOf<String, MutableList<JSONObject>>()
+                                    for (i in 0 until dataArray.length()) {
+                                        val nasabah = dataArray.getJSONObject(i)
+                                        val requestTime = nasabah.getString("request_time")
+                                        val dateParts = requestTime.split(" ")
+
+                                        // Ensure there are enough parts in the split string
+                                        if (dateParts.size >= 2) {
+                                            val date = dateParts[0] // Extracting date part
+                                            val time = dateParts[1] // Extracting time part
+
+                                            if (!groupedData.containsKey(date)) {
+                                                groupedData[date] = mutableListOf()
+                                            }
+                                            nasabah.put("time", time) // Store the time part separately
+                                            groupedData[date]?.add(nasabah)
+                                        } else {
+                                            Log.e("FormActivity", "Invalid request_time format for nasabah: $nasabah")
+                                        }
+                                    }
+
+                                    // Loop through each group (date)
+                                    groupedData.forEach { (date, nasabahList) ->
+                                        // Add the date header
+                                        layout.addView(TextView(context).apply {
+                                            text = date
+                                            textSize = 20f
+                                            setTypeface(null, Typeface.BOLD)
+                                            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                            setTextColor(ContextCompat.getColor(context, R.color.gray))
+                                        })
+
+                                        // Add each nasabah item
+                                        nasabahList.forEach { nasabah ->
+                                            val namaLengkap = nasabah.getString("nama_lengkap")
+                                            val noIdentitas = nasabah.getString("no_identitas")
+                                            val status = nasabah.getString("status")
+                                            val waktu = nasabah.getString("time") // Now, getting the time part from the modified JSON
+
+                                            val statusText = when (status) {
+                                                "0", "1" -> "Sedang Diproses"
+                                                "2" -> "Disetujui"
+                                                "3" -> "Ditolak"
+                                                else -> "Status Tidak Diketahui"
+                                            }
+
+                                            val statusColor = when (status) {
+                                                "2" -> ContextCompat.getColor(context, R.color.green)
+                                                "3" -> ContextCompat.getColor(context, R.color.green)
+                                                else -> ContextCompat.getColor(context, R.color.green)
+                                            }
+
+                                            // Add the item views
+                                            val itemView = LinearLayout(context).apply {
+                                                orientation = LinearLayout.VERTICAL
+                                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                            }
+
+                                            itemView.addView(TextView(context).apply {
+                                                text = namaLengkap
+                                                textSize = 18f
+                                                setPadding(0, 0, 0, 4.dpToPx())
+                                            })
+
+                                            itemView.addView(TextView(context).apply {
+                                                text = noIdentitas
+                                                textSize = 16f
+                                                setPadding(0, 0, 0, 4.dpToPx())
+                                            })
+
+                                            itemView.addView(TextView(context).apply {
+                                                text = statusText
+                                                textSize = 16f
+                                                setTextColor(statusColor)
+                                                setPadding(0, 0, 0, 4.dpToPx())
+                                            })
+
+                                            itemView.addView(TextView(context).apply {
+                                                text = waktu
+                                                textSize = 16f
+                                                setPadding(0, 0, 0, 4.dpToPx())
+                                            })
+
+                                            layout.addView(itemView)
+                                        }
+                                    }
+                                }
+                            }
+
                         }
                     } else {
                         LinearLayout(this@FormActivity).apply {
@@ -1162,7 +1305,7 @@ class FormActivity : AppCompatActivity() {
                                 Log.d("FormActivity", "Signature bitmap width: ${signatureBitmap.width}, height: ${signatureBitmap.height}")
 
                                 val file = createFileFromBitmap(signatureBitmap, "coba1.png")
-                                saveSignatureToServer(file)
+//                                saveSignatureToServer(file)
                             } else {
                                 Toast.makeText(this@FormActivity, "Please provide a signature.", Toast.LENGTH_SHORT).show()
                             }
@@ -1262,47 +1405,47 @@ class FormActivity : AppCompatActivity() {
     }
 
 
-    private fun saveSignatureToServer(file: File) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS) // Increase connection timeout
-                .writeTimeout(30, TimeUnit.SECONDS) // Increase write timeout
-                .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
-                .build()
-
-            val mediaType = "image/png".toMediaTypeOrNull()
-            val requestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", file.name,
-                    RequestBody.create(mediaType, file))
-                .build()
-
-            val request = Request.Builder()
-                .url("http://108.137.154.8:8081/ARRest/images")
-                .post(requestBody)
-                .build()
-
-            try {
-                val response = client.newCall(request).execute()
-                Log.d("FormActivity", "Response code: ${response.code}")
-                Log.d("FormActivity", "Response body: ${response.body?.string()}")
-                withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        Log.d("FormActivity", "Signature uploaded successfully")
-                        Toast.makeText(this@FormActivity, "Signature uploaded successfully", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Log.e("FormActivity", "Failed to upload signature: ${response.message}")
-                        Toast.makeText(this@FormActivity, "Failed to upload signature", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FormActivity", "Error uploading signature: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@FormActivity, "Error uploading signature", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
+//    private fun saveSignatureToServer(file: File) {
+//        CoroutineScope(Dispatchers.IO).launch {
+//            val client = OkHttpClient.Builder()
+//                .connectTimeout(30, TimeUnit.SECONDS) // Increase connection timeout
+//                .writeTimeout(30, TimeUnit.SECONDS) // Increase write timeout
+//                .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
+//                .build()
+//
+//            val mediaType = "image/png".toMediaTypeOrNull()
+//            val requestBody = MultipartBody.Builder()
+//                .setType(MultipartBody.FORM)
+//                .addFormDataPart("file", file.name,
+//                    RequestBody.create(mediaType, file))
+//                .build()
+//
+//            val request = Request.Builder()
+//                .url("http://108.137.154.8:8081/ARRest/images")
+//                .post(requestBody)
+//                .build()
+//
+//            try {
+//                val response = client.newCall(request).execute()
+//                Log.d("FormActivity", "Response code: ${response.code}")
+//                Log.d("FormActivity", "Response body: ${response.body?.string()}")
+//                withContext(Dispatchers.Main) {
+//                    if (response.isSuccessful) {
+//                        Log.d("FormActivity", "Signature uploaded successfully")
+//                        Toast.makeText(this@FormActivity, "Signature uploaded successfully", Toast.LENGTH_SHORT).show()
+//                    } else {
+//                        Log.e("FormActivity", "Failed to upload signature: ${response.message}")
+//                        Toast.makeText(this@FormActivity, "Failed to upload signature", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                Log.e("FormActivity", "Error uploading signature: ${e.message}")
+//                withContext(Dispatchers.Main) {
+//                    Toast.makeText(this@FormActivity, "Error uploading signature", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
 
 
 
@@ -1921,7 +2064,7 @@ class FormActivity : AppCompatActivity() {
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
             if(screen.id == "AU00001"){
-                msgDt = "$username|$savedNorekening|$savedNamaAgen"
+                msgDt = "$username|$savedNorekening|$savedNamaAgen|null"
             }else{
                 msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03"}
                     .joinToString("|") { component ->
@@ -1979,8 +2122,9 @@ class FormActivity : AppCompatActivity() {
             Log.d(TAG, "Form body content: username=$username, password=$password")
 
             val request = Request.Builder()
-                .url("http://api.selada.id/api/auth/login")
+                .url("http://reportntbs.selada.id/api/auth/login")
                 .post(formBody)
+                .addHeader("Accept", "application/json")
                 .build()
 
             Log.d(TAG, "Sending login request to server...")

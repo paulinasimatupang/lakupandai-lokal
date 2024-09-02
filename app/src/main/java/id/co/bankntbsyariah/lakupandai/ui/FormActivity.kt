@@ -321,9 +321,6 @@ class FormActivity : AppCompatActivity() {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
-        if (layoutId == R.layout.activity_transfer) {
-            titleTransaction()
-        }
         if (screenTitle.contains("Berhasil", ignoreCase = true)) {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
             Log.d("FormActivity", "Formatted title: $formattedTitle")
@@ -338,31 +335,22 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun titleTransaction() {
+    private fun getTransactionTitle(formId: String): String {
         val titleView = findViewById<TextView>(R.id.titleTransaction)
-        if (titleView != null) {
-            when (formId) {
-                "TF00003" -> {
-                    titleView.text = getString(R.string.transfer)
-                    Log.d("FormActivity", "Transfer Transaction")
-                }
-                "BS001" -> {
-                    titleView.text = getString(R.string.setor_tunai)
-                    Log.d("FormActivity", "Setor Tunai Transaction")
-                }
-                "BR001" -> {
-                    titleView.text = getString(R.string.tarik_tunai)
-                    Log.d("FormActivity", "Tarik Tunai Transaction")
-                }
-                else -> {
-                    titleView.text = getString(R.string.default_title)  // Optional default title
-                    Log.d("FormActivity", "Unknown Transaction - using default title")
-                }
+        val title = when (formId) {
+            "CCIF001" -> {
+                getString(R.string.transfer)
             }
-            Log.d("FormActivity", "transaction_title successfully updated: ${titleView.text}")
-        } else {
-            Log.e("FormActivity", "Error: TextView with ID titleTransaction not found.")
+            "BS001" -> {
+                getString(R.string.setor_tunai)
+            }
+            else -> {
+                getString(R.string.tarik_tunai)
+            }
         }
+        titleView?.text = title
+
+        return title
     }
 
     private fun showSuccessPopup(message: String) {
@@ -393,6 +381,7 @@ class FormActivity : AppCompatActivity() {
         var namaDepan: String? = null
         var extraText = ""
         var inputRekeningIndex = 0
+        val title = getTransactionTitle(formId)
 
         for (component in screen.comp) {
             when {
@@ -413,11 +402,13 @@ class FormActivity : AppCompatActivity() {
                 val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
                 val dateTransferTextView = findViewById<TextView>(R.id.dateTransfer)
                 val timeTransferTextView = findViewById<TextView>(R.id.timeTransfer)
+                val titleTransactionView = findViewById<TextView>(R.id.titleTransaction)
 
                 transaksiBerhasilTextView?.let {
                     val newText = getComponentValue(component)
                     if (!newText.isNullOrEmpty()) {
                         it.text = newText
+                        titleTransactionView?.text = getTransactionTitle(screen.id)
                         dateTransferTextView?.text = getCurrentDate()
                         timeTransferTextView?.text = getCurrentTime()
                     } else {
@@ -1723,7 +1714,7 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
-        if (component.id == "KM001") {
+        if (component.id == "KM001"||component.id == "KM005") {
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 putExtra(Constants.KEY_MENU_ID, "MN00000")

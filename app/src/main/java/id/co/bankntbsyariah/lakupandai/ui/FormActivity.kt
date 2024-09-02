@@ -1017,8 +1017,23 @@ class FormActivity : AppCompatActivity() {
                                         when (component.id) {
                                             "PIL03"-> {
                                                 pickOTP = selectedValue
-                                                Log.d("Form", "PICK OTP : $selectedValue")
-                                            }
+                                                pickOTP = selectedValue
+                                                Log.d("Form", "PICK OTP: $selectedValue")
+
+                                                // Cek jika nilai tidak valid
+                                                if (selectedValue != "WA" && selectedValue != "SMS") {
+                                                    // Tampilkan AlertDialog
+                                                    AlertDialog.Builder(this@FormActivity)
+                                                        .setTitle("Invalid Option")
+                                                        .setMessage("Harus memilih WA atau SMS.")
+                                                        .setPositiveButton("OK", null)
+                                                        .show()
+
+                                                    // Set pickOTP kembali ke nilai kosong atau default
+                                                    pickOTP = ""
+
+                                                    Toast.makeText(this@FormActivity, "Validasi gagal: Pilih WA atau SMS", Toast.LENGTH_SHORT).show()
+                                                }                                            }
                                             "CB001" -> {
                                                 if (selectedCompValue != null) {
                                                     inputValues[component.id] = selectedCompValue.replace("[OI]", "")
@@ -1660,7 +1675,11 @@ class FormActivity : AppCompatActivity() {
                 allErrors.addAll(validateInput(comp))
             }
         }
-
+        screen?.comp?.forEach { comp ->
+            if (comp.id == "PIL03" && pickOTP.isNullOrEmpty()) {
+                allErrors.add("Harus memilih WA atau SMS.")
+            }
+        }
         if (allErrors.isNotEmpty()) {
             // Tampilkan semua pesan kesalahan
             Toast.makeText(

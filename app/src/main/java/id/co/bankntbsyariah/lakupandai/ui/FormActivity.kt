@@ -2176,6 +2176,13 @@ class FormActivity : AppCompatActivity() {
                             "Updated componentValues with savedNorekening for Component ID: ${component.id}"
                         )
                     }
+                    component.type == 1 && component.label == "Nama Rekening Agen" -> {
+                        componentValues[component.id] = savedNamaAgen
+                        Log.d(
+                            "FormActivity",
+                            "Updated componentValues with savedNamaAgen for Component ID: ${component.id}"
+                        )
+                    }
                     component.type == 1 && component.label == "Kode Agen" -> {
                         componentValues[component.id] = savedKodeAgen.toString()
                         Log.d("FormActivity", "Kode Agen : $savedKodeAgen")
@@ -2206,13 +2213,6 @@ class FormActivity : AppCompatActivity() {
                         Log.d(
                             "FormActivity",
                             "Updated componentValues with value for Component ID: ${component.id}"
-                        )
-                    }
-                    component.type == 1 && component.label == "Nama Rekening Agen" -> {
-                        componentValues[component.id] = savedNamaAgen
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with savedNamaAgen for Component ID: ${component.id}"
                         )
                     }
                     else -> {

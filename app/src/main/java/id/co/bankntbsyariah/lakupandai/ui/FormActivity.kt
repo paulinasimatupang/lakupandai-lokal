@@ -2420,6 +2420,7 @@ class FormActivity : AppCompatActivity() {
                         val id = userData?.optString("id")
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
+                        val terminalData = merchantData?.optJSONObject("terminal")
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
@@ -2479,6 +2480,10 @@ class FormActivity : AppCompatActivity() {
                             editor.putInt("merchant_status", merchantData.optInt("status"))
                             editor.putString("kode_agen", merchantData.optString("mid"))
                             editor.putInt("pin", merchantData.optInt("pin"))
+
+                            if (terminalData != null) {
+                                editor.putString("tid", terminalData.optString("tid"))
+                            }
 
                             editor.putInt("login_attempts", 0)
                             editor.apply()

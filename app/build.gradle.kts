@@ -97,4 +97,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     annotationProcessor ("com.github.bumptech.glide:compiler:4.15.1")
     implementation ("com.google.code.gson:gson:2.8.9")
+    implementation ("com.github.gcacace:signature-pad:1.3.1")
 }

@@ -74,12 +74,14 @@ import okhttp3.internal.format
 import android.Manifest
 import android.content.pm.PackageManager
 import android.provider.MediaStore
+import android.text.InputType
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import  id.co.bankntbsyariah.lakupandai.utils.createTextView
+import android.widget.EditText
 
 class FormActivity : AppCompatActivity() {
 
@@ -741,6 +743,8 @@ class FormActivity : AppCompatActivity() {
                             tag = component.id
                         }
                         inputValues[component.id] = ""
+
+                        setKeyboard(editText, component)
 
                         editText.addTextChangedListener(object : TextWatcher {
                             override fun beforeTextChanged(
@@ -2188,7 +2192,21 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun setKeyboard(editText: EditText, component: Component) {
+        val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
 
+        when (conType) {
+            2 -> {
+                editText.inputType = InputType.TYPE_CLASS_NUMBER
+            }
+            4 -> {
+                editText.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            }
+            else -> {
+                editText.inputType = InputType.TYPE_CLASS_TEXT
+            }
+        }
+    }
     //    private fun navigateToCreate() {
 //        startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
 //            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

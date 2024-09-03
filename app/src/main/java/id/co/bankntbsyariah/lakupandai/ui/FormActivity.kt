@@ -73,8 +73,11 @@ import kotlinx.coroutines.CoroutineScope
 import okhttp3.internal.format
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.CountDownTimer
 import android.provider.MediaStore
 import android.text.InputType
+import android.text.SpannableString
+import android.text.style.UnderlineSpan
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
@@ -102,6 +105,10 @@ class FormActivity : AppCompatActivity() {
     private lateinit var imageViewOrang: ImageView
     private var photoType: String? = null
     private var currentImageView: ImageView? = null
+    private var otpTimer: CountDownTimer? = null
+    private var lastMessageBody: JSONObject? = null
+    private var otpAttempts = mutableListOf<Long>()
+    private val otpCooldownTime = 3 * 60 * 1000L // 30 minutes in milliseconds
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -267,6 +274,8 @@ class FormActivity : AppCompatActivity() {
                     WindowManager.LayoutParams.WRAP_CONTENT
                 )
                 otpDialog?.show()
+
+                startOtpTimer()
             }
 
             else -> {
@@ -371,6 +380,9 @@ class FormActivity : AppCompatActivity() {
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
         val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
+
+
+
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -1135,7 +1147,27 @@ class FormActivity : AppCompatActivity() {
                         setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
-                            if (formId == "AU00001") {
+                            if (component.id == "OTP09") {
+                                // Check if OTP attempts are less than 3
+                                if (otpAttempts.size < 3) {
+                                    otpAttempts.add(System.currentTimeMillis())
+                                    handleButtonClick(component, screen)
+                                } else {
+                                    val lastAttemptTime = otpAttempts.last()
+                                    val currentTime = System.currentTimeMillis()
+                                    if (currentTime - lastAttemptTime < otpCooldownTime) {
+                                        Toast.makeText(
+                                            this@FormActivity,
+                                            "OTP send limit exceeded. Please wait 30 minutes.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        otpAttempts.clear()
+                                        otpAttempts.add(System.currentTimeMillis())
+                                        handleButtonClick(component, screen)
+                                    }
+                                }
+                            }else if (formId == "AU00001") {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
@@ -1165,6 +1197,37 @@ class FormActivity : AppCompatActivity() {
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
+                    val timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
+
+                    val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
+
+                    if (resendOtpTextView != null) {
+                        Log.e("FormActivity", "RESEND OTP NOT null.")
+                        resendOtpTextView.setOnClickListener {
+                            resendOtp()
+                        }
+
+                        val text = "Resend OTP"
+                        val spannable = SpannableString(text)
+                        spannable.setSpan(UnderlineSpan(), 0, text.length, 0)
+                        resendOtpTextView.text = spannable
+                    }
+
+                    val countDownTimer = object : CountDownTimer(120000, 1000) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            val minutes = millisUntilFinished / 60000
+                            val seconds = (millisUntilFinished % 60000) / 1000
+                            val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+                            timerTextView.text = timeFormatted
+                        }
+
+                        override fun onFinish() {
+                            timerTextView.text = "00:00"
+                            // Handle timeout scenario, e.g., disable inputs or show a message
+                        }
+                    }
+
+                    countDownTimer.start()
 
                     val otpDigit1 = otpView.findViewById<EditText>(R.id.otpDigit1)
                     val otpDigit2 = otpView.findViewById<EditText>(R.id.otpDigit2)
@@ -1706,9 +1769,11 @@ class FormActivity : AppCompatActivity() {
                 val otpValue = inputValues["OTP"]
                 Log.e("OTP", "OTP: $otpValue")
                 Log.e("MSG", "MSG: $msg03Value")
-                if (msg03Value == otpValue) {
+                if (msg03Value != null && msg03Value == otpValue) {
+                    otpAttempts.clear()
                     isOtpValidated = true
                     otpDialog?.dismiss()
+                    cancelOtpTimer()
                     val messageBody = createMessageBody(screen)
                     if (messageBody != null) {
                         Log.d("FormActivity", "Message Body: $messageBody")
@@ -1773,6 +1838,12 @@ class FormActivity : AppCompatActivity() {
                     } else {
                         Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
+                } else if (msg03Value == null) {
+                    Toast.makeText(
+                        this@FormActivity,
+                        "Kode OTP telah kadaluarsa, mohon kirim ulang OTP.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 } else {
                     Toast.makeText(
                         this@FormActivity,
@@ -2031,6 +2102,7 @@ class FormActivity : AppCompatActivity() {
             }
 
             msg.put("msg", msgObject)
+            lastMessageBody = msg
 
             // Logging the JSON message details
             Log.d("FormActivity", "Message ID: $msgId")
@@ -2139,6 +2211,7 @@ class FormActivity : AppCompatActivity() {
                         editor.putString("merchant_balance", merchantData.optString("balance"))
                         editor.putString("merchant_avatar", merchantData.optString("avatar"))
                         editor.putInt("merchant_status", merchantData.optInt("status"))
+                        editor.putInt("pin", merchantData.optInt("pin"))
 
                         editor.apply()
 
@@ -2391,4 +2464,107 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun startOtpTimer() {
+        otpTimer = object : CountDownTimer(60000, 1000) { // 2 minutes countdown
+            override fun onTick(millisUntilFinished: Long) {
+                // You can show the remaining time to the user if needed
+            }
+
+            override fun onFinish() {
+                msg03Value = null
+                Log.d("FormActivity", "OTP expired and cleared.")
+            }
+        }.start()
+    }
+
+    private fun cancelOtpTimer() {
+        otpTimer?.cancel()
+        otpTimer = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cancelOtpTimer() // Cancel the timer if activity is destroyed
+    }
+
+    private fun resendOtp() {
+        if (otpAttempts.size < 3) {
+            otpAttempts.add(System.currentTimeMillis())
+            val messageBody = lastMessageBody
+            Log.d("FORM", "LAST MESSAGE : $messageBody")
+            if (messageBody != null) {
+                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                    responseBody?.let { body ->
+                        lifecycleScope.launch {
+                            val screenJson = JSONObject(body)
+                            Log.d("FormActivity", "Response POST: $body")
+                            Log.d("FormActivity", "SCREEN JSON: $screenJson")
+
+                            // Mendapatkan array komponen dari JSON
+                            val compArray =
+                                screenJson.getJSONObject("screen").getJSONObject("comps")
+                                    .getJSONArray("comp")
+
+                            // Mencari komponen dengan ID "MSG03"
+                            var newMsg03Value: String? = null
+                            for (i in 0 until compArray.length()) {
+                                val compObject = compArray.getJSONObject(i)
+                                if (compObject.getString("comp_id") == "MSG03") {
+                                    newMsg03Value = compObject.getJSONObject("comp_values")
+                                        .getJSONArray("comp_value")
+                                        .getJSONObject(0)
+                                        .optString("value")
+                                    break
+                                }
+                            }
+
+                            if (newMsg03Value != null) {
+                                msg03Value = newMsg03Value
+                                Log.d("FormActivity", "NEW MSG03 : $msg03Value")
+                                Toast.makeText(
+                                    this@FormActivity,
+                                    "OTP baru telah dikirim",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                cancelOtpTimer()
+                                startOtpTimer()
+                            } else {
+                                Toast.makeText(
+                                    this@FormActivity,
+                                    "Gagal mendapatkan OTP baru",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } ?: run {
+                        Log.e("FormActivity", "Failed to fetch response body")
+                        Toast.makeText(
+                            this@FormActivity,
+                            "Gagal melakukan request ulang OTP",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                Log.e("FormActivity", "Failed to create message body, request not sent")
+                Toast.makeText(this@FormActivity, "Request body gagal dibuat", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }else {
+            val lastAttemptTime = otpAttempts.last()
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastAttemptTime < otpCooldownTime) {
+                Toast.makeText(
+                    this@FormActivity,
+                    "OTP send limit exceeded. Please wait 30 minutes.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                otpAttempts.clear()
+                otpAttempts.add(System.currentTimeMillis())
+                resendOtp()
+            }
+        }
+    }
 }

@@ -8,4 +8,6 @@ interface WebCaller {
     val client: OkHttpClient
 
     fun fetchNasabahList(branchId: String, token: String): ResponseBody?
+    fun fetchHistory(terminalId: String, token: String): ResponseBody?
+    fun fetchHistoryDetail(terminalId: String, messageId: String, token: String): ResponseBody?
 }

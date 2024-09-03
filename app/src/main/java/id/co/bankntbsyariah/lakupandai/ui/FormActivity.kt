@@ -82,6 +82,8 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
+import org.json.JSONArray
+import java.text.ParseException
 
 class FormActivity : AppCompatActivity() {
 
@@ -601,6 +603,212 @@ class FormActivity : AppCompatActivity() {
 
                                     // Add the item view to the layout
                                     layout.addView(itemView)
+                                }
+                            }
+                        }
+                    }
+
+                    else if (component.id == "HY001") {
+                        val context = this@FormActivity
+                        LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
+                        }.also { layout ->
+                            lifecycleScope.launch {
+                                val webCaller = WebCallerImpl()
+                                val fetchedValue = withContext(Dispatchers.IO) {
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val token = sharedPreferences.getString("token", "") ?: ""
+                                    val terminalId = sharedPreferences.getString("tid", "") ?: ""
+                                    val response = webCaller.fetchHistory(terminalId, token)
+                                    response?.string()
+                                }
+
+                                if (!fetchedValue.isNullOrEmpty()) {
+                                    try {
+                                        // Debug log for the raw response
+                                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                                        val jsonResponse = JSONObject(fetchedValue)
+                                        val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
+
+                                        // Clear existing views before adding new data
+                                        layout.removeAllViews()
+
+                                        for (i in 0 until dataArray.length()) {
+                                            val item = dataArray.getJSONObject(i)
+
+                                            val replyTime = item.optString("reply_time", "")
+                                            val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                            val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
+                                            val formattedReplyTime: String = try {
+                                                val date = originalFormat.parse(replyTime)
+                                                targetFormat.format(date)
+                                            } catch (e: ParseException) {
+                                                Log.e("FormActivity", "Error parsing date: ${e.message}")
+                                                replyTime
+                                            }
+
+                                            val status = item.optString("status", "")
+                                            val requestMessage = item.getString("request_message")
+
+                                            val no_rek = item.getString("no_rek")
+                                            val nama_rek = item.getString("nama_rek")
+                                            val nominal = item.getString("nominal")
+
+                                            val formatTrans = "$no_rek - $nama_rek \n $nominal"
+
+                                            val requestMessageJson = JSONObject(requestMessage.trim())
+                                            val msgObject = requestMessageJson.getJSONObject("msg")
+
+                                            val msgId = msgObject.getString("msg_id")
+                                            val msgSi = msgObject.getString("msg_si")
+
+                                            val actionText = when (msgSi) {
+                                                "T00002" -> "Transfer"
+                                                "OTT001" -> "Tarik Tunai"
+                                                "OT0001" -> "Setor Tunai"
+                                                else -> msgSi
+                                            }
+
+                                            val statusTrans = when (status) {
+                                                "00" -> "Berhasil"
+                                                else -> "Gagal"
+                                            }
+
+                                            val statusColor = when (status) {
+                                                "00" -> ContextCompat.getColor(context, R.color.green)
+                                                else -> ContextCompat.getColor(context, R.color.red)
+                                            }
+
+                                            val gridLayout = GridLayout(context).apply {
+                                                layoutParams = LinearLayout.LayoutParams(
+                                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                                )
+                                                rowCount = 2
+                                                columnCount = 2
+                                                // Set margins and padding if needed
+                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+
+//                                                setOnClickListener {
+//                                                    lifecycleScope.launch {
+//                                                        val detailResponse = withContext(Dispatchers.IO) {
+//                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+//                                                            val token = preferences.getString("token", "") ?: ""
+//                                                            val terminalId = preferences.getString("tid", "") ?: ""
+//                                                            val messageId = item.optString("message_id", "")
+//
+//                                                            try {
+//                                                                val response = webCaller.fetchHistoryDetail(terminalId, messageId, token)
+//                                                                response?.string()
+//                                                            } catch (e: Exception) {
+//                                                                Log.e("FormActivity", "Error fetching history detail: ${e.message}", e)
+//                                                                null
+//                                                            }
+//                                                        }
+//
+//                                                        if (!detailResponse.isNullOrEmpty()) {
+//                                                            try {
+//                                                                val jsonResponse = JSONObject(detailResponse)
+//                                                                val dataString = jsonResponse.optString("data", "{}")
+//                                                                val dataJson = JSONObject(dataString)
+//
+//                                                                // Extract `screen` object from `dataJson`
+//                                                                val screenJson = dataJson.optJSONObject("screen")
+//
+//                                                                // Convert `screenJson` to `Screen` object
+//                                                                val screen = screenJson?.let { json ->
+//                                                                    Screen(
+//                                                                        type = json.optInt("type"), // Adjust this to match the type in JSON
+//                                                                        title = json.optString("title"),
+//                                                                        id = json.optString("id"),
+//                                                                        ver = json.optString("ver"),
+//                                                                        comp = parseComponents(json.optJSONObject("comps")?.optJSONArray("comp") ?: JSONArray()),
+//                                                                        actionUrl = json.optString("action_url")
+//                                                                    )
+//                                                                }
+
+                                                                // Setup the form with the parsed `Screen` data
+//                                                                if (screen != null) {
+//                                                                    setupForm(screen)
+//                                                                } else {
+//                                                                    withContext(Dispatchers.Main) {
+//                                                                        Toast.makeText(this@FormActivity, "Invalid screen data", Toast.LENGTH_SHORT).show()
+//                                                                    }
+//                                                                }
+//                                                            } catch (e: JSONException) {
+//                                                                Log.e("FormActivity", "Detail JSON parsing error: ${e.message}", e)
+//                                                                withContext(Dispatchers.Main) {
+//                                                                    Toast.makeText(this@FormActivity, "Error parsing detail JSON response", Toast.LENGTH_SHORT).show()
+//                                                                }
+//                                                            }
+//                                                        } else {
+//                                                            withContext(Dispatchers.Main) {
+//                                                                Toast.makeText(this@FormActivity, "Failed to fetch detail", Toast.LENGTH_SHORT).show()
+//                                                            }
+//                                                        }
+//                                                    }
+//
+//                                                }
+                                            }
+
+                                            gridLayout.addView(TextView(context).apply {
+                                                text = actionText
+                                                textSize = 16f
+                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                                                layoutParams = GridLayout.LayoutParams().apply {
+                                                    columnSpec = GridLayout.spec(0) // Column 1
+                                                    rowSpec = GridLayout.spec(0)    // Row 1
+                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
+                                                }
+                                            })
+
+                                            gridLayout.addView(TextView(context).apply {
+                                                text = formatTrans
+                                                textSize = 12f
+                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                                                layoutParams = GridLayout.LayoutParams().apply {
+                                                    columnSpec = GridLayout.spec(0) // Column 1
+                                                    rowSpec = GridLayout.spec(1)    // Row 2
+                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
+                                                }
+                                            })
+
+                                            gridLayout.addView(TextView(context).apply {
+                                                text = statusTrans
+                                                setTextColor(statusColor)
+                                                textSize = 16f
+                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                                                layoutParams = GridLayout.LayoutParams().apply {
+                                                    columnSpec = GridLayout.spec(1) // Column 2
+                                                    rowSpec = GridLayout.spec(0)    // Row 1
+                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
+                                                }
+                                            })
+
+                                            gridLayout.addView(TextView(context).apply {
+                                                text = formattedReplyTime
+                                                textSize = 12f
+                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 16.dpToPx())
+                                                layoutParams = GridLayout.LayoutParams().apply {
+                                                    columnSpec = GridLayout.spec(1) // Column 2
+                                                    rowSpec = GridLayout.spec(1)    // Row 2
+                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
+                                                }
+                                            })
+                                            layout.addView(gridLayout)
+                                        }
+                                    } catch (e: JSONException) {
+                                        Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         }
@@ -1998,6 +2206,13 @@ class FormActivity : AppCompatActivity() {
                         Log.d(
                             "FormActivity",
                             "Updated componentValues with value for Component ID: ${component.id}"
+                        )
+                    }
+                    component.type == 1 && component.label == "Nama Rekening Agen" -> {
+                        componentValues[component.id] = savedNamaAgen
+                        Log.d(
+                            "FormActivity",
+                            "Updated componentValues with savedNamaAgen for Component ID: ${component.id}"
                         )
                     }
                     else -> {

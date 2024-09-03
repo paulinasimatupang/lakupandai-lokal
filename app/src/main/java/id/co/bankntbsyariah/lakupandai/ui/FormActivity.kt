@@ -2123,7 +2123,30 @@ class FormActivity : AppCompatActivity() {
                                             putExtra("MESSAGE_BODY", "Pesan sudah teririm")
                                         }
                                     startActivity(intent)
-                                }else {
+                                }  else if (screen.id == "TF00003" && newScreen.id != "000000F") {
+                                    val intent =
+                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                        }
+                                    startActivity(intent)
+                                } else if (screen.id == "BR001" && newScreen.id != "000000F") {
+                                    val intent =
+                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                        }
+                                    startActivity(intent)
+                                }else if (screen.id == "BS001" && newScreen.id != "000000F") {
+                                    val intent =
+                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                        }
+                                    startActivity(intent)
+                                }
+
+                                else {
                                     handleScreenType(newScreen)
                                 }
                             }
@@ -2293,9 +2316,20 @@ class FormActivity : AppCompatActivity() {
 
             }
             val unf03Value = componentValues["UNF03"] ?: ""
+            val unf01Value = componentValues["AG009"] ?: ""
+            val unf04Value = componentValues["SET10"] ?: ""
             val rnr02Value = componentValues["RNR02"] ?: ""
-            componentValues["MSG05"] = "$unf03Value. Sisa saldo anda adalah $rnr02Value."
-
+            when (screen.id) {
+                "RCS0001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
+                }
+                "TF00003", "BR001", "BS001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value.Transaksi berhasil dilakukan."
+                }
+                else -> {
+                    componentValues["MSG05"] = "Pesan tidak diketahui."
+                }
+            }
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
             if(screen.id == "AU00001"){

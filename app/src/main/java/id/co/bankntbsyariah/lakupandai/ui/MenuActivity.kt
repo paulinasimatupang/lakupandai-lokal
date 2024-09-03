@@ -71,6 +71,7 @@ class MenuActivity : AppCompatActivity() {
         // Set the appropriate layout based on menuId
         setContentView(
             when (menuId) {
+                "PP00001" -> R.layout.profile_layout
                 "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout

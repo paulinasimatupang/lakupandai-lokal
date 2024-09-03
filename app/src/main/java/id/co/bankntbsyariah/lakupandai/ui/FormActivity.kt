@@ -1388,7 +1388,11 @@ class FormActivity : AppCompatActivity() {
                                         Log.e("FORM", "Failed to retrieve kodeCabang")
                                     }
                                 }
-                            } else {
+                            } else if (formId == "LS00001") {
+                                changePassword()
+                            } else if (formId == "LS00002") {
+                                changePin()
+                            }else {
                                 handleButtonClick(component, screen)
                             }
                         }
@@ -2373,6 +2377,7 @@ class FormActivity : AppCompatActivity() {
             var username: String? = null
             var password: String? = null
 
+            // Populate form data
             for ((key, value) in inputValues) {
                 when (key) {
                     "UN001" -> {
@@ -2388,7 +2393,6 @@ class FormActivity : AppCompatActivity() {
             }
 
             val formBody = formBodyBuilder.build()
-
             Log.d(TAG, "Form body content: username=$username, password=$password")
 
             val request = Request.Builder()
@@ -2407,12 +2411,16 @@ class FormActivity : AppCompatActivity() {
 
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
-                    val token = jsonResponse.optString("token")
-                    val fullname = jsonResponse.optJSONObject("data").optString("fullname")
-                    val status = jsonResponse.optJSONObject("data").optString("status")
-                    val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
-//                    val terminalData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")?.optJSONObject("terminal")
-//
+                    val status = jsonResponse.optBoolean("status", false)
+
+                    if (status) {
+                        val token = jsonResponse.optString("token")
+                        val userData = jsonResponse.optJSONObject("data")
+                        val fullname = userData?.optString("fullname")
+                        val id = userData?.optString("id")
+                        val userStatus = userData?.optString("status")
+                        val merchantData = userData?.optJSONObject("merchant")
+
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
 //                    val imeiFromTerminalData = terminalData?.optString("imei")
@@ -2427,56 +2435,71 @@ class FormActivity : AppCompatActivity() {
 //                        return@launch
 //                    }
 
-                    if (status == "0") {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
+                        // Check user status
+                        when (userStatus) {
+                            "0" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
+                            }
+                            "2" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
+                            }
+                            "3" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Akun Anda terblokir", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
+                            }
                         }
-                        return@launch
-                    } else if (status == "2") {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
-                        }
-                        return@launch
-                    }
 
-                    if (token.isNotEmpty() && merchantData != null) {
+                        if (token.isNotEmpty() && merchantData != null) {
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val editor = sharedPreferences.edit()
 
-                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                        val editor = sharedPreferences.edit()
+                            editor.putString("username", username)
+                            editor.putString("token", token)
+                            editor.putString("fullname", fullname)
+                            editor.putString("id", id)
 
-                        // Save user data
-                        editor.putString("username", username)
-                        editor.putString("token", token)
-                        editor.putString("fullname", fullname)
+                            // Save merchant data
+                            editor.putString("merchant_id", merchantData.optString("id"))
+                            editor.putString("merchant_name", merchantData.optString("name"))
+                            editor.putString("norekening", merchantData.optString("no"))
+                            editor.putString("merchant_code", merchantData.optString("code"))
+                            editor.putString("merchant_address", merchantData.optString("address"))
+                            editor.putString("merchant_phone", merchantData.optString("phone"))
+                            editor.putString("merchant_email", merchantData.optString("email"))
+                            editor.putString("merchant_balance", merchantData.optString("balance"))
+                            editor.putString("merchant_avatar", merchantData.optString("avatar"))
+                            editor.putInt("merchant_status", merchantData.optInt("status"))
+                            editor.putString("kode_agen", merchantData.optString("mid"))
+                            editor.putInt("pin", merchantData.optInt("pin"))
 
-                        // Save merchant data
-                        editor.putInt("merchant_id", merchantData.optInt("id"))
-                        editor.putString("merchant_name", merchantData.optString("name"))
-                        editor.putString("norekening", merchantData.optString("no"))
-                        editor.putString("merchant_code", merchantData.optString("code"))
-                        editor.putString("merchant_address", merchantData.optString("address"))
-                        editor.putString("merchant_phone", merchantData.optString("phone"))
-                        editor.putString("merchant_email", merchantData.optString("email"))
-                        editor.putString("merchant_balance", merchantData.optString("balance"))
-                        editor.putString("merchant_avatar", merchantData.optString("avatar"))
-                        editor.putInt("merchant_status", merchantData.optInt("status"))
-                        editor.putInt("pin", merchantData.optInt("pin"))
+                            editor.putInt("login_attempts", 0)
+                            editor.apply()
 
-                        editor.apply()
-
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                            navigateToScreen()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                navigateToScreen()
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } else {
+                        val errorMessage = jsonResponse.optString("message", "Login gagal.")
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
-                    }
+                    handleFailedLoginAttempt()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception occurred while logging in", e)
@@ -2486,6 +2509,191 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+    private suspend fun handleFailedLoginAttempt() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
+
+        if (currentAttempts >= 3) {
+            blockUserAccount()
+            editor.apply()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            editor.putInt("login_attempts", currentAttempts + 1)
+            editor.apply()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        Log.d("BlockAgen", "Current login_attempts: ${currentAttempts + 1}")
+    }
+
+
+    private fun blockUserAccount() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("token", "") ?: ""
+                    val id = sharedPreferences.getString("merchant_id", "") ?: ""
+                    val response = webCaller.blockAgen(id, token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optString("status", "") ?: JSONArray()
+                        val message = jsonResponse.optBoolean("message", false)
+                        if (status as Boolean) {
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error : ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun changePassword() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var oldPassword: String? = null
+                var newPassword: String? = null
+
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "LSN01" -> {
+                            oldPassword = value
+                            formBodyBuilder.add("old_password", value)
+                        }
+                        "LSN02" -> {
+                            newPassword = value
+                            formBodyBuilder.add("new_password", value)
+                        }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("token", "") ?: ""
+                    val userId = sharedPreferences.getString("id", "") ?: ""
+                    val response = webCaller.changePassword(userId, oldPassword ?: "", newPassword ?: "", token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optBoolean("status", false) ?: JSONArray()
+                        val message = jsonResponse.optString("message", "")
+                        if (status as Boolean) {
+                            Log.d(TAG, "Password changed successfully.")
+                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
+                            navigateToScreen()  // Replace with your actual navigation function
+                        } else {
+                            Log.e(TAG, "Failed to change password.")
+                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun changePin() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var oldPin: String? = null
+                var newPin: String? = null
+
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "LSP01" -> {
+                            oldPin = value
+                            formBodyBuilder.add("old_password", value)
+                        }
+                        "LSP02" -> {
+                            newPin = value
+                            formBodyBuilder.add("new_password", value)
+                        }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("token", "") ?: ""
+                    val id = sharedPreferences.getString("merchant_id", "") ?:""
+                    val response = webCaller.changePin(id, oldPin ?: "", newPin ?: "", token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optBoolean("status", false) ?: JSONArray()
+                        val message = jsonResponse.optString("message", "")
+                        if (status as Boolean) {
+                            Log.d(TAG, "Password changed successfully.")
+                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
+                            navigateToScreen()  // Replace with your actual navigation function
+                        } else {
+                            Log.e(TAG, "Failed to change password.")
+                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+            }
+        }
+    }
+
+
 
     private fun setKeyboard(editText: EditText, component: Component) {
         val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3

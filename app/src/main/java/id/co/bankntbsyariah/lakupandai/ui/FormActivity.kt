@@ -101,6 +101,7 @@ class FormActivity : AppCompatActivity() {
     private lateinit var imageViewKTP: ImageView
     private lateinit var imageViewOrang: ImageView
     private var photoType: String? = null
+    private var currentImageView: ImageView? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -1278,50 +1279,22 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 18 -> {
-                    val buttonContainer = LinearLayout(this@FormActivity).apply {
-                        orientation = LinearLayout.VERTICAL
-                    }
+                    val cameraView = layoutInflater.inflate(R.layout.camera_preview, null, false)
+                    val imageViewPreview = cameraView.findViewById<ImageView>(R.id.imageViewPreview)
+                    val buttonCapture = cameraView.findViewById<Button>(R.id.buttonCapture)
 
-                    val button = Button(this@FormActivity).apply {
-                        when (component.id) {
-                            "SIG02" -> {
-                                text = "Foto KTP"
-                                setTextColor(getColor(R.color.white))
-                                setBackground(getDrawable(R.drawable.button_green))
-                                setOnClickListener {
-                                    if (checkCameraPermission()) {
-                                        openCamera()
-                                    } else {
-                                        requestCameraPermission()
-                                    }
-                                }
-                            }
-                            "SIG03" -> {
-                                text = "Foto Orang"
-                                setTextColor(getColor(R.color.white))
-                                setBackground(getDrawable(R.drawable.button_green))
-                                setOnClickListener {
-                                    if (checkCameraPermission()) {
-                                        openCamera()
-                                    } else {
-                                        requestCameraPermission()
-                                    }
-                                }
-                            }
-                            else -> return@apply
+                    buttonCapture.setOnClickListener {
+                        currentImageView = imageViewPreview
+                        if (checkCameraPermission()) {
+                            openCameraIntent()
+                        } else {
+                            requestCameraPermission()
                         }
-                        textSize = 18f
                     }
 
-                    buttonContainer.addView(button)
-
-                    container.addView(buttonContainer, LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setMargins(20, 20, 20, 20)
-                    })
+                    container.addView(cameraView)
                 }
+
                 else -> {
                     null
                 }
@@ -2390,18 +2363,32 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+//
+//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+//        super.onActivityResult(requestCode, resultCode, data)
+//        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
+//            // Dapatkan foto yang diambil
+//            photo = data?.extras?.get("data") as? Bitmap
+//
+//            // Tampilkan foto yang diambil di ImageView yang sesuai
+//            when (photoType) {
+//                "KTP" -> imageViewKTP.setImageBitmap(photo)
+//                "Orang" -> imageViewOrang.setImageBitmap(photo)
+//            }
+//        }
+//    }
+
+    private fun openCameraIntent() {
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-            // Dapatkan foto yang diambil
-            photo = data?.extras?.get("data") as? Bitmap
-
-            // Tampilkan foto yang diambil di ImageView yang sesuai
-            when (photoType) {
-                "KTP" -> imageViewKTP.setImageBitmap(photo)
-                "Orang" -> imageViewOrang.setImageBitmap(photo)
-            }
+            val photo = data?.extras?.get("data") as? Bitmap
+            currentImageView?.setImageBitmap(photo)  // Update the correct ImageView
         }
     }
+
 }

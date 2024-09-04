@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Bundle
-import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Base64
@@ -55,33 +54,28 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import android.view.ViewGroup
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import kotlinx.coroutines.CoroutineScope
-import okhttp3.internal.format
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Environment
 import android.provider.MediaStore
 import android.text.InputType
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
 import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
+import android.os.Handler
+import android.os.Looper
+import okhttp3.RequestBody.Companion.asRequestBody
 
 class FormActivity : AppCompatActivity() {
 
@@ -100,8 +94,12 @@ class FormActivity : AppCompatActivity() {
     private var photo: Bitmap? = null
     private lateinit var imageViewKTP: ImageView
     private lateinit var imageViewOrang: ImageView
-    private var photoType: String? = null
+    private var photoCounter: Int = 0 // Counter untuk menandai foto pertama atau kedua
     private var currentImageView: ImageView? = null
+    private var signatureFile: File? = null
+    private var fileFotoKTP: File? = null
+    private var fileFotoOrang: File? = null
+
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -1270,8 +1268,17 @@ class FormActivity : AppCompatActivity() {
                                 val signatureBitmap = signaturePad.signatureBitmap
                                 Log.d("FormActivity", "Signature bitmap width: ${signatureBitmap.width}, height: ${signatureBitmap.height}")
 
-                                val file = createFileFromBitmap(signatureBitmap, "coba1.png")
-//                                saveSignatureToServer(file)
+                                // Buat file dengan nama TTD_NIK
+                                val fileName = "TTD_${nikValue ?: "unknown"}.png"
+                                signatureFile = saveImageToFile(signatureBitmap, fileName)
+
+                                if (signatureFile != null && signatureFile!!.exists()) {
+                                    Log.d("FormActivity", "File tanda tangan berhasil disimpan: ${signatureFile?.absolutePath}")
+                                    Toast.makeText(this@FormActivity, "Signature saved successfully: $fileName", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Log.e("FormActivity", "Gagal menyimpan file tanda tangan.")
+                                    Toast.makeText(this@FormActivity, "Failed to save signature.", Toast.LENGTH_SHORT).show()
+                                }
                             } else {
                                 Toast.makeText(this@FormActivity, "Please provide a signature.", Toast.LENGTH_SHORT).show()
                             }
@@ -1283,8 +1290,25 @@ class FormActivity : AppCompatActivity() {
                     val imageViewPreview = cameraView.findViewById<ImageView>(R.id.imageViewPreview)
                     val buttonCapture = cameraView.findViewById<Button>(R.id.buttonCapture)
 
+
                     buttonCapture.setOnClickListener {
+                        val fileName = if (photoCounter == 0) {
+                            "FOTO_${nikValue ?: "unknown"}.png" // Nama file untuk foto Orang
+                        } else {
+                            "KTP_${nikValue ?: "unknown"}.png" // Nama file untuk foto KTP
+                        }
+
+                        if (currentImageView == null) {
+                            imageViewOrang = imageViewPreview
+                            Log.d("PhotoApp", "Foto Orang diambil: ${imageViewOrang != null} dengan nama file $fileName")
+                        } else {
+                            imageViewKTP = imageViewPreview
+                            Log.d("PhotoApp", "Foto KTP diambil: ${imageViewKTP != null} dengan nama file $fileName")
+                        }
+                        photoCounter++ // Inkrementasi nilai photoCounter setelah foto diambil
                         currentImageView = imageViewPreview
+                        Log.d("PhotoApp", "Current ImageView Updated: ${currentImageView != null}")
+
                         if (checkCameraPermission()) {
                             openCameraIntent()
                         } else {
@@ -1523,7 +1547,7 @@ class FormActivity : AppCompatActivity() {
                 else -> ""
             }
             "CIF34" -> when (currentValue) {
-                "1" -> "Kawin"
+                 "1" -> "Kawin"
                 "2" -> "Belum Kawin"
                 "3" -> "Janda/Duda"
                 else -> ""
@@ -1734,6 +1758,34 @@ class FormActivity : AppCompatActivity() {
                                             }
                                             Log.i("FormActivity", "Fetched formValue: $formValue")
                                         }
+                                        val url = "http://108.137.154.8:8080/ARRest/fileupload"
+                                        if(fileFotoOrang != null){
+                                            // Mengunggah foto orang
+                                            fileFotoOrang?.let { file ->
+                                                uploadImageFile(file, url)
+                                                Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
+                                            }
+                                        }else{
+                                            Log.d("Foto", "Foto Orang Kosong")
+                                        }
+                                        if(fileFotoKTP != null){
+                                            // Mengunggah KTP
+                                            fileFotoKTP?.let { file ->
+                                                uploadImageFile(file, url)
+                                                Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                            }
+                                        }else{
+                                            Log.d("Foto", "Foto KTP Kosong")
+                                        }
+                                        if(signatureFile != null){
+                                            // Mengunggah tanda tangan
+                                            signatureFile?.let { file ->
+                                                uploadImageFile(file, url)
+                                                Log.d("Foto", "Signature Ada : $signatureFile")
+                                            }
+                                        }else{
+                                            Log.d("Foto", "Tanda Tangan Kosong")
+                                        }
                                         setupScreen(formValue)
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
@@ -1812,6 +1864,34 @@ class FormActivity : AppCompatActivity() {
                                         }
                                         Log.i("FormActivity", "Fetched formValue: $formValue")
                                     }
+                                    val url = "http://108.137.154.8:8080/ARRest/fileupload"
+                                    if(fileFotoOrang != null){
+                                        // Mengunggah foto orang
+                                        fileFotoOrang?.let { file ->
+                                            uploadImageFile(file, url)
+                                            Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
+                                        }
+                                    }else{
+                                        Log.d("Foto", "Foto Orang Kosong")
+                                    }
+                                    if(fileFotoKTP != null){
+                                        // Mengunggah KTP
+                                        fileFotoKTP?.let { file ->
+                                            uploadImageFile(file, url)
+                                            Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                        }
+                                    }else{
+                                        Log.d("Foto", "Foto KTP Kosong")
+                                    }
+                                    if(signatureFile != null){
+                                        // Mengunggah tanda tangan
+                                        signatureFile?.let { file ->
+                                            uploadImageFile(file, url)
+                                            Log.d("Foto", "Signature Ada : $signatureFile")
+                                        }
+                                    }else{
+                                        Log.d("Foto", "Tanda Tangan Kosong")
+                                    }
                                     setupScreen(formValue)
                                     val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                         putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
@@ -1888,8 +1968,6 @@ class FormActivity : AppCompatActivity() {
         editor.apply() // atau editor.commit()
     }
 
-
-
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
@@ -1905,53 +1983,33 @@ class FormActivity : AppCompatActivity() {
             val branchid = getKodeCabangFromPreferences()
             Log.e("FormActivity", "Saved Kode Cabang: $branchid")
 
-            // Get device Android ID
-//            val msgUi = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
 
             // Concatenate msg_ui with timestamp to generate msg_id
-//            val msgId = msgUi + timestamp
-//
-//            // Use actionUrl from screen; if null, msg_si will be nul
-
-//            val msgId = "353471045058692200995"
             val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
 
             Log.d("FormActivity", "msgSi: $msgSi")
-
             Log.d("FormActivity", "PICK OTP: $pickOTP")
+
+            // Kondisi untuk mengubah msgSi berdasarkan screen.id dan comp_id PIL03
             if (screen.comp.any { it.id == "PIL03" } && pickOTP == "SMS") {
-                when(screen.id){
+                when (screen.id) {
                     // cek saldo
-                    "CS00004"->{
-                        msgSi = "N00002"
-                    }
+                    "CS00004" -> msgSi = "N00002"
                     // cek mutasi
-                    "MB81124"->{
-                        msgSi = "E81122"
-                    }
-                    "TF00002"->{
-                        msgSi = "T00003"
-                    }
-                    "CCIF001"->{
-                        msgSi = "CC0002"
-                    }
-                    "RT001"->{
-                        msgSi = "RTT002"
-                    }
-                    "RS001"->{
-                        msgSi = "OTN002"
-                    }
-                    else->{
-                        msgSi = screen.actionUrl
-                    }
+                    "MB81124" -> msgSi = "E81122"
+                    "TF00002" -> msgSi = "T00003"
+                    "CCIF001" -> msgSi = "CC0002"
+                    "RT001" -> msgSi = "RTT002"
+                    "RS001" -> msgSi = "OTN002"
+                    else -> msgSi = screen.actionUrl
                 }
             }
 
+            // Menyimpan nilai komponen ke dalam map
             val componentValues = mutableMapOf<String, String>()
             screen.comp.filter { it.type != 7 && it.type != 15 }.forEach { component ->
                 Log.d("FormActivity", "Component: $component")
@@ -1963,66 +2021,54 @@ class FormActivity : AppCompatActivity() {
                     }
                     component.type == 1 && component.label == "No Rekening Agen" -> {
                         componentValues[component.id] = savedNorekening
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with savedNorekening for Component ID: ${component.id}"
-                        )
+                        Log.d("FormActivity", "Updated componentValues with savedNorekening for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "Kode Agen" -> {
                         componentValues[component.id] = savedKodeAgen.toString()
                         Log.d("FormActivity", "Kode Agen : $savedKodeAgen")
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with savedKodeAgen for Component ID: ${component.id}"
-                        )
                     }
                     component.type == 1 && component.label == "NIK" -> {
-                        // Use nikValue if component label is "NIK"
                         componentValues[component.id] = nikValue ?: ""
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with nikValue for Component ID: ${component.id}"
-                        )
+                        Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "Kode Cabang" -> {
                         val branchid = getKodeCabangFromPreferences()
                         componentValues[component.id] = branchid ?: ""
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with branchid : ${branchid}"
-                        )
+                        Log.d("FormActivity", "Updated componentValues with branchid : ${branchid}")
                     }
                     component.type == 1 && component.label != "NIK" -> {
                         val value = (component.values.get(0)?.second ?: "") as String
                         componentValues[component.id] = value
-                        Log.d(
-                            "FormActivity",
-                            "Updated componentValues with value for Component ID: ${component.id}"
-                        )
+                        Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
                     }
                     else -> {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }
                 }
-
             }
-            val unf03Value = componentValues["UNF03"] ?: ""
-            val rnr02Value = componentValues["RNR02"] ?: ""
-            componentValues["MSG05"] = "$unf03Value. Sisa saldo anda adalah $rnr02Value."
 
+            // Tambahkan logika pengecualian untuk SIG01, SIG02, SIG03
+            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03")
+
+            // Menggabungkan nilai componentValues untuk msg_dt
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
-            if(screen.id == "AU00001"){
+            if (screen.id == "AU00001") {
                 msgDt = "$username|$savedNorekening|$savedNamaAgen|null"
-            }else{
-                msgDt = screen.comp.filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03"}
+            } else {
+                msgDt = screen.comp
+                    .filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03" && !excludedCompIds.contains(it.id) }
                     .joinToString("|") { component ->
                         componentValues[component.id] ?: ""
                     }
             }
 
-            Log.d("Form", "Component : ${componentValues}")
+            // Tambahkan nilai khusus untuk MSG05
+            val unf03Value = componentValues["UNF03"] ?: ""
+            val rnr02Value = componentValues["RNR02"] ?: ""
+            componentValues["MSG05"] = "$unf03Value. Sisa saldo anda adalah $rnr02Value."
 
+            // Membuat JSONObject yang akan dikirim sebagai pesan
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)
                 put("msg_ui", msgUi)
@@ -2388,7 +2434,96 @@ class FormActivity : AppCompatActivity() {
         if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
             val photo = data?.extras?.get("data") as? Bitmap
             currentImageView?.setImageBitmap(photo)  // Update the correct ImageView
+
+            // Simpan gambar ke file setelah foto diambil
+            val fileName = if (photoCounter == 1) {
+                "FOTO_${nikValue ?: "unknown"}.png" // Foto Orang
+            } else {
+                "KTP_${nikValue ?: "unknown"}.png" // Foto KTP
+            }
+
+            currentImageView?.let { imageView ->
+                saveImageToFile(photo!!, fileName)?.let { file ->
+                    if (photoCounter == 1) {
+                        fileFotoOrang = file
+                    } else {
+                        fileFotoKTP = file
+                    }
+                }
+            }
         }
     }
 
+    // Fungsi untuk menyimpan gambar sebagai file PNG
+    private fun saveImageToFile(bitmap: Bitmap, fileName: String): File? {
+        return try {
+            val file = File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), fileName)
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            Log.d("PhotoApp", "File disimpan: ${file.absolutePath}")
+            file
+        } catch (e: Exception) {
+            Log.e("PhotoApp", "Gagal menyimpan file: ${e.localizedMessage}")
+            null
+        }
+    }
+
+    // Fungsi untuk mengunggah file ke server
+    private fun uploadImageFile(file: File, url: String) {
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", file.name, file.asRequestBody("image/png".toMediaTypeOrNull()))
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        val client = OkHttpClient()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("UploadFile", "Gagal mengupload file: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    Log.d("UploadFile", "File berhasil diupload ke $url")
+                } else {
+                    Log.e("UploadFile", "Gagal mengupload file: ${response.code}")
+                }
+            }
+        })
+    }
+
+
+    // Tambahkan logika untuk mengunggah file setelah service dengan ID CC0003 dijalankan
+    private fun uploadFilesAfterService(serviceId: String) {
+        if (serviceId == "CC0003") {
+            val delayMillis: Long = 15000 // Delay 15 detik sebelum mengunggah
+            val handler = Handler(Looper.getMainLooper())
+
+            handler.postDelayed({
+                val url = "http://108.137.154.8:8080/ARRest/fileupload"
+
+                // Mengunggah foto orang
+                fileFotoOrang?.let { file ->
+                    uploadImageFile(file, url)
+                }
+
+                // Mengunggah KTP
+                fileFotoKTP?.let { file ->
+                    uploadImageFile(file, url)
+                }
+
+                // Mengunggah tanda tangan
+                signatureFile?.let { file ->
+                    uploadImageFile(file, url)
+                }
+
+            }, delayMillis)
+        }
+    }
 }

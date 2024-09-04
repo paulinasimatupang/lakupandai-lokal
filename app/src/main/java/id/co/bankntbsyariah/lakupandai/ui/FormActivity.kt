@@ -91,6 +91,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
+import android.graphics.Color
 
 
 class FormActivity : AppCompatActivity() {
@@ -901,15 +902,29 @@ class FormActivity : AppCompatActivity() {
                 2 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan EditText di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 16dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
+                            setTextSize(16f) // Ukuran teks untuk input
+                            setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
                         }
                         inputValues[component.id] = ""
 
@@ -972,37 +987,42 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
 
-
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
+
+                        // TextView untuk label
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan EditText di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
+                        // EditText untuk input password
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             inputType =
                                 android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.pass_bg)
                             id = View.generateViewId()
-                            textSize = 18f
+                            setTextSize(16f) // Ukuran teks untuk input
+                            setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
 
                             // Adjust the padding to move the hint text slightly to the right
-                            setPadding(
-                                48,
-                                paddingTop,
-                                48,
-                                paddingBottom
-                            ) // Adjust left and right padding
+                            setPadding(48, paddingTop, 48, paddingBottom) // Adjust left and right padding
 
                             // Set the eye icon to the right of the EditText
-                            setCompoundDrawablesWithIntrinsicBounds(
-                                0,
-                                0,
-                                R.drawable.ic_eye_closed,
-                                0
-                            )
+                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
 
                             // Add padding between the text and eye icon
                             setCompoundDrawablePadding(16)
@@ -1037,20 +1057,31 @@ class FormActivity : AppCompatActivity() {
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
-
                         }
                         addView(editText)
                     }
                 }
+
                 4 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        addView(TextView(this@FormActivity).apply {
+                        // TextView untuk label
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 16f
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan Spinner di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
 
                         var compOption = component.compValues?.compValue
 
@@ -1101,10 +1132,14 @@ class FormActivity : AppCompatActivity() {
                                 )
                                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                                 this.adapter = adapter
+
+                                // Set margin untuk spinner
                                 layoutParams = LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
-                                )
+                                ).apply {
+                                    setMargins(0, 0, 0, 20) // Margin bawah 20dp untuk jarak antar elemen
+                                }
                             }
 
                             spinner.onItemSelectedListener =
@@ -1129,7 +1164,7 @@ class FormActivity : AppCompatActivity() {
                                         val selectedCompValue = selectedPair.second
 
                                         if (screen.id == "CCIF001") {
-                                            inputRekening[component.id] = selectedValue ?: "" // Now storing selectedValue
+                                            inputRekening[component.id] = selectedValue ?: "" // Menyimpan selectedValue
                                         }
 
                                         Log.d(
@@ -1143,8 +1178,7 @@ class FormActivity : AppCompatActivity() {
                                         )
 
                                         when (component.id) {
-                                            "PIL03"-> {
-                                                pickOTP = selectedValue
+                                            "PIL03" -> {
                                                 pickOTP = selectedValue
                                                 Log.d("Form", "PICK OTP: $selectedValue")
 
@@ -1161,7 +1195,8 @@ class FormActivity : AppCompatActivity() {
                                                     pickOTP = ""
 
                                                     Toast.makeText(this@FormActivity, "Validasi gagal: Pilih WA atau SMS", Toast.LENGTH_SHORT).show()
-                                                }                                            }
+                                                }
+                                            }
                                             "CB001" -> {
                                                 if (selectedCompValue != null) {
                                                     inputValues[component.id] = selectedCompValue.replace("[OI]", "")
@@ -1190,8 +1225,7 @@ class FormActivity : AppCompatActivity() {
                                                 )
                                             }
 
-                                            "CIF23" -> inputValues[component.id] =
-                                                (position - 1).toString()
+                                            "CIF23" -> inputValues[component.id] = (position - 1).toString()
 
                                             "CIF14" -> {
                                                 if (selectedCompValue != null) {
@@ -1217,11 +1251,18 @@ class FormActivity : AppCompatActivity() {
 
                             addView(spinner)
                         }
+                    }.let { view ->
+                        container.addView(view, LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            setMargins(20, 20, 20, 20) // Margin untuk seluruh view
+                        })
                     }
                 }
 
                 5 -> {
-                    LinearLayout(this).apply {
+                    LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
@@ -1229,31 +1270,45 @@ class FormActivity : AppCompatActivity() {
                             setTypeface(null, Typeface.BOLD)
                         })
 
+                        val selectedValues = mutableSetOf<Int>() // Set to track selected values
+
                         component.values.forEachIndexed { index, value ->
                             val checkBox = CheckBox(this@FormActivity).apply {
                                 text = value.first
                             }
+
                             checkBox.setOnCheckedChangeListener { _, isChecked ->
                                 if (screen.id == "CCIF001") {
                                     inputRekening[component.id] = inputValues[component.id] ?: ""
                                 }
+
                                 if (isChecked) {
-                                    inputValues[component.id] = index.toString()
+                                    selectedValues.add(index)
                                 } else {
-                                    inputValues.remove(component.id)
+                                    selectedValues.remove(index)
                                 }
+
+                                inputValues[component.id] = selectedValues.joinToString(",") { it.toString() }
+
+                                Log.d(
+                                    "FormActivity",
+                                    "Component ID: ${component.id}, Selected Values: ${inputValues[component.id]}"
+                                )
                             }
+
                             addView(checkBox)
                         }
                     }
                 }
+
                 6 -> {
-                    LinearLayout(this).apply {
+                    LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
 
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
                             textSize = 16f
+                            setTypeface(null, Typeface.BOLD)
                         })
 
                         val radioGroup = RadioGroup(this@FormActivity).apply {
@@ -1264,7 +1319,9 @@ class FormActivity : AppCompatActivity() {
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
                                 textSize = 18f
+                                id = View.generateViewId() // Assign a unique ID to each radio button
                             }
+
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
                                 if (isChecked) {
                                     val selectedValue = value.first
@@ -1273,14 +1330,19 @@ class FormActivity : AppCompatActivity() {
                                         inputRekening[component.id] = selectedValue
                                     }
 
-                                    val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
-                                        (index + 1).toString()
-                                    } else {
-                                        index.toString()
+                                    val valueToSave = when (component.id) {
+                                        "CIF05", "CIF17", "CIF07", "CIF21" -> (index + 1).toString()
+                                        else -> index.toString()
                                     }
                                     inputValues[component.id] = valueToSave
+
+                                    Log.d(
+                                        "FormActivity",
+                                        "Component ID: ${component.id}, Selected Value: $selectedValue, Saved Value: $valueToSave"
+                                    )
                                 }
                             }
+
                             radioGroup.addView(radioButton)
                         }
 
@@ -1372,25 +1434,26 @@ class FormActivity : AppCompatActivity() {
                         })
                     }
                 }
+
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
                     val timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
-
                     val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
 
-                    if (resendOtpTextView != null) {
+                    // Setup Resend OTP TextView
+                    resendOtpTextView?.let {
                         Log.e("FormActivity", "RESEND OTP NOT null.")
-                        resendOtpTextView.setOnClickListener {
-                            resendOtp()
-                        }
+                        it.setOnClickListener { resendOtp() }
 
                         val text = "Resend OTP"
-                        val spannable = SpannableString(text)
-                        spannable.setSpan(UnderlineSpan(), 0, text.length, 0)
-                        resendOtpTextView.text = spannable
+                        val spannable = SpannableString(text).apply {
+                            setSpan(UnderlineSpan(), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        it.text = spannable
                     }
 
+                    // Setup CountDownTimer
                     val countDownTimer = object : CountDownTimer(120000, 1000) {
                         override fun onTick(millisUntilFinished: Long) {
                             val minutes = millisUntilFinished / 60000
@@ -1404,18 +1467,17 @@ class FormActivity : AppCompatActivity() {
                             // Handle timeout scenario, e.g., disable inputs or show a message
                         }
                     }
-
                     countDownTimer.start()
 
-                    val otpDigit1 = otpView.findViewById<EditText>(R.id.otpDigit1)
-                    val otpDigit2 = otpView.findViewById<EditText>(R.id.otpDigit2)
-                    val otpDigit3 = otpView.findViewById<EditText>(R.id.otpDigit3)
-                    val otpDigit4 = otpView.findViewById<EditText>(R.id.otpDigit4)
-                    val otpDigit5 = otpView.findViewById<EditText>(R.id.otpDigit5)
-                    val otpDigit6 = otpView.findViewById<EditText>(R.id.otpDigit6)
-
-
-                    val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4, otpDigit5, otpDigit6)
+                    // Setup OTP Digits
+                    val otpDigits = listOf(
+                        otpView.findViewById<EditText>(R.id.otpDigit1),
+                        otpView.findViewById<EditText>(R.id.otpDigit2),
+                        otpView.findViewById<EditText>(R.id.otpDigit3),
+                        otpView.findViewById<EditText>(R.id.otpDigit4),
+                        otpView.findViewById<EditText>(R.id.otpDigit5),
+                        otpView.findViewById<EditText>(R.id.otpDigit6)
+                    )
 
                     otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
@@ -1442,32 +1504,51 @@ class FormActivity : AppCompatActivity() {
                                     inputValues["OTP"] = otpValue
                                 }
                             }
+
                             override fun afterTextChanged(s: Editable?) {}
                         })
                     }
+
                     container.addView(otpView)
                 }
 
                 16 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
+
+                        // TextView untuk label
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan EditText di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
+                        // EditText untuk input tanggal
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             background = getDrawable(R.drawable.date_input)
                             id = View.generateViewId()
                             tag = component.id
-                            inputType = android.text.InputType.TYPE_NULL
+                            inputType = android.text.InputType.TYPE_NULL // Menonaktifkan input keyboard
+                            setTextSize(16f) // Ukuran teks untuk input
+                            setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
+
                             setOnClickListener {
                                 Log.d("FormActivity", "EditText clicked: ${component.id}")
                                 showDatePickerDialog(this) { selectedDate ->
                                     inputValues[component.id as String] = selectedDate
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] =
-                                            inputValues[component.id] ?: ""
+                                        inputRekening[component.id] = inputValues[component.id] ?: ""
                                     }
                                 }
                             }
@@ -1479,10 +1560,11 @@ class FormActivity : AppCompatActivity() {
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
                         ).apply {
-                            setMargins(20, 20, 20, 20)
+                            setMargins(20, 20, 20, 20) // Margin untuk seluruh view
                         })
                     }
                 }
+
                 17 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL

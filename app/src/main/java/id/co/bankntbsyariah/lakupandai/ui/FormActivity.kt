@@ -90,6 +90,7 @@ import java.text.ParseException
 import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
+import android.text.style.StyleSpan
 
 
 class FormActivity : AppCompatActivity() {

@@ -13,24 +13,12 @@
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Verifikasi PIN"
+        android:text="Masukkan PIN"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="16dp"/>
-
-    <!-- Instruction Text -->
-    <TextView
-        android:id="@+id/tvInstruction"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Masukkan PIN"
-        android:textSize="16sp"
-        android:textColor="@android:color/black"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp"/>
-
     <!-- Description Text -->
     <TextView
         android:id="@+id/tvDescription"
@@ -56,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
             android:gravity="center"
-            android:inputType="number"
+            android:inputType="numberPassword"
             android:maxLength="1"
             android:textColor="#000000"
             android:textSize="20sp"/>
@@ -67,7 +55,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
             android:gravity="center"
-            android:inputType="number"
+            android:inputType="numberPassword"
             android:maxLength="1"
             android:textColor="#000000"
             android:textSize="20sp"/>
@@ -78,7 +66,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
             android:gravity="center"
-            android:inputType="number"
+            android:inputType="numberPassword"
             android:maxLength="1"
             android:textColor="#000000"
             android:textSize="20sp"/>
@@ -89,7 +77,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
             android:gravity="center"
-            android:inputType="number"
+            android:inputType="numberPassword"
             android:maxLength="1"
             android:textColor="#000000"
             android:textSize="20sp"/>
@@ -110,7 +98,6 @@
             android:layout_width="45dp"
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
-            android:text="5"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"

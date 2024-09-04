@@ -1361,7 +1361,7 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             val sharedPreferences =
                                 getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                            val pinLogin = sharedPreferences.getString("pin", "")?: ""
+                            val pinLogin = sharedPreferences.getString("pin", "").toString()
                             Log.e("PIN", "PIN LOGIN: $pinLogin")
                             if (component.id == "OK001") {
                                 val pinValue = inputValues["PIN"]
@@ -2587,7 +2587,7 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("merchant_avatar", merchantData.optString("avatar"))
                             editor.putInt("merchant_status", merchantData.optInt("status"))
                             editor.putString("kode_agen", merchantData.optString("mid"))
-                            editor.putString("pin", merchantData.optString("pin"))
+                            editor.putInt("pin", merchantData.optInt("pin"))
 
                             if (terminalData != null) {
                                 editor.putString("tid", terminalData.optString("tid"))

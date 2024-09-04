@@ -2629,24 +2629,25 @@ class FormActivity : AppCompatActivity() {
 
         if (currentAttempts >= 3) {
             blockUserAccount()
-            val intentPopup =
-                Intent(this@FormActivity, PopupActivity::class.java).apply {
-                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                    putExtra("MESSAGE_BODY", "Akun Anda telah terblokir. Hubungi Call Center.")
-                    putExtra("RETURN_TO_ROOT", true)
-                    putExtra(Constants.KEY_FORM_ID, "AU00001")
-                }
+            val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                putExtra("MESSAGE_BODY", "Akun Anda telah terblokir. Hubungi Call Center.")
+                putExtra("RETURN_TO_ROOT", true)
+                putExtra(Constants.KEY_FORM_ID, "AU00001")
+            }
             startActivity(intentPopup)
         } else {
             editor.putInt("login_attempts", currentAttempts + 1)
             editor.apply()
+            val attemptsLeft = 3 - (currentAttempts + 1)
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@FormActivity, "PIN Salah!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@FormActivity, "PIN Salah! Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
             }
         }
 
         Log.d("BlockAgen", "Current pin_attempts: ${currentAttempts + 1}")
     }
+
 
     private suspend fun handleFailedLoginAttempt() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -2655,16 +2656,15 @@ class FormActivity : AppCompatActivity() {
 
         if (currentAttempts >= 3) {
             blockUserAccount()
-            editor.apply()
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
             }
-
         } else {
             editor.putInt("login_attempts", currentAttempts + 1)
             editor.apply()
+            val attemptsLeft = 3 - (currentAttempts + 1)
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@FormActivity, "Username atau password salah. Kesalahan ke-${currentAttempts + 1}. Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
             }
         }
 

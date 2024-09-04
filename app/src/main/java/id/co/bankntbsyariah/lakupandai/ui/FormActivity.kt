@@ -587,7 +587,7 @@ class FormActivity : AppCompatActivity() {
 
                             // Add grouped data to the layout
                             groupedData.forEach { (date, nasabahList) ->
-                                layout.addView(createTextView(context, date, 20f, Typeface.BOLD, R.color.gray, 16.dpToPx(), 8.dpToPx()))
+                                layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
 
                                 nasabahList.forEach { nasabah ->
                                     // Inflate the item view layout
@@ -631,7 +631,7 @@ class FormActivity : AppCompatActivity() {
                         val context = this@FormActivity
                         LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
-                            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
+                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
                         }.also { layout ->
                             lifecycleScope.launch {
                                 val webCaller = WebCallerImpl()
@@ -651,172 +651,90 @@ class FormActivity : AppCompatActivity() {
                                         val jsonResponse = JSONObject(fetchedValue)
                                         val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
 
+                                        // Convert JSONArray to List<JSONObject>
+                                        val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
+
                                         // Clear existing views before adding new data
                                         layout.removeAllViews()
 
-                                        for (i in 0 until dataArray.length()) {
-                                            val item = dataArray.getJSONObject(i)
+                                        // Group data by date
+                                        val groupedData = dataList.groupBy {
+                                            val replyTime = it.optString("reply_time", "")
+                                            replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                        }
 
-                                            val replyTime = item.optString("reply_time", "")
-                                            val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                                            val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
-                                            val formattedReplyTime: String = try {
-                                                val date = originalFormat.parse(replyTime)
-                                                targetFormat.format(date)
-                                            } catch (e: ParseException) {
-                                                Log.e("FormActivity", "Error parsing date: ${e.message}")
-                                                replyTime
-                                            }
+                                        // Add grouped data to the layout
+                                        groupedData.forEach { (date, historyList) ->
+                                            layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
 
-                                            val status = item.optString("status", "")
-                                            val requestMessage = item.getString("request_message")
+                                            historyList.forEach { history ->
+                                                val replyTime = history.optString("reply_time", "")
+                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
+                                                val formattedReplyTime: String = try {
+                                                    val date = originalFormat.parse(replyTime)
+                                                    targetFormat.format(date)
+                                                } catch (e: ParseException) {
+                                                    Log.e("FormActivity", "Error parsing date: ${e.message}")
+                                                    replyTime
+                                                }
 
-                                            val no_rek = item.getString("no_rek")
-                                            val nama_rek = item.getString("nama_rek")
-                                            val nominal = item.getString("nominal")
+                                                val status = history.optString("status", "")
+                                                val requestMessage = history.getString("request_message")
 
-                                            val formatTrans = "$no_rek - $nama_rek \n $nominal"
+                                                val no_rek = history.getString("no_rek")
+                                                val nama_rek = history.getString("nama_rek")
+                                                val nominal = history.getString("nominal")
 
-                                            val requestMessageJson = JSONObject(requestMessage.trim())
-                                            val msgObject = requestMessageJson.getJSONObject("msg")
+                                                val formatTrans = "$no_rek - $nama_rek \n $nominal"
 
-                                            val msgId = msgObject.getString("msg_id")
-                                            val msgSi = msgObject.getString("msg_si")
+                                                val requestMessageJson = JSONObject(requestMessage.trim())
+                                                val msgObject = requestMessageJson.getJSONObject("msg")
 
-                                            val actionText = when (msgSi) {
-                                                "T00002" -> "Transfer"
-                                                "OTT001" -> "Tarik Tunai"
-                                                "OT0001" -> "Setor Tunai"
-                                                else -> msgSi
-                                            }
+                                                val msgId = msgObject.getString("msg_id")
+                                                val msgSi = msgObject.getString("msg_si")
 
-                                            val statusTrans = when (status) {
-                                                "00" -> "Berhasil"
-                                                else -> "Gagal"
-                                            }
+                                                val actionText = when (msgSi) {
+                                                    "T00002" -> "Transfer"
+                                                    "OTT001" -> "Tarik Tunai"
+                                                    "OT0001" -> "Setor Tunai"
+                                                    else -> msgSi
+                                                }
 
-                                            val statusColor = when (status) {
-                                                "00" -> ContextCompat.getColor(context, R.color.green)
-                                                else -> ContextCompat.getColor(context, R.color.red)
-                                            }
+                                                val statusTrans = when (status) {
+                                                    "00" -> "Berhasil"
+                                                    else -> "Gagal"
+                                                }
 
-                                            val gridLayout = GridLayout(context).apply {
-                                                layoutParams = LinearLayout.LayoutParams(
+                                                val statusColor = when (status) {
+                                                    "00" -> ContextCompat.getColor(context, R.color.green)
+                                                    else -> ContextCompat.getColor(context, R.color.red)
+                                                }
+
+                                                // Inflate the item layout
+                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null)
+
+                                                // Populate the item view with data
+                                                itemView.findViewById<TextView>(R.id.text_action).text = actionText
+                                                itemView.findViewById<TextView>(R.id.text_format_trans).text = formatTrans
+                                                itemView.findViewById<TextView>(R.id.text_status).apply {
+                                                    text = statusTrans
+                                                    setTextColor(statusColor)
+                                                }
+                                                itemView.findViewById<TextView>(R.id.text_reply_time).text = formattedReplyTime
+
+                                                // Add margin to the item view
+                                                val params = LinearLayout.LayoutParams(
                                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                                     LinearLayout.LayoutParams.WRAP_CONTENT
-                                                )
-                                                rowCount = 2
-                                                columnCount = 2
-                                                // Set margins and padding if needed
-                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                                                ).apply {
+                                                    setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin for spacing between items
+                                                }
+                                                itemView.layoutParams = params
 
-//                                                setOnClickListener {
-//                                                    lifecycleScope.launch {
-//                                                        val detailResponse = withContext(Dispatchers.IO) {
-//                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-//                                                            val token = preferences.getString("token", "") ?: ""
-//                                                            val terminalId = preferences.getString("tid", "") ?: ""
-//                                                            val messageId = item.optString("message_id", "")
-//
-//                                                            try {
-//                                                                val response = webCaller.fetchHistoryDetail(terminalId, messageId, token)
-//                                                                response?.string()
-//                                                            } catch (e: Exception) {
-//                                                                Log.e("FormActivity", "Error fetching history detail: ${e.message}", e)
-//                                                                null
-//                                                            }
-//                                                        }
-//
-//                                                        if (!detailResponse.isNullOrEmpty()) {
-//                                                            try {
-//                                                                val jsonResponse = JSONObject(detailResponse)
-//                                                                val dataString = jsonResponse.optString("data", "{}")
-//                                                                val dataJson = JSONObject(dataString)
-//
-//                                                                // Extract `screen` object from `dataJson`
-//                                                                val screenJson = dataJson.optJSONObject("screen")
-//
-//                                                                // Convert `screenJson` to `Screen` object
-//                                                                val screen = screenJson?.let { json ->
-//                                                                    Screen(
-//                                                                        type = json.optInt("type"), // Adjust this to match the type in JSON
-//                                                                        title = json.optString("title"),
-//                                                                        id = json.optString("id"),
-//                                                                        ver = json.optString("ver"),
-//                                                                        comp = parseComponents(json.optJSONObject("comps")?.optJSONArray("comp") ?: JSONArray()),
-//                                                                        actionUrl = json.optString("action_url")
-//                                                                    )
-//                                                                }
-
-                                                                // Setup the form with the parsed `Screen` data
-//                                                                if (screen != null) {
-//                                                                    setupForm(screen)
-//                                                                } else {
-//                                                                    withContext(Dispatchers.Main) {
-//                                                                        Toast.makeText(this@FormActivity, "Invalid screen data", Toast.LENGTH_SHORT).show()
-//                                                                    }
-//                                                                }
-//                                                            } catch (e: JSONException) {
-//                                                                Log.e("FormActivity", "Detail JSON parsing error: ${e.message}", e)
-//                                                                withContext(Dispatchers.Main) {
-//                                                                    Toast.makeText(this@FormActivity, "Error parsing detail JSON response", Toast.LENGTH_SHORT).show()
-//                                                                }
-//                                                            }
-//                                                        } else {
-//                                                            withContext(Dispatchers.Main) {
-//                                                                Toast.makeText(this@FormActivity, "Failed to fetch detail", Toast.LENGTH_SHORT).show()
-//                                                            }
-//                                                        }
-//                                                    }
-//
-//                                                }
+                                                // Add the populated view to the layout
+                                                layout.addView(itemView)
                                             }
-
-                                            gridLayout.addView(TextView(context).apply {
-                                                text = actionText
-                                                textSize = 16f
-                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
-                                                layoutParams = GridLayout.LayoutParams().apply {
-                                                    columnSpec = GridLayout.spec(0) // Column 1
-                                                    rowSpec = GridLayout.spec(0)    // Row 1
-                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
-                                                }
-                                            })
-
-                                            gridLayout.addView(TextView(context).apply {
-                                                text = formatTrans
-                                                textSize = 12f
-                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
-                                                layoutParams = GridLayout.LayoutParams().apply {
-                                                    columnSpec = GridLayout.spec(0) // Column 1
-                                                    rowSpec = GridLayout.spec(1)    // Row 2
-                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
-                                                }
-                                            })
-
-                                            gridLayout.addView(TextView(context).apply {
-                                                text = statusTrans
-                                                setTextColor(statusColor)
-                                                textSize = 16f
-                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
-                                                layoutParams = GridLayout.LayoutParams().apply {
-                                                    columnSpec = GridLayout.spec(1) // Column 2
-                                                    rowSpec = GridLayout.spec(0)    // Row 1
-                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
-                                                }
-                                            })
-
-                                            gridLayout.addView(TextView(context).apply {
-                                                text = formattedReplyTime
-                                                textSize = 12f
-                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 16.dpToPx())
-                                                layoutParams = GridLayout.LayoutParams().apply {
-                                                    columnSpec = GridLayout.spec(1) // Column 2
-                                                    rowSpec = GridLayout.spec(1)    // Row 2
-                                                    setMargins(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
-                                                }
-                                            })
-                                            layout.addView(gridLayout)
                                         }
                                     } catch (e: JSONException) {
                                         Log.e("FormActivity", "JSON parsing error: ${e.message}")
@@ -832,6 +750,7 @@ class FormActivity : AppCompatActivity() {
                             }
                         }
                     }
+
 
                     else {
                         LinearLayout(this@FormActivity).apply {

@@ -87,6 +87,8 @@ import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
 import org.json.JSONArray
 import java.text.ParseException
+import android.os.Handler
+import android.os.Looper
 
 class FormActivity : AppCompatActivity() {
 
@@ -111,6 +113,7 @@ class FormActivity : AppCompatActivity() {
     private var lastMessageBody: JSONObject? = null
     private var otpAttempts = mutableListOf<Long>()
     private val otpCooldownTime = 3 * 60 * 1000L // 30 minutes in milliseconds
+    private var otpScreen: Screen? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -325,6 +328,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
+            screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
             screenTitle.contains("Berhasil", ignoreCase = true) ->
             {
                 showSuccessPopup(screenTitle)
@@ -1355,14 +1359,32 @@ class FormActivity : AppCompatActivity() {
                         setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
-                            if (component.id == "OTP09") {
-                                // Check if OTP attempts are less than 3
+                            val sharedPreferences =
+                                getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val pinLogin = sharedPreferences.getString("pin", "")?: ""
+                            Log.e("PIN", "PIN LOGIN: $pinLogin")
+                            if (component.id == "OK001") {
+                                val pinValue = inputValues["PIN"]
+                                Log.e("PIN", "PIN INPUT: $pinValue")
+
+                                if (pinLogin != null && pinLogin == pinValue) {
+                                    otpScreen?.let { screen ->
+                                        handleScreenType(screen)
+                                    }
+                                } else {
+                                    lifecycleScope.launch(Dispatchers.IO) {
+                                        handleFailedPinAttempt()
+                                    }
+                                }
+                            } else if (component.id == "OTP09") {
+                                // Periksa apakah percobaan OTP kurang dari 3
                                 if (otpAttempts.size < 3) {
                                     otpAttempts.add(System.currentTimeMillis())
                                     handleButtonClick(component, screen)
                                 } else {
                                     val lastAttemptTime = otpAttempts.last()
                                     val currentTime = System.currentTimeMillis()
+
                                     if (currentTime - lastAttemptTime < otpCooldownTime) {
                                         Toast.makeText(
                                             this@FormActivity,
@@ -1371,7 +1393,7 @@ class FormActivity : AppCompatActivity() {
                                         ).show()
                                     } else {
                                         otpAttempts.clear()
-                                        otpAttempts.add(System.currentTimeMillis())
+                                        otpAttempts.add(currentTime)
                                         handleButtonClick(component, screen)
                                     }
                                 }
@@ -1569,6 +1591,51 @@ class FormActivity : AppCompatActivity() {
 
                     container.addView(cameraView)
                 }
+                19 -> {
+                    val inflater = layoutInflater
+                    val pinView = inflater.inflate(R.layout.activity_pin, container, false)
+
+                    val pinDigit1 = pinView.findViewById<EditText>(R.id.pinDigit1)
+                    val pinDigit2 = pinView.findViewById<EditText>(R.id.pinDigit2)
+                    val pinDigit3 = pinView.findViewById<EditText>(R.id.pinDigit3)
+                    val pinDigit4 = pinView.findViewById<EditText>(R.id.pinDigit4)
+                    val pinDigit5 = pinView.findViewById<EditText>(R.id.pinDigit5)
+                    val pinDigit6 = pinView.findViewById<EditText>(R.id.pinDigit6)
+
+                    val pinDigits = listOf(pinDigit1, pinDigit2, pinDigit3, pinDigit4, pinDigit5, pinDigit6)
+
+                    pinDigits.forEachIndexed { index, digit ->
+                        digit.addTextChangedListener(object : TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                                if (s != null) {
+                                    when {
+                                        count > 0 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < pinDigits.size) {
+                                                pinDigits[nextIndex].requestFocus()
+                                            }
+                                        }
+                                        before > 0 -> {
+                                            val prevIndex = index - 1
+                                            if (prevIndex >= 0) {
+                                                pinDigits[prevIndex].requestFocus()
+                                            }
+                                        }
+                                    }
+                                    val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
+                                    inputValues["PIN"] = pinValue
+                                }
+                            }
+
+                            override fun afterTextChanged(s: Editable?) {}
+                        })
+                    }
+
+                    container.addView(pinView)
+                }
+
 
                 else -> {
                     null
@@ -2070,6 +2137,7 @@ class FormActivity : AppCompatActivity() {
                 }
             } else {
                 val messageBody = screen?.let { createMessageBody(it) }
+                val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
                 if (messageBody != null) {
                     Log.d("FormActivity", "Message Body: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -2080,78 +2148,114 @@ class FormActivity : AppCompatActivity() {
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                if (screen.id == "CCIF003" && newScreen.id == "000000D") {
-                                    val message = newScreen?.comp?.find { it.id == "0000A" }
-                                        ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
-                                    newScreen.id = "RCCIF02"
-                                    var newScreenId = newScreen.id
+                                if(sendOTPComponent != null) {
+                                    var pinScreen = "P000001"
                                     var formValue =
-                                        StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        StorageImpl(applicationContext).fetchForm(pinScreen)
                                     if (formValue.isNullOrEmpty()) {
                                         formValue = withContext(Dispatchers.IO) {
                                             ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                newScreenId
+                                                pinScreen
                                             )
                                         }
-                                        Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        Log.i("FormActivity", "Fetched pinValue: $formValue")
                                     }
                                     setupScreen(formValue)
-                                    val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                        putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                        putExtra("MESSAGE_BODY", message)
-                                        putExtra("RETURN_TO_ROOT", false)
+                                    otpScreen = newScreen
+                                }else {
+                                    if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                        val message = newScreen?.comp?.find { it.id == "0000A" }
+                                            ?.compValues?.compValue?.firstOrNull()?.value
+                                            ?: "Unknown error"
+                                        newScreen.id = "RCCIF02"
+                                        var newScreenId = newScreen.id
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                    newScreenId
+                                                )
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
+                                        val intent = Intent(
+                                            this@FormActivity,
+                                            PopupActivity::class.java
+                                        ).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", message)
+                                            putExtra("RETURN_TO_ROOT", false)
+                                        }
+                                        startActivity(intent)
+                                    } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                        newScreen.id = "CCIF001"
+                                        var newScreenId = newScreen.id
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                    newScreenId
+                                                )
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
+                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "TF00003" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "BR001" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "BS001" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else {
+                                        handleScreenType(newScreen)
                                     }
-                                    startActivity(intent)
-                                } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
-                                    newScreen.id = "CCIF001"
-                                    var newScreenId = newScreen.id
-                                    var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
-                                    if (formValue.isNullOrEmpty()) {
-                                        formValue = withContext(Dispatchers.IO) {
-                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
-                                        }
-                                        Log.i("FormActivity", "Fetched formValue: $formValue")
-                                    }
-                                    setupScreen(formValue)
-                                } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                            putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
-                                        }
-                                    startActivity(intent)
-                                } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                        }
-                                    startActivity(intent)
-                                }  else if (screen.id == "TF00003" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                        }
-                                    startActivity(intent)
-                                } else if (screen.id == "BR001" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                        }
-                                    startActivity(intent)
-                                }else if (screen.id == "BS001" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                        }
-                                    startActivity(intent)
-                                }
-
-                                else {
-                                    handleScreenType(newScreen)
                                 }
                             }
                         } ?: run {
@@ -2202,7 +2306,7 @@ class FormActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
-            val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
+            val savedKodeAgen = sharedPreferences.getString("merchant_id", "")?: ""
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
@@ -2420,7 +2524,7 @@ class FormActivity : AppCompatActivity() {
                         val id = userData?.optString("id")
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
-                        val terminalData = merchantData?.optJSONObject("terminal")
+
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
@@ -2466,6 +2570,10 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("token", token)
                             editor.putString("fullname", fullname)
                             editor.putString("id", id)
+                            val terminalData = merchantData?.optJSONObject("terminal")
+                            if (terminalData != null) {
+                                editor.putString("tid", terminalData.optString("tid"))
+                            }
 
                             // Save merchant data
                             editor.putString("merchant_id", merchantData.optString("id"))
@@ -2479,7 +2587,7 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("merchant_avatar", merchantData.optString("avatar"))
                             editor.putInt("merchant_status", merchantData.optInt("status"))
                             editor.putString("kode_agen", merchantData.optString("mid"))
-                            editor.putInt("pin", merchantData.optInt("pin"))
+                            editor.putString("pin", merchantData.optString("pin"))
 
                             if (terminalData != null) {
                                 editor.putString("tid", terminalData.optString("tid"))
@@ -2514,6 +2622,32 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+    private suspend fun handleFailedPinAttempt() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
+
+        if (currentAttempts >= 3) {
+            blockUserAccount()
+            val intentPopup =
+                Intent(this@FormActivity, PopupActivity::class.java).apply {
+                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                    putExtra("MESSAGE_BODY", "Akun Anda telah terblokir. Hubungi Call Center.")
+                    putExtra("RETURN_TO_ROOT", true)
+                    putExtra(Constants.KEY_FORM_ID, "AU00001")
+                }
+            startActivity(intentPopup)
+        } else {
+            editor.putInt("login_attempts", currentAttempts + 1)
+            editor.apply()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@FormActivity, "PIN Salah!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        Log.d("BlockAgen", "Current pin_attempts: ${currentAttempts + 1}")
+    }
+
     private suspend fun handleFailedLoginAttempt() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
@@ -2525,6 +2659,7 @@ class FormActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
             }
+
         } else {
             editor.putInt("login_attempts", currentAttempts + 1)
             editor.apply()
@@ -2535,6 +2670,7 @@ class FormActivity : AppCompatActivity() {
 
         Log.d("BlockAgen", "Current login_attempts: ${currentAttempts + 1}")
     }
+
 
 
     private fun blockUserAccount() {

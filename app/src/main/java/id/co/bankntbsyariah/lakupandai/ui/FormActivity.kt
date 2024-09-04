@@ -1361,7 +1361,7 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             val sharedPreferences =
                                 getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                            val pinLogin = sharedPreferences.getString("pin", "").toString()
+                            val pinLogin = sharedPreferences.getInt("pin", 0).toString()
                             Log.e("PIN", "PIN LOGIN: $pinLogin")
                             if (component.id == "OK001") {
                                 val pinValue = inputValues["PIN"]

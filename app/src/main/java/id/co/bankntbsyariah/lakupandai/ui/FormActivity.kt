@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Base64
@@ -65,16 +66,23 @@ import java.io.IOException
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Environment
+import android.os.CountDownTimer
 import android.provider.MediaStore
 import android.text.InputType
+import android.text.SpannableString
+import android.text.style.UnderlineSpan
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
 import okhttp3.*
 import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
+import org.json.JSONArray
+import java.text.ParseException
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.style.StyleSpan
 import okhttp3.RequestBody.Companion.asRequestBody
 
 class FormActivity : AppCompatActivity() {
@@ -100,6 +108,11 @@ class FormActivity : AppCompatActivity() {
     private var fileFotoKTP: File? = null
     private var fileFotoOrang: File? = null
 
+    private var otpTimer: CountDownTimer? = null
+    private var lastMessageBody: JSONObject? = null
+    private var otpAttempts = mutableListOf<Long>()
+    private val otpCooldownTime = 3 * 60 * 1000L // 30 minutes in milliseconds
+    private var otpScreen: Screen? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -307,11 +320,12 @@ class FormActivity : AppCompatActivity() {
 
     private fun handleScreenTitle(screenTitle: String) {
         val layoutId = when {
-            screenTitle.contains("Form", ignoreCase = true) -> R.layout.activity_form2
-            screenTitle.contains("Review", ignoreCase = true) -> R.layout.activity_review
-            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
+            screenTitle.contains("Form", ignoreCase = true) -> R.layout.header
+            screenTitle.contains("Review", ignoreCase = true) -> R.layout.header
+//            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
+            screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
             screenTitle.contains("Berhasil", ignoreCase = true) ->
             {
                 showSuccessPopup(screenTitle)
@@ -323,6 +337,19 @@ class FormActivity : AppCompatActivity() {
             setContentView(layoutId)
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
+
+        if (screenTitle.contains("Form", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("FORM", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
+        if (screenTitle.contains("Review", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("Review", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
         if (screenTitle.contains("Berhasil", ignoreCase = true)) {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
             Log.d("FormActivity", "Formatted title: $formattedTitle")
@@ -369,6 +396,7 @@ class FormActivity : AppCompatActivity() {
             ?: findViewById(R.id.menu_container)
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
         val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
+
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -564,7 +592,7 @@ class FormActivity : AppCompatActivity() {
 
                             // Add grouped data to the layout
                             groupedData.forEach { (date, nasabahList) ->
-                                layout.addView(createTextView(context, date, 20f, Typeface.BOLD, R.color.gray, 16.dpToPx(), 8.dpToPx()))
+                                layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
 
                                 nasabahList.forEach { nasabah ->
                                     // Inflate the item view layout
@@ -604,6 +632,131 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
 
+                    else if (component.id == "HY001") {
+                        val context = this@FormActivity
+                        LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+                        }.also { layout ->
+                            lifecycleScope.launch {
+                                val webCaller = WebCallerImpl()
+                                val fetchedValue = withContext(Dispatchers.IO) {
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val token = sharedPreferences.getString("token", "") ?: ""
+                                    val terminalId = sharedPreferences.getString("tid", "") ?: ""
+                                    val response = webCaller.fetchHistory(terminalId, token)
+                                    response?.string()
+                                }
+
+                                if (!fetchedValue.isNullOrEmpty()) {
+                                    try {
+                                        // Debug log for the raw response
+                                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                                        val jsonResponse = JSONObject(fetchedValue)
+                                        val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
+
+                                        // Convert JSONArray to List<JSONObject>
+                                        val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
+
+                                        // Clear existing views before adding new data
+                                        layout.removeAllViews()
+
+                                        // Group data by date
+                                        val groupedData = dataList.groupBy {
+                                            val replyTime = it.optString("reply_time", "")
+                                            replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                        }
+
+                                        // Add grouped data to the layout
+                                        groupedData.forEach { (date, historyList) ->
+                                            layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
+
+                                            historyList.forEach { history ->
+                                                val replyTime = history.optString("reply_time", "")
+                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
+                                                val formattedReplyTime: String = try {
+                                                    val date = originalFormat.parse(replyTime)
+                                                    targetFormat.format(date)
+                                                } catch (e: ParseException) {
+                                                    Log.e("FormActivity", "Error parsing date: ${e.message}")
+                                                    replyTime
+                                                }
+
+                                                val status = history.optString("status", "")
+                                                val requestMessage = history.getString("request_message")
+
+                                                val no_rek = history.getString("no_rek")
+                                                val nama_rek = history.getString("nama_rek")
+                                                val nominal = history.getString("nominal")
+
+                                                val formatTrans = "$no_rek - $nama_rek \n $nominal"
+
+                                                val requestMessageJson = JSONObject(requestMessage.trim())
+                                                val msgObject = requestMessageJson.getJSONObject("msg")
+
+                                                val msgId = msgObject.getString("msg_id")
+                                                val msgSi = msgObject.getString("msg_si")
+
+                                                val actionText = when (msgSi) {
+                                                    "T00002" -> "Transfer"
+                                                    "OTT001" -> "Tarik Tunai"
+                                                    "OT0001" -> "Setor Tunai"
+                                                    else -> msgSi
+                                                }
+
+                                                val statusTrans = when (status) {
+                                                    "00" -> "Berhasil"
+                                                    else -> "Gagal"
+                                                }
+
+                                                val statusColor = when (status) {
+                                                    "00" -> ContextCompat.getColor(context, R.color.green)
+                                                    else -> ContextCompat.getColor(context, R.color.red)
+                                                }
+
+                                                // Inflate the item layout
+                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null)
+
+                                                // Populate the item view with data
+                                                itemView.findViewById<TextView>(R.id.text_action).text = actionText
+                                                itemView.findViewById<TextView>(R.id.text_format_trans).text = formatTrans
+                                                itemView.findViewById<TextView>(R.id.text_status).apply {
+                                                    text = statusTrans
+                                                    setTextColor(statusColor)
+                                                }
+                                                itemView.findViewById<TextView>(R.id.text_reply_time).text = formattedReplyTime
+
+                                                // Add margin to the item view
+                                                val params = LinearLayout.LayoutParams(
+                                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                                ).apply {
+                                                    setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin for spacing between items
+                                                }
+                                                itemView.layoutParams = params
+
+                                                // Add the populated view to the layout
+                                                layout.addView(itemView)
+                                            }
+                                        }
+                                    } catch (e: JSONException) {
+                                        Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
                     else {
                         LinearLayout(this@FormActivity).apply {
                             orientation = LinearLayout.VERTICAL
@@ -639,11 +792,20 @@ class FormActivity : AppCompatActivity() {
                                         saldoStr = saldoStr.replace(",", "")
                                     }
 
-                                    val saldo = saldoStr.toDoubleOrNull()?: 0.0
+                                    val saldo = saldoStr.toDoubleOrNull() ?: 0.0
 
-                                    formatRupiah(saldo)
+                                    // Format saldo
+                                    val formattedSaldo = formatRupiah(saldo)
+
+                                    // Menggunakan SpannableString untuk menambahkan gaya bold
+                                    val spannable = SpannableString(formattedSaldo)
+                                    val boldSpan = StyleSpan(Typeface.BOLD)
+
+                                    // Misalkan kita ingin membuat seluruh teks saldo menjadi tebal
+                                    spannable.setSpan(boldSpan, 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+                                    spannable
                                 }
-
                                 else -> componentValue
                             }
 
@@ -665,9 +827,9 @@ class FormActivity : AppCompatActivity() {
                             }
 
                             if (screen.id == "TF00003") {
-                                setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                                setPadding(0.dpToPx(), 0.dpToPx(), 0.dpToPx(), 0.dpToPx())
                             } else {
-                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setPadding(0.dpToPx(), 0.dpToPx(), 0.dpToPx(), 0.dpToPx())
                             }
 
                             if (component.id == "APY00") {
@@ -689,9 +851,9 @@ class FormActivity : AppCompatActivity() {
                                     textSize = 15f
                                     setTypeface(null, Typeface.NORMAL)
                                     if (screen.id == "TF00003") {
-                                        setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                                        setPadding(0.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
                                     } else {
-                                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                        setPadding(0.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
                                     }
                                     setTextColor(
                                         ContextCompat.getColor(
@@ -707,22 +869,22 @@ class FormActivity : AppCompatActivity() {
                                     addView(TextView(this@FormActivity).apply {
                                         text = rekeningValue
                                         textSize = 18f
-                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                        setPadding(0.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
                                     })
                                 } else {
                                     addView(TextView(this@FormActivity).apply {
                                         text = formattedValue
                                         textSize = 18f
-                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                        setPadding(0.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
                                     })
                                 }
 
                             }
                             if (screen.id != "TF00003") {
-                                background = ContextCompat.getDrawable(
-                                    this@FormActivity,
-                                    R.drawable.text_view_background
-                                )
+//                                background = ContextCompat.getDrawable(
+//                                    this@FormActivity,
+//                                    R.drawable.text_view_background
+//                                )
                             }
                         }
                     }
@@ -1100,7 +1262,7 @@ class FormActivity : AppCompatActivity() {
                                     val selectedValue = value.first
 
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] = selectedValue 
+                                        inputRekening[component.id] = selectedValue
                                     }
 
                                     val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
@@ -1133,7 +1295,45 @@ class FormActivity : AppCompatActivity() {
                         setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
-                            if (formId == "AU00001") {
+                            val sharedPreferences =
+                                getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val pinLogin = sharedPreferences.getInt("pin", 0).toString()
+                            Log.e("PIN", "PIN LOGIN: $pinLogin")
+                            if (component.id == "OK001") {
+                                val pinValue = inputValues["PIN"]
+                                Log.e("PIN", "PIN INPUT: $pinValue")
+
+                                if (pinLogin != null && pinLogin == pinValue) {
+                                    otpScreen?.let { screen ->
+                                        handleScreenType(screen)
+                                    }
+                                } else {
+                                    lifecycleScope.launch(Dispatchers.IO) {
+                                        handleFailedPinAttempt()
+                                    }
+                                }
+                            } else if (component.id == "OTP09") {
+                                // Periksa apakah percobaan OTP kurang dari 3
+                                if (otpAttempts.size < 3) {
+                                    otpAttempts.add(System.currentTimeMillis())
+                                    handleButtonClick(component, screen)
+                                } else {
+                                    val lastAttemptTime = otpAttempts.last()
+                                    val currentTime = System.currentTimeMillis()
+
+                                    if (currentTime - lastAttemptTime < otpCooldownTime) {
+                                        Toast.makeText(
+                                            this@FormActivity,
+                                            "OTP send limit exceeded. Please wait 30 minutes.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        otpAttempts.clear()
+                                        otpAttempts.add(currentTime)
+                                        handleButtonClick(component, screen)
+                                    }
+                                }
+                            }else if (formId == "AU00001") {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
@@ -1146,7 +1346,11 @@ class FormActivity : AppCompatActivity() {
                                         Log.e("FORM", "Failed to retrieve kodeCabang")
                                     }
                                 }
-                            } else {
+                            } else if (formId == "LS00001") {
+                                changePassword()
+                            } else if (formId == "LS00002") {
+                                changePin()
+                            }else {
                                 handleButtonClick(component, screen)
                             }
                         }
@@ -1163,6 +1367,37 @@ class FormActivity : AppCompatActivity() {
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
+                    val timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
+
+                    val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
+
+                    if (resendOtpTextView != null) {
+                        Log.e("FormActivity", "RESEND OTP NOT null.")
+                        resendOtpTextView.setOnClickListener {
+                            resendOtp()
+                        }
+
+                        val text = "Resend OTP"
+                        val spannable = SpannableString(text)
+                        spannable.setSpan(UnderlineSpan(), 0, text.length, 0)
+                        resendOtpTextView.text = spannable
+                    }
+
+                    val countDownTimer = object : CountDownTimer(120000, 1000) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            val minutes = millisUntilFinished / 60000
+                            val seconds = (millisUntilFinished % 60000) / 1000
+                            val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+                            timerTextView.text = timeFormatted
+                        }
+
+                        override fun onFinish() {
+                            timerTextView.text = "00:00"
+                            // Handle timeout scenario, e.g., disable inputs or show a message
+                        }
+                    }
+
+                    countDownTimer.start()
 
                     val otpDigit1 = otpView.findViewById<EditText>(R.id.otpDigit1)
                     val otpDigit2 = otpView.findViewById<EditText>(R.id.otpDigit2)
@@ -1318,6 +1553,51 @@ class FormActivity : AppCompatActivity() {
 
                     container.addView(cameraView)
                 }
+                19 -> {
+                    val inflater = layoutInflater
+                    val pinView = inflater.inflate(R.layout.activity_pin, container, false)
+
+                    val pinDigit1 = pinView.findViewById<EditText>(R.id.pinDigit1)
+                    val pinDigit2 = pinView.findViewById<EditText>(R.id.pinDigit2)
+                    val pinDigit3 = pinView.findViewById<EditText>(R.id.pinDigit3)
+                    val pinDigit4 = pinView.findViewById<EditText>(R.id.pinDigit4)
+                    val pinDigit5 = pinView.findViewById<EditText>(R.id.pinDigit5)
+                    val pinDigit6 = pinView.findViewById<EditText>(R.id.pinDigit6)
+
+                    val pinDigits = listOf(pinDigit1, pinDigit2, pinDigit3, pinDigit4, pinDigit5, pinDigit6)
+
+                    pinDigits.forEachIndexed { index, digit ->
+                        digit.addTextChangedListener(object : TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                                if (s != null) {
+                                    when {
+                                        count > 0 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < pinDigits.size) {
+                                                pinDigits[nextIndex].requestFocus()
+                                            }
+                                        }
+                                        before > 0 -> {
+                                            val prevIndex = index - 1
+                                            if (prevIndex >= 0) {
+                                                pinDigits[prevIndex].requestFocus()
+                                            }
+                                        }
+                                    }
+                                    val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
+                                    inputValues["PIN"] = pinValue
+                                }
+                            }
+
+                            override fun afterTextChanged(s: Editable?) {}
+                        })
+                    }
+
+                    container.addView(pinView)
+                }
+
 
                 else -> {
                     null
@@ -1547,7 +1827,7 @@ class FormActivity : AppCompatActivity() {
                 else -> ""
             }
             "CIF34" -> when (currentValue) {
-                 "1" -> "Kawin"
+                "1" -> "Kawin"
                 "2" -> "Belum Kawin"
                 "3" -> "Janda/Duda"
                 else -> ""
@@ -1730,9 +2010,11 @@ class FormActivity : AppCompatActivity() {
                 val otpValue = inputValues["OTP"]
                 Log.e("OTP", "OTP: $otpValue")
                 Log.e("MSG", "MSG: $msg03Value")
-                if (msg03Value == otpValue) {
+                if (msg03Value != null && msg03Value == otpValue) {
+                    otpAttempts.clear()
                     isOtpValidated = true
                     otpDialog?.dismiss()
+                    cancelOtpTimer()
                     val messageBody = createMessageBody(screen)
                     if (messageBody != null) {
                         Log.d("FormActivity", "Message Body: $messageBody")
@@ -1825,6 +2107,12 @@ class FormActivity : AppCompatActivity() {
                     } else {
                         Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
+                } else if (msg03Value == null) {
+                    Toast.makeText(
+                        this@FormActivity,
+                        "Kode OTP telah kadaluarsa, mohon kirim ulang OTP.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 } else {
                     Toast.makeText(
                         this@FormActivity,
@@ -1839,6 +2127,7 @@ class FormActivity : AppCompatActivity() {
                 }
             } else {
                 val messageBody = screen?.let { createMessageBody(it) }
+                val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
                 if (messageBody != null) {
                     Log.d("FormActivity", "Message Body: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -1849,20 +2138,17 @@ class FormActivity : AppCompatActivity() {
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                if (screen.id == "CCIF003" && newScreen.id == "000000D") {
-                                    val message = newScreen?.comp?.find { it.id == "0000A" }
-                                        ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
-                                    newScreen.id = "RCCIF02"
-                                    var newScreenId = newScreen.id
+                                if(sendOTPComponent != null) {
+                                    var pinScreen = "P000001"
                                     var formValue =
-                                        StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        StorageImpl(applicationContext).fetchForm(pinScreen)
                                     if (formValue.isNullOrEmpty()) {
                                         formValue = withContext(Dispatchers.IO) {
                                             ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                newScreenId
+                                                pinScreen
                                             )
                                         }
-                                        Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        Log.i("FormActivity", "Fetched pinValue: $formValue")
                                     }
                                     val url = "http://108.137.154.8:8080/ARRest/fileupload"
                                     if(fileFotoOrang != null){
@@ -1893,39 +2179,101 @@ class FormActivity : AppCompatActivity() {
                                         Log.d("Foto", "Tanda Tangan Kosong")
                                     }
                                     setupScreen(formValue)
-                                    val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                        putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                        putExtra("MESSAGE_BODY", message)
-                                        putExtra("RETURN_TO_ROOT", false)
-                                    }
-                                    startActivity(intent)
-                                } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
-                                    newScreen.id = "CCIF001"
-                                    var newScreenId = newScreen.id
-                                    var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
-                                    if (formValue.isNullOrEmpty()) {
-                                        formValue = withContext(Dispatchers.IO) {
-                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
-                                        }
-                                        Log.i("FormActivity", "Fetched formValue: $formValue")
-                                    }
-                                    setupScreen(formValue)
-                                } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                            putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
-                                        }
-                                    startActivity(intent)
-                                } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
-                                    val intent =
-                                        Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                        }
-                                    startActivity(intent)
+                                    otpScreen = newScreen
                                 }else {
-                                    handleScreenType(newScreen)
+                                    if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                        val message = newScreen?.comp?.find { it.id == "0000A" }
+                                            ?.compValues?.compValue?.firstOrNull()?.value
+                                            ?: "Unknown error"
+                                        newScreen.id = "RCCIF02"
+                                        var newScreenId = newScreen.id
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                    newScreenId
+                                                )
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
+                                        val intent = Intent(
+                                            this@FormActivity,
+                                            PopupActivity::class.java
+                                        ).apply {
+                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                            putExtra("MESSAGE_BODY", message)
+                                            putExtra("RETURN_TO_ROOT", false)
+                                        }
+                                        startActivity(intent)
+                                    } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                        newScreen.id = "CCIF001"
+                                        var newScreenId = newScreen.id
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(newScreenId)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                    newScreenId
+                                                )
+                                            }
+                                            Log.i("FormActivity", "Fetched formValue: $formValue")
+                                        }
+                                        setupScreen(formValue)
+                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "TF00003" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "BR001" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else if (screen.id == "BS001" && newScreen.id != "000000F") {
+                                        val intent =
+                                            Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                            }
+                                        startActivity(intent)
+                                    } else {
+                                        handleScreenType(newScreen)
+                                    }
                                 }
                             }
                         } ?: run {
@@ -1974,7 +2322,7 @@ class FormActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
-            val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0)
+            val savedKodeAgen = sharedPreferences.getString("merchant_id", "")?: ""
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
@@ -2023,6 +2371,13 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] = savedNorekening
                         Log.d("FormActivity", "Updated componentValues with savedNorekening for Component ID: ${component.id}")
                     }
+                    component.type == 1 && component.label == "Nama Rekening Agen" -> {
+                        componentValues[component.id] = savedNamaAgen
+                        Log.d(
+                            "FormActivity",
+                            "Updated componentValues with savedNamaAgen for Component ID: ${component.id}"
+                        )
+                    }
                     component.type == 1 && component.label == "Kode Agen" -> {
                         componentValues[component.id] = savedKodeAgen.toString()
                         Log.d("FormActivity", "Kode Agen : $savedKodeAgen")
@@ -2045,12 +2400,25 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }
                 }
-            }
 
-            // Tambahkan logika pengecualian untuk SIG01, SIG02, SIG03
+            }
+            val unf03Value = componentValues["UNF03"] ?: ""
+            val unf01Value = componentValues["AG009"] ?: ""
+            val unf04Value = componentValues["SET10"] ?: ""
+            val rnr02Value = componentValues["RNR02"] ?: ""
+            when (screen.id) {
+                "RCS0001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
+                }
+                "TF00003", "BR001", "BS001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value.Transaksi berhasil dilakukan."
+                }
+                else -> {
+                    componentValues["MSG05"] = "Pesan tidak diketahui."
+                }
+            }
             val excludedCompIds = listOf("SIG01", "SIG02", "SIG03")
 
-            // Menggabungkan nilai componentValues untuk msg_dt
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
             if (screen.id == "AU00001") {
@@ -2063,12 +2431,8 @@ class FormActivity : AppCompatActivity() {
                     }
             }
 
-            // Tambahkan nilai khusus untuk MSG05
-            val unf03Value = componentValues["UNF03"] ?: ""
-            val rnr02Value = componentValues["RNR02"] ?: ""
-            componentValues["MSG05"] = "$unf03Value. Sisa saldo anda adalah $rnr02Value."
+            Log.d("Form", "Component : ${componentValues}")
 
-            // Membuat JSONObject yang akan dikirim sebagai pesan
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)
                 put("msg_ui", msgUi)
@@ -2077,6 +2441,7 @@ class FormActivity : AppCompatActivity() {
             }
 
             msg.put("msg", msgObject)
+            lastMessageBody = msg
 
             // Logging the JSON message details
             Log.d("FormActivity", "Message ID: $msgId")
@@ -2132,12 +2497,19 @@ class FormActivity : AppCompatActivity() {
 
                 if (response.isSuccessful && responseData != null) {
                     val jsonResponse = JSONObject(responseData)
-                    val token = jsonResponse.optString("token")
-                    val fullname = jsonResponse.optJSONObject("data").optString("fullname")
-                    val status = jsonResponse.optJSONObject("data").optString("status")
-                    val merchantData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")
-//                    val terminalData = jsonResponse.optJSONObject("data")?.optJSONObject("merchant")?.optJSONObject("terminal")
-//
+                    val status = jsonResponse.optBoolean("status", false)
+
+                    if (status) {
+                        val token = jsonResponse.optString("token")
+                        val userData = jsonResponse.optJSONObject("data")
+                        val fullname = userData?.optString("fullname")
+                        val id = userData?.optString("id")
+                        val userStatus = userData?.optString("status")
+                        val merchantData = userData?.optJSONObject("merchant")
+                        val terminalArray = merchantData?.optJSONArray("terminal")
+                        val terminalData = terminalArray?.getJSONObject(0)
+
+
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
 //                    val imeiFromTerminalData = terminalData?.optString("imei")
@@ -2152,55 +2524,75 @@ class FormActivity : AppCompatActivity() {
 //                        return@launch
 //                    }
 
-                    if (status == "0") {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
+                        // Check user status
+                        when (userStatus) {
+                            "0" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
+                            }
+                            "2" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
+                            }
+                            "3" -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Akun Anda terblokir", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
+                            }
                         }
-                        return@launch
-                    } else if (status == "2") {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
-                        }
-                        return@launch
-                    }
 
-                    if (token.isNotEmpty() && merchantData != null) {
+                        if (token.isNotEmpty() && merchantData != null) {
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val editor = sharedPreferences.edit()
 
-                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                        val editor = sharedPreferences.edit()
+                            editor.putString("username", username)
+                            editor.putString("token", token)
+                            editor.putString("fullname", fullname)
+                            editor.putString("id", id)
 
-                        // Save user data
-                        editor.putString("username", username)
-                        editor.putString("token", token)
-                        editor.putString("fullname", fullname)
+                            // Save merchant data
+                            editor.putString("merchant_id", merchantData.optString("id"))
+                            editor.putString("merchant_name", merchantData.optString("name"))
+                            editor.putString("norekening", merchantData.optString("no"))
+                            editor.putString("merchant_code", merchantData.optString("code"))
+                            editor.putString("merchant_address", merchantData.optString("address"))
+                            editor.putString("merchant_phone", merchantData.optString("phone"))
+                            editor.putString("merchant_email", merchantData.optString("email"))
+                            editor.putString("merchant_balance", merchantData.optString("balance"))
+                            editor.putString("merchant_avatar", merchantData.optString("avatar"))
+                            editor.putInt("merchant_status", merchantData.optInt("status"))
+                            editor.putString("kode_agen", merchantData.optString("mid"))
+                            editor.putInt("pin", merchantData.optInt("pin"))
 
-                        // Save merchant data
-                        editor.putInt("merchant_id", merchantData.optInt("id"))
-                        editor.putString("merchant_name", merchantData.optString("name"))
-                        editor.putString("norekening", merchantData.optString("no"))
-                        editor.putString("merchant_code", merchantData.optString("code"))
-                        editor.putString("merchant_address", merchantData.optString("address"))
-                        editor.putString("merchant_phone", merchantData.optString("phone"))
-                        editor.putString("merchant_email", merchantData.optString("email"))
-                        editor.putString("merchant_balance", merchantData.optString("balance"))
-                        editor.putString("merchant_avatar", merchantData.optString("avatar"))
-                        editor.putInt("merchant_status", merchantData.optInt("status"))
+                            if (terminalData != null) {
+                                editor.putString("tid", terminalData.optString("tid"))
+                            }
 
-                        editor.apply()
+                            editor.putInt("login_attempts", 0)
+                            editor.apply()
 
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                            navigateToScreen()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                navigateToScreen()
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } else {
+                        val errorMessage = jsonResponse.optString("message", "Login gagal.")
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Username atau password salah", Toast.LENGTH_SHORT).show()
-                    }
+                    handleFailedLoginAttempt()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception occurred while logging in", e)
@@ -2210,6 +2602,220 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+    private suspend fun handleFailedPinAttempt() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
+
+        if (currentAttempts >= 3) {
+            blockUserAccount()
+            val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                putExtra("MESSAGE_BODY", "Akun Anda telah terblokir. Hubungi Call Center.")
+                putExtra("RETURN_TO_ROOT", true)
+                putExtra(Constants.KEY_FORM_ID, "AU00001")
+            }
+            startActivity(intentPopup)
+        } else {
+            editor.putInt("login_attempts", currentAttempts + 1)
+            editor.apply()
+            val attemptsLeft = 3 - (currentAttempts + 1)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@FormActivity, "PIN Salah! Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        Log.d("BlockAgen", "Current pin_attempts: ${currentAttempts + 1}")
+    }
+
+
+    private suspend fun handleFailedLoginAttempt() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
+
+        if (currentAttempts >= 3) {
+            blockUserAccount()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            editor.putInt("login_attempts", currentAttempts + 1)
+            editor.apply()
+            val attemptsLeft = 3 - (currentAttempts + 1)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@FormActivity, "Username atau password salah. Kesalahan ke-${currentAttempts + 1}. Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        Log.d("BlockAgen", "Current login_attempts: ${currentAttempts + 1}")
+    }
+
+
+
+
+    private fun blockUserAccount() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("token", "") ?: ""
+                    val id = sharedPreferences.getString("merchant_id", "") ?: ""
+                    val response = webCaller.blockAgen(id, token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optString("status", "") ?: JSONArray()
+                        val message = jsonResponse.optBoolean("message", false)
+                        if (status as Boolean) {
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error : ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun changePassword() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var oldPassword: String? = null
+                var newPassword: String? = null
+
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "LSN01" -> {
+                            oldPassword = value
+                            formBodyBuilder.add("old_password", value)
+                        }
+                        "LSN02" -> {
+                            newPassword = value
+                            formBodyBuilder.add("new_password", value)
+                        }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("token", "") ?: ""
+                    val userId = sharedPreferences.getString("id", "") ?: ""
+                    val response = webCaller.changePassword(userId, oldPassword ?: "", newPassword ?: "", token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optBoolean("status", false) ?: JSONArray()
+                        val message = jsonResponse.optString("message", "")
+                        if (status as Boolean) {
+                            Log.d(TAG, "Password changed successfully.")
+                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
+                            navigateToScreen()  // Replace with your actual navigation function
+                        } else {
+                            Log.e(TAG, "Failed to change password.")
+                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun changePin() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var oldPin: String? = null
+                var newPin: String? = null
+
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "LSP01" -> {
+                            oldPin = value
+                            formBodyBuilder.add("old_password", value)
+                        }
+                        "LSP02" -> {
+                            newPin = value
+                            formBodyBuilder.add("new_password", value)
+                        }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("token", "") ?: ""
+                    val id = sharedPreferences.getString("merchant_id", "") ?:""
+                    val response = webCaller.changePin(id, oldPin ?: "", newPin ?: "", token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optBoolean("status", false) ?: JSONArray()
+                        val message = jsonResponse.optString("message", "")
+                        if (status as Boolean) {
+                            Log.d(TAG, "Password changed successfully.")
+                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
+                            navigateToScreen()  // Replace with your actual navigation function
+                        } else {
+                            Log.e(TAG, "Failed to change password.")
+                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+            }
+        }
+    }
+
+
 
     private fun setKeyboard(editText: EditText, component: Component) {
         val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
@@ -2498,6 +3104,109 @@ class FormActivity : AppCompatActivity() {
         })
     }
 
+    private fun startOtpTimer() {
+        otpTimer = object : CountDownTimer(60000, 1000) { // 2 minutes countdown
+            override fun onTick(millisUntilFinished: Long) {
+                // You can show the remaining time to the user if needed
+            }
+
+            override fun onFinish() {
+                msg03Value = null
+                Log.d("FormActivity", "OTP expired and cleared.")
+            }
+        }.start()
+    }
+
+    private fun cancelOtpTimer() {
+        otpTimer?.cancel()
+        otpTimer = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cancelOtpTimer() // Cancel the timer if activity is destroyed
+    }
+
+    private fun resendOtp() {
+        if (otpAttempts.size < 3) {
+            otpAttempts.add(System.currentTimeMillis())
+            val messageBody = lastMessageBody
+            Log.d("FORM", "LAST MESSAGE : $messageBody")
+            if (messageBody != null) {
+                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                    responseBody?.let { body ->
+                        lifecycleScope.launch {
+                            val screenJson = JSONObject(body)
+                            Log.d("FormActivity", "Response POST: $body")
+                            Log.d("FormActivity", "SCREEN JSON: $screenJson")
+
+                            // Mendapatkan array komponen dari JSON
+                            val compArray =
+                                screenJson.getJSONObject("screen").getJSONObject("comps")
+                                    .getJSONArray("comp")
+
+                            // Mencari komponen dengan ID "MSG03"
+                            var newMsg03Value: String? = null
+                            for (i in 0 until compArray.length()) {
+                                val compObject = compArray.getJSONObject(i)
+                                if (compObject.getString("comp_id") == "MSG03") {
+                                    newMsg03Value = compObject.getJSONObject("comp_values")
+                                        .getJSONArray("comp_value")
+                                        .getJSONObject(0)
+                                        .optString("value")
+                                    break
+                                }
+                            }
+
+                            if (newMsg03Value != null) {
+                                msg03Value = newMsg03Value
+                                Log.d("FormActivity", "NEW MSG03 : $msg03Value")
+                                Toast.makeText(
+                                    this@FormActivity,
+                                    "OTP baru telah dikirim",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                cancelOtpTimer()
+                                startOtpTimer()
+                            } else {
+                                Toast.makeText(
+                                    this@FormActivity,
+                                    "Gagal mendapatkan OTP baru",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } ?: run {
+                        Log.e("FormActivity", "Failed to fetch response body")
+                        Toast.makeText(
+                            this@FormActivity,
+                            "Gagal melakukan request ulang OTP",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                Log.e("FormActivity", "Failed to create message body, request not sent")
+                Toast.makeText(this@FormActivity, "Request body gagal dibuat", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }else {
+            val lastAttemptTime = otpAttempts.last()
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastAttemptTime < otpCooldownTime) {
+                Toast.makeText(
+                    this@FormActivity,
+                    "OTP send limit exceeded. Please wait 30 minutes.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                otpAttempts.clear()
+                otpAttempts.add(System.currentTimeMillis())
+                resendOtp()
+            }
+        }
+    }
 
     // Tambahkan logika untuk mengunggah file setelah service dengan ID CC0003 dijalankan
     private fun uploadFilesAfterService(serviceId: String) {

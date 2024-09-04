@@ -52,6 +52,7 @@ class MenuActivity : AppCompatActivity() {
     private var backToExit = false
     private lateinit var imageSlider: ViewPager2
     private lateinit var sliderAdapter: ImageSliderAdapter
+    private var isSaldoVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +72,7 @@ class MenuActivity : AppCompatActivity() {
         // Set the appropriate layout based on menuId
         setContentView(
             when (menuId) {
+                "PP00001" -> R.layout.profile_layout
                 "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
@@ -195,13 +197,21 @@ class MenuActivity : AppCompatActivity() {
         }
 
         // Set up check saldo button click listener
-        findViewById<ImageButton>(R.id.check_saldo_button)?.setOnClickListener {
+//        findViewById<ImageButton>(R.id.check_saldo_button)?.setOnClickListener {
             checkSaldo()
-        }
+//        }
 
         findViewById<ImageButton>(R.id.dashboard_nav)?.setOnClickListener {
             val intent = Intent(this, MenuActivity::class.java)
             intent.putExtra("formId", "MN00000")
+            startActivity(intent)
+        }
+
+        findViewById<ImageButton>(R.id.history_nav)?.setOnClickListener {
+            val intent = Intent(this@MenuActivity, FormActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_FORM_ID, "HY00001")
+            }
             startActivity(intent)
         }
     }
@@ -527,40 +537,56 @@ class MenuActivity : AppCompatActivity() {
                                 for (i in 0 until compArray.length()) {
                                     val comp = compArray.getJSONObject(i)
                                     val label = comp.optString("comp_lbl")
-                                    val value = comp.optJSONObject("comp_values")?.optJSONArray("comp_value")?.optJSONObject(0)?.optString("value")
+                                    val value = comp.optJSONObject("comp_values")
+                                        ?.optJSONArray("comp_value")?.optJSONObject(0)
+                                        ?.optString("value")
 
                                     if (label == "No Rekening") {
                                         accountNumber = value
                                     } else if (label == "Saldo Akhir") {
                                         saldo = value
-                                        if (saldo != null) {
-                                            if (saldo.contains("-")) {
-                                                saldo = saldo.replace("-", "")
-                                            }
-                                        }
-
-                                        if (saldo != null) {
-                                            if (saldo.contains(",")) {
-                                                saldo = saldo.replace(",", "")
-                                            }
-                                        }
-
+                                        saldo = saldo?.replace("-", "")?.replace(",", "")
                                         val saldoNumeric = saldo?.toDoubleOrNull() ?: 0.0
                                         saldo = formatRupiah(saldoNumeric)
                                     }
                                 }
 
                                 runOnUiThread {
-                                    findViewById<TextView>(R.id.account_number_text)?.text = "$accountNumber"
-                                    findViewById<TextView>(R.id.saldo_text)?.text = "$saldo"
-                                    Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
-                                    Log.d("MenuActivity", "Updated Saldo text: $saldo")
+                                    // Menampilkan nomor rekening secara langsung
+                                    findViewById<TextView>(R.id.account_number_text)?.text =
+                                        accountNumber ?: ""
+                                    Log.d(
+                                        "MenuActivity",
+                                        "Updated No Rekening text: $accountNumber"
+                                    )
+
+                                    // Tambahkan click listener untuk tombol saldo
+                                    val checkSaldoButton = findViewById<ImageButton>(R.id.check_saldo_button)
+                                    val saldoTextView = findViewById<TextView>(R.id.saldo_text)
+
+                                    checkSaldoButton?.setOnClickListener {
+                                        isSaldoVisible = !isSaldoVisible
+
+                                        // Tampilkan atau sembunyikan saldo
+                                        saldoTextView?.text = if (isSaldoVisible) saldo ?: "" else "XXXXXXXXX"
+
+                                        // Ganti ikon berdasarkan status saldo
+                                        checkSaldoButton.setImageResource(
+                                            if (isSaldoVisible) R.drawable.eye_open else R.drawable.eye_closed
+                                        )
+
+                                        Log.d(
+                                            "MenuActivity",
+                                            "Updated Saldo text: ${if (isSaldoVisible) saldo else "XXXXXXXXX"}, isSaldoVisible: $isSaldoVisible"
+                                        )
+                                    }
                                 }
                             }
                         } else {
                             Log.e("MenuActivity", "screen object is null in JSON response")
                             runOnUiThread {
-                                Toast.makeText(this, "Failed to fetch saldo", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, "Failed to fetch saldo", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                         }
                     } catch (e: Exception) {

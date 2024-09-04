@@ -3,12 +3,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp"
-    android:background="@drawable/card_background"
-    android:layout_margin="8dp"
+    android:padding="4dp"
+    android:background="@drawable/card_grey"
+    android:layout_margin="2dp"
     android:layout_gravity="center"
     android:elevation="4dp"
-    android:layout_marginBottom="20dp">
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -18,19 +19,34 @@
         android:layout_marginBottom="1dp">
 
         <TextView
-            android:id="@+id/textViewWaktu"
+            android:id="@+id/text_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="16sp"
             android:textColor="@color/black"
+
             android:paddingBottom="4dp"
             android:layout_alignParentStart="true"
             android:layout_alignParentLeft="true"
             android:layout_alignParentTop="true"
-            android:text="Waktu: 12:34:56"/>
+            android:textColorLink="@color/green"
+            android:text="Action"/>
 
         <TextView
-            android:id="@+id/textViewStatus"
+            android:id="@+id/text_format_trans"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/dark_grey"
+            android:paddingBottom="4dp"
+            android:layout_marginBottom="2dp"
+            android:layout_below="@id/text_action"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:text="Transaction Format"/>
+
+        <TextView
+            android:id="@+id/text_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="16sp"
@@ -40,33 +56,24 @@
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:layout_alignParentTop="true"
-            android:text="Status: Disetujui"/>
+            android:text="Status"/>
 
         <TextView
-            android:id="@+id/textViewNamaLengkap"
+            android:id="@+id/text_reply_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textColor="@color/black"
-            android:textStyle="bold"
-            android:paddingBottom="4dp"
+            android:layout_below="@id/text_status"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginTop="-10dp"
+            android:layout_marginEnd="0dp"
+            android:gravity="start|center_vertical"
+            android:layout_marginRight="5dp"
             android:layout_marginBottom="8dp"
-            android:layout_below="@id/textViewStatus"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:text="Nama Lengkap: John Doe"/>
-
-        <TextView
-            android:id="@+id/textViewNoIdentitas"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="16sp"
+            android:paddingBottom="2dp"
+            android:text="Reply Time"
             android:textColor="@color/dark_grey"
-            android:paddingBottom="4dp"
-            android:layout_below="@id/textViewNamaLengkap"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:text="No Identitas: 1234567890"/>
+            android:textSize="10sp" />
 
     </RelativeLayout>
 </LinearLayout>

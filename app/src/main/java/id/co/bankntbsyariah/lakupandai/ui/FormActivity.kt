@@ -89,6 +89,9 @@ import org.json.JSONArray
 import java.text.ParseException
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.style.StyleSpan
+
 
 class FormActivity : AppCompatActivity() {
 
@@ -865,11 +868,20 @@ class FormActivity : AppCompatActivity() {
                                         saldoStr = saldoStr.replace(",", "")
                                     }
 
-                                    val saldo = saldoStr.toDoubleOrNull()?: 0.0
+                                    val saldo = saldoStr.toDoubleOrNull() ?: 0.0
 
-                                    formatRupiah(saldo)
+                                    // Format saldo
+                                    val formattedSaldo = formatRupiah(saldo)
+
+                                    // Menggunakan SpannableString untuk menambahkan gaya bold
+                                    val spannable = SpannableString(formattedSaldo)
+                                    val boldSpan = StyleSpan(Typeface.BOLD)
+
+                                    // Misalkan kita ingin membuat seluruh teks saldo menjadi tebal
+                                    spannable.setSpan(boldSpan, 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+                                    spannable
                                 }
-
                                 else -> componentValue
                             }
 
@@ -891,9 +903,9 @@ class FormActivity : AppCompatActivity() {
                             }
 
                             if (screen.id == "TF00003") {
-                                setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                                setPadding(0.dpToPx(), 0.dpToPx(), 0.dpToPx(), 0.dpToPx())
                             } else {
-                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setPadding(0.dpToPx(), 0.dpToPx(), 0.dpToPx(), 0.dpToPx())
                             }
 
                             if (component.id == "APY00") {
@@ -915,9 +927,9 @@ class FormActivity : AppCompatActivity() {
                                     textSize = 15f
                                     setTypeface(null, Typeface.NORMAL)
                                     if (screen.id == "TF00003") {
-                                        setPadding(3.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
+                                        setPadding(0.dpToPx(), 3.dpToPx(), 16.dpToPx(), 2.dpToPx())
                                     } else {
-                                        setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                        setPadding(0.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
                                     }
                                     setTextColor(
                                         ContextCompat.getColor(
@@ -933,22 +945,22 @@ class FormActivity : AppCompatActivity() {
                                     addView(TextView(this@FormActivity).apply {
                                         text = rekeningValue
                                         textSize = 18f
-                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                        setPadding(0.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
                                     })
                                 } else {
                                     addView(TextView(this@FormActivity).apply {
                                         text = formattedValue
                                         textSize = 18f
-                                        setPadding(16.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
+                                        setPadding(0.dpToPx(), 0, 16.dpToPx(), 10.dpToPx())
                                     })
                                 }
 
                             }
                             if (screen.id != "TF00003") {
-                                background = ContextCompat.getDrawable(
-                                    this@FormActivity,
-                                    R.drawable.text_view_background
-                                )
+//                                background = ContextCompat.getDrawable(
+//                                    this@FormActivity,
+//                                    R.drawable.text_view_background
+//                                )
                             }
                         }
                     }
@@ -1326,7 +1338,7 @@ class FormActivity : AppCompatActivity() {
                                     val selectedValue = value.first
 
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] = selectedValue 
+                                        inputRekening[component.id] = selectedValue
                                     }
 
                                     val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
@@ -2524,6 +2536,8 @@ class FormActivity : AppCompatActivity() {
                         val id = userData?.optString("id")
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
+                        val terminalArray = merchantData?.optJSONArray("terminal")
+                        val terminalData = terminalArray?.getJSONObject(0)
 
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -2570,10 +2584,6 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("token", token)
                             editor.putString("fullname", fullname)
                             editor.putString("id", id)
-                            val terminalData = merchantData?.optJSONObject("terminal")
-                            if (terminalData != null) {
-                                editor.putString("tid", terminalData.optString("tid"))
-                            }
 
                             // Save merchant data
                             editor.putString("merchant_id", merchantData.optString("id"))

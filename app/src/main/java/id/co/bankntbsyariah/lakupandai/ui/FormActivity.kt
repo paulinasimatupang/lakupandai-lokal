@@ -2536,6 +2536,8 @@ class FormActivity : AppCompatActivity() {
                         val id = userData?.optString("id")
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
+                        val terminalArray = merchantData?.optJSONArray("terminal")
+                        val terminalData = terminalArray?.getJSONObject(0)
 
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
@@ -2582,10 +2584,6 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("token", token)
                             editor.putString("fullname", fullname)
                             editor.putString("id", id)
-                            val terminalData = merchantData?.optJSONObject("terminal")
-                            if (terminalData != null) {
-                                editor.putString("tid", terminalData.optString("tid"))
-                            }
 
                             // Save merchant data
                             editor.putString("merchant_id", merchantData.optString("id"))

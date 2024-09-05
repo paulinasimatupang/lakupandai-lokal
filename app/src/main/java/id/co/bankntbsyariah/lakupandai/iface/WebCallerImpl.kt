@@ -13,15 +13,15 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
     private val TAG = "WebCallerImpl"
 
-    override fun fetchNasabahList(branchId: String, token: String): ResponseBody? {
+    override fun fetchNasabahList(kode_agen: String, token: String): ResponseBody? {
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/nasabah/list/$branchId")
+            .url("http://reportntbs.selada.id/api/nasabah/list/$kode_agen")
             .addHeader("Authorization", "Bearer $token")
             .get() // Menggunakan GET tanpa request body
             .build()
 
         Log.d("Token", "Token : $token")
-        Log.d("Branchid", "Branchid : $branchId")
+        Log.d("Kode Agen", "Kode Agen : $kode_agen")
 
         return try {
             client.newCall(request).execute().let { response ->

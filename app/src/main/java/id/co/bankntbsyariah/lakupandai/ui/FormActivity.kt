@@ -584,9 +584,17 @@ class FormActivity : AppCompatActivity() {
                         // Perform data fetching asynchronously
                         lifecycleScope.launch {
                             val fetchedValue = withContext(Dispatchers.IO) {
-                                val branchid = getKodeCabangFromPreferences()
-                                val token = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE).getString("token", "") ?: ""
-                                branchid?.let { WebCallerImpl().fetchNasabahList(it, token) }?.string()
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val kode_agen = sharedPreferences.getString("kode_agen", "") ?: ""
+                                val token = sharedPreferences.getString("token", "") ?: ""
+
+                                Log.d("FormActivity", "BSA Kode Agen: $kode_agen")
+
+                                if (kode_agen.isNotEmpty()) {
+                                    WebCallerImpl().fetchNasabahList(kode_agen, token)?.string()
+                                } else {
+                                    null
+                                }
                             }
 
                             if (fetchedValue.isNullOrEmpty()) {
@@ -693,14 +701,13 @@ class FormActivity : AppCompatActivity() {
                                             replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
                                         }
 
-                                        // Add grouped data to the layout
                                         groupedData.forEach { (date, historyList) ->
                                             layout.addView(TextView(context).apply {
                                                 text = date
                                                 textSize = 15f
                                                 setTypeface(null, Typeface.BOLD)
                                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+                                                setTextColor(Color.parseColor("#0A6E44"))
                                             })
 
                                             historyList.forEach { history ->
@@ -1977,7 +1984,7 @@ class FormActivity : AppCompatActivity() {
             "Kode Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                val savedKodeAgen = sharedPreferences.getString("merchant_id", "")?: ""
+                val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
                 if (currentValue == "null" && savedKodeAgen != "0") {
                     Log.d("FormActivity", "Kode Agen diisi dengan nilai: $savedKodeAgen")
                     component.compValues?.compValue?.firstOrNull()?.value = savedKodeAgen
@@ -2503,7 +2510,7 @@ class FormActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
-            val savedKodeAgen = sharedPreferences.getString("merchant_id", "")?: ""
+            val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
@@ -2703,7 +2710,6 @@ class FormActivity : AppCompatActivity() {
                         val merchantData = userData?.optJSONObject("merchant")
                         val terminalArray = merchantData?.optJSONArray("terminal")
                         val terminalData = terminalArray?.getJSONObject(0)
-
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")

@@ -60,8 +60,10 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
     override fun fetchHistoryDetail(terminalId: String, messageId: String, token: String): ResponseBody? {
+        val url = "http://reportntbs.selada.id/api/history/detail?terminal_id=$terminalId&message_id=$messageId"
+
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/history/$terminalId/$messageId")
+            .url(url)
             .addHeader("Authorization", "Bearer $token")
             .get()
             .build()
@@ -69,7 +71,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         return try {
             client.newCall(request).execute().let { response ->
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to fetch history list: ${response.message}")
+                    Log.e(TAG, "Failed to fetch history detail: ${response.message}")
                     null
                 } else {
                     response.body
@@ -81,7 +83,6 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    @SuppressLint("SuspiciousIndentation")
     override fun changePassword(id: String, old_password: String, new_password: String, token: String): ResponseBody? {
         val formBody = FormBody.Builder()
             .add("id", id)

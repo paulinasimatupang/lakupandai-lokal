@@ -1316,12 +1316,24 @@ class FormActivity : AppCompatActivity() {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        addView(TextView(this@FormActivity).apply {
+                        // Label TextView
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 16f
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
 
+                            // Atur jarak antara label dan RadioGroup di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
+                        // RadioGroup
                         val radioGroup = RadioGroup(this@FormActivity).apply {
                             orientation = RadioGroup.VERTICAL
                         }
@@ -1329,7 +1341,7 @@ class FormActivity : AppCompatActivity() {
                         component.values.forEachIndexed { index, value ->
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
-                                textSize = 18f
+                                textSize = 16f // Ukuran teks untuk RadioButton
                                 id = View.generateViewId() // Assign a unique ID to each radio button
                             }
 
@@ -2509,16 +2521,21 @@ class FormActivity : AppCompatActivity() {
             val unf04Value = componentValues["SET10"] ?: ""
             val unf05Value = componentValues["NAR01"] ?: ""
             val rnr06Value = componentValues["TRF30"] ?: ""
+            val rnr07Value = componentValues["TRT07 "] ?: ""
+            val rnr08Value = componentValues["TRF31"] ?: ""
+            val rnr09Value = componentValues["TRF30"] ?: ""
+            val rnr10Value = componentValues["T0002"] ?: ""
+            val rnr11Value = componentValues["SET20"] ?: ""
 
             when (screen.id) {
                 "RCS0001" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$unf05Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
                 }
                 "TF00003" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan nomor rekening: $unf04Value. Transaksi Transfer berhasil dilakukan."
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr08Value , dengan nomor rekening: $rnr07Value . Berhasil melakukan transaksi transfer kepada $rnr09Value penerima dengan nominal $rnr10Value  ."
                 }
                 "BR001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value. Transaksi Tarik berhasil dilakukan."
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $rnr11Value. Transaksi Tarik berhasil dilakukan."
                 }
                 "BS001" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan nomor rekening: $unf04Value. Transaksi Setor berhasil dilakukan."

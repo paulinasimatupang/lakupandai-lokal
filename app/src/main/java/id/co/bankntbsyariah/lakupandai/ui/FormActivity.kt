@@ -556,10 +556,28 @@ class FormActivity : AppCompatActivity() {
                         // Create and configure the main layout
                         val layout = LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
-                            addView(createTextView(context, component.label, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
-                            addView(createTextView(context, "Loading...", 18f, Typeface.NORMAL, null, 16.dpToPx(), 10.dpToPx()))
-                        }
 
+                            // Adjust padding as per type 2
+                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+
+                            // Add label TextView with consistent styling
+                            addView(TextView(context).apply {
+                                text = component.label
+                                textSize = 15f
+                                setTypeface(null, Typeface.BOLD)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks label
+                            })
+
+                            // Add a placeholder TextView for "Loading..."
+                            addView(TextView(context).apply {
+                                text = "Loading..."
+                                textSize = 18f
+                                setTypeface(null, Typeface.NORMAL)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 10.dpToPx())
+                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks placeholder
+                            })
+                        }
                         // Add the layout to the container
                         container.addView(layout)
 
@@ -593,7 +611,13 @@ class FormActivity : AppCompatActivity() {
 
                             // Add grouped data to the layout
                             groupedData.forEach { (date, nasabahList) ->
-                                layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
+                                layout.addView(TextView(context).apply {
+                                    text = date
+                                    textSize = 15f
+                                    setTypeface(null, Typeface.BOLD)
+                                    setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                    setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+                                })
 
                                 nasabahList.forEach { nasabah ->
                                     // Inflate the item view layout
@@ -671,7 +695,13 @@ class FormActivity : AppCompatActivity() {
 
                                         // Add grouped data to the layout
                                         groupedData.forEach { (date, historyList) ->
-                                            layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
+                                            layout.addView(TextView(context).apply {
+                                                text = date
+                                                textSize = 15f
+                                                setTypeface(null, Typeface.BOLD)
+                                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+                                            })
 
                                             historyList.forEach { history ->
                                                 val replyTime = history.optString("reply_time", "")
@@ -757,7 +787,6 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
 
-
                     else {
                         LinearLayout(this@FormActivity).apply {
                             orientation = LinearLayout.VERTICAL
@@ -839,12 +868,7 @@ class FormActivity : AppCompatActivity() {
                                     textSize = 15f
                                     setTypeface(null, Typeface.BOLD)
                                     setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                    setTextColor(
-                                        ContextCompat.getColor(
-                                            this@FormActivity,
-                                            R.color.black
-                                        )
-                                    )
+                                    setTextColor(Color.parseColor("#0A6E44")) // Mengatur warna teks label
                                 })
                             } else {
                                 addView(TextView(this@FormActivity).apply {
@@ -856,12 +880,7 @@ class FormActivity : AppCompatActivity() {
                                     } else {
                                         setPadding(0.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
                                     }
-                                    setTextColor(
-                                        ContextCompat.getColor(
-                                            this@FormActivity,
-                                            R.color.black
-                                        )
-                                    )
+                                    setTextColor(Color.parseColor("#0A6E44")) // Mengatur warna teks label
                                 })
                                 if (screen.id == "RCCIF02") {
                                     val rekeningIndex = inputRekeningIndex.coerceAtMost(inputRekening.size - 1) // Pastikan tidak melebihi ukuran inputRekening

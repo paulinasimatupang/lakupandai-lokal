@@ -1878,7 +1878,7 @@ class FormActivity : AppCompatActivity() {
             "Kode Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0).toString()
+                val savedKodeAgen = sharedPreferences.getString("merchant_id", "")?: ""
                 if (currentValue == "null" && savedKodeAgen != "0") {
                     Log.d("FormActivity", "Kode Agen diisi dengan nilai: $savedKodeAgen")
                     component.compValues?.compValue?.firstOrNull()?.value = savedKodeAgen
@@ -2486,11 +2486,12 @@ class FormActivity : AppCompatActivity() {
             }
             val unf03Value = componentValues["UNF03"] ?: ""
             val unf01Value = componentValues["AG009"] ?: ""
+            val unf05Value = componentValues["NAR01"] ?: ""
             val unf04Value = componentValues["SET10"] ?: ""
             val rnr02Value = componentValues["RNR02"] ?: ""
             when (screen.id) {
                 "RCS0001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
+                    componentValues["MSG05"] = "Nasabah Yth.$unf05Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
                 }
                 "TF00003", "BR001", "BS001" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value.Transaksi berhasil dilakukan."

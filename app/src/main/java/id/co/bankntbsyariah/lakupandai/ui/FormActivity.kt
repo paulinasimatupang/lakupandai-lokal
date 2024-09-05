@@ -83,12 +83,8 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
-<<<<<<< HEAD
 import android.graphics.Color
-
-=======
 import okhttp3.RequestBody.Companion.asRequestBody
->>>>>>> 0647cd8aadc193ca7a1a29a1b3f2280050346c33
 
 class FormActivity : AppCompatActivity() {
 

@@ -748,7 +748,63 @@ class FormActivity : AppCompatActivity() {
                                                 }
 
                                                 // Inflate the item layout
-                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null)
+                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply{
+                                                    setOnClickListener {
+                                                        lifecycleScope.launch {
+                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                                            val token = preferences.getString("token", "") ?: ""
+                                                            val terminalId = preferences.getString("tid", "") ?: ""
+                                                            val messageId = msgId
+
+
+                                                            Log.d("FormActivity", "token: $token, tid: $terminalId, msg: $messageId")
+
+                                                            val responseBodyString = withContext(Dispatchers.IO) {
+                                                                try {
+                                                                    val responseBody = webCaller.fetchHistoryDetail(terminalId, messageId, token)
+
+                                                                    responseBody?.string()
+                                                                } catch (e: Exception) {
+                                                                    Log.e("FormActivity", "Error fetching history detail: ${e.message}", e)
+                                                                    null
+                                                                }
+                                                            }
+
+                                                            if (!responseBodyString.isNullOrEmpty()) {
+                                                                try {
+                                                                    val jsonResponse = JSONObject(responseBodyString)
+                                                                    val dataArray = jsonResponse.optJSONArray("data")
+
+                                                                    if (dataArray != null && dataArray.length() > 0) {
+                                                                        val dataObject = dataArray.getJSONObject(0)
+                                                                        val responseMessageString = dataObject.optString("response_message", "")
+                                                                        Log.d("FormActivity", "Response message ${responseMessageString}")
+                                                                        lifecycleScope.launch {
+                                                                            val screenJson =
+                                                                                JSONObject(responseMessageString)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(newScreen)
+                                                                        }
+                                                                    } else {
+                                                                        Log.d("FormActivity", "The JSON array is empty.")
+                                                                    }
+                                                                } catch (e: JSONException) {
+                                                                    Log.e("FormActivity", "Detail JSON parsing error: ${e.message}", e)
+                                                                    withContext(Dispatchers.Main) {
+                                                                        Toast.makeText(this@FormActivity, "Error parsing detail JSON response", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                withContext(Dispatchers.Main) {
+                                                                    Toast.makeText(this@FormActivity, "Failed to fetch detail", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
 
                                                 // Populate the item view with data
                                                 itemView.findViewById<TextView>(R.id.text_action).text = actionText
@@ -1374,7 +1430,7 @@ class FormActivity : AppCompatActivity() {
                 }
 
                 7 -> {
-                    Button(this).apply {
+                    val button = Button(this).apply {
                         text = component.label
                         setTextColor(getColor(R.color.white))
                         textSize = 18f
@@ -1447,14 +1503,26 @@ class FormActivity : AppCompatActivity() {
                                 handleButtonClick(component, screen)
                             }
                         }
-                    }.let { view ->
-                        // Ensure view is added with proper layout parameters
-                        container.addView(view, LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            setMargins(20, 20, 20, 20)
-                        })
+                    }
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(20, 20, 20, 20)
+                }
+
+                    if (component.id == "KM005" || component.id == "MSG10") {
+                        // Ensure buttontf is properly initialized and add button to it
+                        val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
+                            ?: LinearLayout(this).apply {
+                                id = R.id.button_type_7_container
+                                orientation = LinearLayout.VERTICAL
+                                container.addView(this)
+                            }
+
+                        buttontf.addView(button, params)
+                    } else {
+                        container.addView(button, params)
                     }
                 }
 

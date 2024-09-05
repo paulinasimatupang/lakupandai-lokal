@@ -2484,17 +2484,25 @@ class FormActivity : AppCompatActivity() {
                 }
 
             }
-            val unf03Value = componentValues["UNF03"] ?: ""
             val unf01Value = componentValues["AG009"] ?: ""
-            val unf05Value = componentValues["NAR01"] ?: ""
-            val unf04Value = componentValues["SET10"] ?: ""
             val rnr02Value = componentValues["RNR02"] ?: ""
+            val unf03Value = componentValues["UNF03"] ?: ""
+            val unf04Value = componentValues["SET10"] ?: ""
+            val unf05Value = componentValues["NAR01"] ?: ""
+            val rnr06Value = componentValues["TRF30"] ?: ""
+
             when (screen.id) {
                 "RCS0001" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$unf05Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
                 }
-                "TF00003", "BR001", "BS001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value.Transaksi berhasil dilakukan."
+                "TF00003" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan nomor rekening: $unf04Value. Transaksi Transfer berhasil dilakukan."
+                }
+                "BR001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value. Transaksi Tarik berhasil dilakukan."
+                }
+                "BS001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan nomor rekening: $unf04Value. Transaksi Setor berhasil dilakukan."
                 }
                 else -> {
                     componentValues["MSG05"] = "Pesan tidak diketahui."

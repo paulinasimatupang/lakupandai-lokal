@@ -98,4 +98,7 @@ dependencies {
     annotationProcessor ("com.github.bumptech.glide:compiler:4.15.1")
     implementation ("com.google.code.gson:gson:2.8.9")
     implementation ("com.github.gcacace:signature-pad:1.3.1")
+    implementation ("com.github.bumptech.glide:glide:4.12.0")
+    implementation ("com.github.bumptech.glide:compiler:4.12.0")
+
 }

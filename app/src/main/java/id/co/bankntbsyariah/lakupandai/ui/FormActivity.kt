@@ -83,6 +83,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
+import com.bumptech.glide.Glide
 import okhttp3.RequestBody.Companion.asRequestBody
 
 class FormActivity : AppCompatActivity() {
@@ -1646,49 +1647,6 @@ class FormActivity : AppCompatActivity() {
 
     }
 
-
-//    private fun saveSignatureToServer(file: File) {
-//        CoroutineScope(Dispatchers.IO).launch {
-//            val client = OkHttpClient.Builder()
-//                .connectTimeout(30, TimeUnit.SECONDS) // Increase connection timeout
-//                .writeTimeout(30, TimeUnit.SECONDS) // Increase write timeout
-//                .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
-//                .build()
-//
-//            val mediaType = "image/png".toMediaTypeOrNull()
-//            val requestBody = MultipartBody.Builder()
-//                .setType(MultipartBody.FORM)
-//                .addFormDataPart("file", file.name,
-//                    RequestBody.create(mediaType, file))
-//                .build()
-//
-//            val request = Request.Builder()
-//                .url("http://108.137.154.8:8081/ARRest/images")
-//                .post(requestBody)
-//                .build()
-//
-//            try {
-//                val response = client.newCall(request).execute()
-//                Log.d("FormActivity", "Response code: ${response.code}")
-//                Log.d("FormActivity", "Response body: ${response.body?.string()}")
-//                withContext(Dispatchers.Main) {
-//                    if (response.isSuccessful) {
-//                        Log.d("FormActivity", "Signature uploaded successfully")
-//                        Toast.makeText(this@FormActivity, "Signature uploaded successfully", Toast.LENGTH_SHORT).show()
-//                    } else {
-//                        Log.e("FormActivity", "Failed to upload signature: ${response.message}")
-//                        Toast.makeText(this@FormActivity, "Failed to upload signature", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                Log.e("FormActivity", "Error uploading signature: ${e.message}")
-//                withContext(Dispatchers.Main) {
-//                    Toast.makeText(this@FormActivity, "Error uploading signature", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
-
     private fun getStatusColor(context: Context, status: String): Int {
         return when (status) {
             "0", "1"-> ContextCompat.getColor(context, R.color.blue)
@@ -2207,6 +2165,7 @@ class FormActivity : AppCompatActivity() {
                                             putExtra("RETURN_TO_ROOT", false)
                                         }
                                         startActivity(intent)
+
                                     } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
                                         newScreen.id = "CCIF001"
                                         var newScreenId = newScreen.id
@@ -2417,7 +2376,7 @@ class FormActivity : AppCompatActivity() {
                     componentValues["MSG05"] = "Pesan tidak diketahui."
                 }
             }
-            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03")
+            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03", "SIG04", "SIG05", "SIG06")
 
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
@@ -3015,20 +2974,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-//
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-//            // Dapatkan foto yang diambil
-//            photo = data?.extras?.get("data") as? Bitmap
-//
-//            // Tampilkan foto yang diambil di ImageView yang sesuai
-//            when (photoType) {
-//                "KTP" -> imageViewKTP.setImageBitmap(photo)
-//                "Orang" -> imageViewOrang.setImageBitmap(photo)
-//            }
-//        }
-//    }
 
     private fun openCameraIntent() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
@@ -3208,31 +3153,33 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    // Tambahkan logika untuk mengunggah file setelah service dengan ID CC0003 dijalankan
-    private fun uploadFilesAfterService(serviceId: String) {
-        if (serviceId == "CC0003") {
-            val delayMillis: Long = 15000 // Delay 15 detik sebelum mengunggah
-            val handler = Handler(Looper.getMainLooper())
+    // Fungsi untuk memuat 3 gambar dari server berdasarkan NIK
+    private fun loadImagesFromServer() {
+        // Ambil nilai NIK dari variabel global
+        val nik = nikValue ?: "unknown"
+        val ktpUrl = "http://108.137.154.8:8080/document/image/KTP_$nik.png"
+        val fotoUrl = "http://108.137.154.8:8080/document/image/FOTO_$nik.png"
+        val ttdUrl = "http://108.137.154.8:8080/document/image/TTD_$nik.png"
 
-            handler.postDelayed({
-                val url = "http://108.137.154.8:8080/ARRest/fileupload"
+        // Menggunakan Glide untuk memuat gambar KTP dari URL
+        Glide.with(this)
+            .load(ktpUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
+            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
+            .into(findViewById(R.id.imageKTP)) // Masukkan gambar ke dalam imageKTP
 
-                // Mengunggah foto orang
-                fileFotoOrang?.let { file ->
-                    uploadImageFile(file, url)
-                }
+        // Menggunakan Glide untuk memuat gambar Foto dari URL
+        Glide.with(this)
+            .load(fotoUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
+            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
+            .into(findViewById(R.id.imageOrang)) // Masukkan gambar ke dalam imageOrang
 
-                // Mengunggah KTP
-                fileFotoKTP?.let { file ->
-                    uploadImageFile(file, url)
-                }
-
-                // Mengunggah tanda tangan
-                signatureFile?.let { file ->
-                    uploadImageFile(file, url)
-                }
-
-            }, delayMillis)
-        }
+        // Menggunakan Glide untuk memuat gambar TTD dari URL
+        Glide.with(this)
+            .load(ttdUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
+            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
+            .into(findViewById(R.id.imageTTD)) // Masukkan gambar ke dalam imageTTD
     }
 }

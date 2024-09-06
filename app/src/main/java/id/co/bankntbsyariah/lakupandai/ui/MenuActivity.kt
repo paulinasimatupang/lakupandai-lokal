@@ -214,6 +214,14 @@ class MenuActivity : AppCompatActivity() {
             }
             startActivity(intent)
         }
+
+        findViewById<ImageButton>(R.id.history_bsa_nav)?.setOnClickListener {
+            val intent = Intent(this@MenuActivity, FormActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_FORM_ID, "HR00001")
+            }
+            startActivity(intent)
+        }
     }
 
     private fun showError(message: String) {

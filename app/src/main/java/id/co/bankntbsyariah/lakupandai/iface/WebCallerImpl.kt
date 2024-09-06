@@ -13,15 +13,15 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
     private val TAG = "WebCallerImpl"
 
-    override fun fetchNasabahList(branchId: String, token: String): ResponseBody? {
+    override fun fetchNasabahList(kode_agen: String, token: String): ResponseBody? {
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/nasabah/list/$branchId")
+            .url("http://reportntbs.selada.id/api/nasabah/list/$kode_agen")
             .addHeader("Authorization", "Bearer $token")
             .get() // Menggunakan GET tanpa request body
             .build()
 
         Log.d("Token", "Token : $token")
-        Log.d("Branchid", "Branchid : $branchId")
+        Log.d("Kode Agen", "Kode Agen : $kode_agen")
 
         return try {
             client.newCall(request).execute().let { response ->
@@ -60,8 +60,10 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
     override fun fetchHistoryDetail(terminalId: String, messageId: String, token: String): ResponseBody? {
+        val url = "http://reportntbs.selada.id/api/history/detail?terminal_id=$terminalId&message_id=$messageId"
+
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/history/$terminalId/$messageId")
+            .url(url)
             .addHeader("Authorization", "Bearer $token")
             .get()
             .build()
@@ -69,7 +71,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         return try {
             client.newCall(request).execute().let { response ->
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to fetch history list: ${response.message}")
+                    Log.e(TAG, "Failed to fetch history detail: ${response.message}")
                     null
                 } else {
                     response.body
@@ -81,7 +83,6 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    @SuppressLint("SuspiciousIndentation")
     override fun changePassword(id: String, old_password: String, new_password: String, token: String): ResponseBody? {
         val formBody = FormBody.Builder()
             .add("id", id)

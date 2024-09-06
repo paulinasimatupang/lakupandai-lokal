@@ -27,7 +27,9 @@ import okhttp3.OkHttpClient
 class RecyclerViewMenuAdapter(
     private val menuList: ArrayList<MenuItem>,
     private val context: Context,
-    private val isHamburger: Boolean
+    private val isHamburger: Boolean,
+    private val isProfile: Boolean
+
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
     val TAG: String  // Define a tag for logging
         get() = "ImageFetcher"
@@ -39,12 +41,14 @@ class RecyclerViewMenuAdapter(
         val itemView = layoutInflater.inflate(
             if (isHamburger) {
                 R.layout.recycler_list_menu
+            } else if(isProfile){
+                R.layout.recycler_profile_list
             } else {
                 R.layout.recycler_view_menu_item
             },
             parent, false
         )
-        return MenuViewHolder(itemView)
+        return MenuViewHolder(itemView, isProfile)
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
@@ -75,14 +79,23 @@ class RecyclerViewMenuAdapter(
             val menuItem = menuList[position]
             val iconName = "${menuItem.image}.png"
 
-            Glide.with(context)
-                .load("http://108.137.154.8:8081/ARRest/static/$iconName")
-                .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))
-                .into(holder.menuImage)
+            holder.menuImage?.let {
+                Glide.with(context)
+                    .load("http://108.137.154.8:8081/ARRest/static/$iconName")
+                    .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))
+                    .into(it)
+            }
 
             holder.menuTitle.text = menuList[position].title
-            holder.menuSubtitle.text = menuList[position].subtitle
-            holder.menuDescription.text = menuList[position].description
+
+            if (isProfile) {
+                holder.menuSubtitle?.visibility = View.GONE
+                holder.menuDescription?.visibility = View.GONE
+                holder.menuImage?.visibility = View.GONE
+            } else {
+                holder.menuSubtitle?.text = menuItem.subtitle
+                holder.menuDescription?.text = menuItem.description
+            }
             holder.itemView.setOnClickListener {
                 Log.d(TAG, "Menu item with comp_icon: $iconName clicked")
                 (context as MenuActivity).onMenuItemClick(position)
@@ -147,10 +160,19 @@ class RecyclerViewMenuAdapter(
         return menuList.size
     }
 
-    class MenuViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val menuImage: ImageView = itemView.findViewById(R.id.header_image)
+    class MenuViewHolder(itemView: View, isProfile: Boolean) : RecyclerView.ViewHolder(itemView) {
         val menuTitle: TextView = itemView.findViewById(R.id.title)
-        val menuSubtitle: TextView = itemView.findViewById(R.id.subhead)
-        val menuDescription: TextView = itemView.findViewById(R.id.body)
+
+        val menuImage: ImageView? = if (!isProfile) itemView.findViewById(R.id.header_image) else null
+        val menuSubtitle: TextView? = if (!isProfile) itemView.findViewById(R.id.subhead) else null
+        val menuDescription: TextView? = if (!isProfile) itemView.findViewById(R.id.body) else null
+
+        init {
+            if (isProfile) {
+                menuImage?.visibility = View.GONE
+                menuSubtitle?.visibility = View.GONE
+                menuDescription?.visibility = View.GONE
+            }
+        }
     }
 }

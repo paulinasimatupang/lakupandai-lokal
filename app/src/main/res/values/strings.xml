@@ -27,6 +27,18 @@
     <string name="tarik_tunai">Tarik Tunai</string>
     <string name="default_title">Default Title</string> <!-- Optional default title -->
 
+    <string-array name="sort_options">
+        <item>Sort by Name</item>
+        <item>Sort by Time</item>
+        <item>Sort by Status</item>
+    </string-array>
+
+
+    <string-array name="sort_options1">
+        <item>Sort by Date</item>
+        <item>Sort by Status</item>
+        <item>Sort by Transaction Type</item>
+    </string-array>
 
     <!--    Templates-->
     <string name="footer_text">Laku Pandai - NTB Syariah</string>

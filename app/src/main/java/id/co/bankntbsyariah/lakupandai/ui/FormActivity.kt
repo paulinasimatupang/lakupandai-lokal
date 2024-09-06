@@ -83,6 +83,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
+import android.graphics.Color
 import com.bumptech.glide.Glide
 import okhttp3.RequestBody.Companion.asRequestBody
 
@@ -556,19 +557,54 @@ class FormActivity : AppCompatActivity() {
                         // Create and configure the main layout
                         val layout = LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
-                            addView(createTextView(context, component.label, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
-                            addView(createTextView(context, "Loading...", 18f, Typeface.NORMAL, null, 16.dpToPx(), 10.dpToPx()))
-                        }
 
-                        // Add the layout to the container
+                            // Adjust padding as per type 2
+                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+
+                            // Add label TextView with consistent styling
+                            addView(TextView(context).apply {
+                                text = component.label
+                                textSize = 15f
+                                setTypeface(null, Typeface.BOLD)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks label
+                            })
+
+                            // Add a placeholder TextView for "Loading..."
+                            addView(TextView(context).apply {
+                                text = "Loading..."
+                                textSize = 18f
+                                setTypeface(null, Typeface.NORMAL)
+                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 10.dpToPx())
+                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks placeholder
+                            })
+                        }
+                        // Inflate the search and sort layout
+                        val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
+                        container.addView(searchLayout)
+
+                        // Initialize search and sort views
+                        val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
+                        val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
+                        val searchContainer = searchLayout.findViewById<LinearLayout>(R.id.container)
+
+                        // Add the main layout to the container
                         container.addView(layout)
 
                         // Perform data fetching asynchronously
                         lifecycleScope.launch {
                             val fetchedValue = withContext(Dispatchers.IO) {
-                                val branchid = getKodeCabangFromPreferences()
-                                val token = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE).getString("token", "") ?: ""
-                                branchid?.let { WebCallerImpl().fetchNasabahList(it, token) }?.string()
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val kodeAgen = sharedPreferences.getString("kode_agen", "") ?: ""
+                                val token = sharedPreferences.getString("token", "") ?: ""
+
+                                Log.d("FormActivity", "BSA Kode Agen: $kodeAgen")
+
+                                if (kodeAgen.isNotEmpty()) {
+                                    WebCallerImpl().fetchNasabahList(kodeAgen, token)?.string()
+                                } else {
+                                    null
+                                }
                             }
 
                             if (fetchedValue.isNullOrEmpty()) {
@@ -591,9 +627,15 @@ class FormActivity : AppCompatActivity() {
                                 requestTime.split(" ").getOrNull(0) ?: "Unknown Date"
                             }
 
-                            // Add grouped data to the layout
+                            // Add grouped data to the main layout
                             groupedData.forEach { (date, nasabahList) ->
-                                layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
+                                layout.addView(TextView(context).apply {
+                                    text = date
+                                    textSize = 15f
+                                    setTypeface(null, Typeface.BOLD)
+                                    setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                    setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+                                })
 
                                 nasabahList.forEach { nasabah ->
                                     // Inflate the item view layout
@@ -626,15 +668,60 @@ class FormActivity : AppCompatActivity() {
                                     }
                                     itemView.layoutParams = layoutParams
 
-                                    // Add the item view to the layout
+                                    // Add the item view to the main layout
                                     layout.addView(itemView)
                                 }
+                            }
+
+                            // Set up search and sort functionality
+                            searchBar.addTextChangedListener(object : TextWatcher {
+                                override fun afterTextChanged(s: Editable?) {
+                                    val searchText = s.toString().lowercase()
+                                    val filteredDataList = dataList.filter {
+                                        it.getString("nama_lengkap").lowercase().contains(searchText) ||
+                                                it.getString("no_identitas").lowercase().contains(searchText)
+                                    }
+                                    refreshData(filteredDataList, layout, context)
+                                }
+
+                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                            })
+
+                            sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                                    val sortOption = parent?.getItemAtPosition(position) as String
+                                    val sortedDataList = when (sortOption) {
+                                        "Sort by Name" -> dataList.sortedBy { it.getString("nama_lengkap").lowercase() }
+                                        "Sort by Time" -> dataList.sortedBy { it.getString("request_time") }
+                                        "Sort by Status" -> dataList.sortedBy { it.getString("status") }
+                                        else -> dataList
+                                    }
+                                    refreshData(sortedDataList, layout, context)
+                                }
+
+                                override fun onNothingSelected(parent: AdapterView<*>?) {}
                             }
                         }
                     }
 
                     else if (component.id == "HY001") {
                         val context = this@FormActivity
+                        val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
+                        container.addView(searchLayout)
+
+                        // Initialize search and sort views
+                        val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
+                        val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
+                        val searchContainer = searchLayout.findViewById<LinearLayout>(R.id.container)
+
+                        // Initialize sort options
+                        val sortOptions = resources.getStringArray(R.array.sort_options1)
+                        val sortAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, sortOptions)
+                        sortAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        sortSpinner.adapter = sortAdapter
+
+                        val dataList = mutableListOf<JSONObject>() // Use mutableListOf to store data
                         LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
                             setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
@@ -671,7 +758,13 @@ class FormActivity : AppCompatActivity() {
 
                                         // Add grouped data to the layout
                                         groupedData.forEach { (date, historyList) ->
-                                            layout.addView(createTextView(context, date, 15f, Typeface.BOLD, R.color.black, 16.dpToPx(), 8.dpToPx()))
+                                            layout.addView(TextView(context).apply {
+                                                text = date
+                                                textSize = 15f
+                                                setTypeface(null, Typeface.BOLD)
+                                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                                setTextColor(Color.parseColor("#0A6E44"))
+                                            })
 
                                             historyList.forEach { history ->
                                                 val replyTime = history.optString("reply_time", "")
@@ -718,7 +811,111 @@ class FormActivity : AppCompatActivity() {
                                                 }
 
                                                 // Inflate the item layout
-                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null)
+                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply{
+                                                    setOnClickListener {
+                                                        lifecycleScope.launch {
+                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                                            val token = preferences.getString("token", "") ?: ""
+                                                            val terminalId = preferences.getString("tid", "") ?: ""
+                                                            val messageId = msgId
+
+
+                                                            Log.d("FormActivity", "token: $token, tid: $terminalId, msg: $messageId")
+
+                                                            val responseBodyString = withContext(Dispatchers.IO) {
+                                                                try {
+                                                                    val responseBody = webCaller.fetchHistoryDetail(terminalId, messageId, token)
+
+                                                                    responseBody?.string()
+                                                                } catch (e: Exception) {
+                                                                    Log.e("FormActivity", "Error fetching history detail: ${e.message}", e)
+                                                                    null
+                                                                }
+                                                            }
+
+                                                            if (!responseBodyString.isNullOrEmpty()) {
+                                                                try {
+                                                                    val jsonResponse = JSONObject(responseBodyString)
+                                                                    val dataArray = jsonResponse.optJSONArray("data")
+
+                                                                    if (dataArray != null && dataArray.length() > 0) {
+                                                                        val dataObject = dataArray.getJSONObject(0)
+                                                                        val responseMessageString = dataObject.optString("response_message", "")
+                                                                        Log.d("FormActivity", "Response message ${responseMessageString}")
+                                                                        lifecycleScope.launch {
+                                                                            val screenJson =
+                                                                                JSONObject(responseMessageString)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(newScreen)
+                                                                        }
+                                                                    } else {
+                                                                        Log.d("FormActivity", "The JSON array is empty.")
+                                                                    }
+                                                                } catch (e: JSONException) {
+                                                                    Log.e("FormActivity", "Detail JSON parsing error: ${e.message}", e)
+                                                                    withContext(Dispatchers.Main) {
+                                                                        Toast.makeText(this@FormActivity, "Error parsing detail JSON response", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                withContext(Dispatchers.Main) {
+                                                                    Toast.makeText(this@FormActivity, "Failed to fetch detail", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                            searchBar.addTextChangedListener(object : TextWatcher {
+                                                                override fun afterTextChanged(s: Editable?) {
+                                                                    val searchText = s.toString().lowercase()
+                                                                    val filteredDataList = dataList.filter {
+                                                                        it.optString("nama_rek", "").lowercase().contains(searchText) ||
+                                                                                it.optString("status", "").lowercase().contains(searchText)
+                                                                    }
+                                                                    refreshDataTransfer(filteredDataList.groupBy {
+                                                                        val replyTime = it.optString("reply_time", "")
+                                                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                                                    }, searchContainer, context)
+                                                                }
+
+                                                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                                            })
+
+                                                            // Set up sort functionality
+                                                            sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                                                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                                                                    val sortOption1 = parent?.getItemAtPosition(position) as String
+                                                                    val sortedDataList = when (sortOption1) {
+                                                                        "Sort by Date" -> dataList.sortedBy {
+                                                                            try {
+                                                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                                                val date = originalFormat.parse(it.optString("reply_time", ""))
+                                                                                date ?: Date(0) // Default to epoch if parsing fails
+                                                                            } catch (e: ParseException) {
+                                                                                Date(0)
+                                                                            }
+                                                                        }
+                                                                        "Sort by Status" -> dataList.sortedBy { it.optString("status", "") }
+                                                                        "Sort by Transaction Type" -> dataList.sortedBy {
+                                                                            val requestMessage = it.optString("request_message", "")
+                                                                            val requestMessageJson = JSONObject(requestMessage.trim())
+                                                                            val msgObject = requestMessageJson.getJSONObject("msg")
+                                                                            msgObject.optString("msg_si", "")
+                                                                        }
+                                                                        else -> dataList
+                                                                    }
+                                                                    refreshDataTransfer(sortedDataList.groupBy {
+                                                                        val replyTime = it.optString("reply_time", "")
+                                                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                                                    }, searchContainer, context)
+                                                                }
+
+                                                                override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                                            }
+                                                        }
+                                                    }
+                                                }
 
                                                 // Populate the item view with data
                                                 itemView.findViewById<TextView>(R.id.text_action).text = actionText
@@ -839,12 +1036,7 @@ class FormActivity : AppCompatActivity() {
                                     textSize = 15f
                                     setTypeface(null, Typeface.BOLD)
                                     setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                    setTextColor(
-                                        ContextCompat.getColor(
-                                            this@FormActivity,
-                                            R.color.black
-                                        )
-                                    )
+                                    setTextColor(Color.parseColor("#0A6E44")) // Mengatur warna teks label
                                 })
                             } else {
                                 addView(TextView(this@FormActivity).apply {
@@ -856,12 +1048,7 @@ class FormActivity : AppCompatActivity() {
                                     } else {
                                         setPadding(0.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
                                     }
-                                    setTextColor(
-                                        ContextCompat.getColor(
-                                            this@FormActivity,
-                                            R.color.black
-                                        )
-                                    )
+                                    setTextColor(Color.parseColor("#0A6E44")) // Mengatur warna teks label
                                 })
                                 if (screen.id == "RCCIF02") {
                                     val rekeningIndex = inputRekeningIndex.coerceAtMost(inputRekening.size - 1) // Pastikan tidak melebihi ukuran inputRekening
@@ -894,15 +1081,29 @@ class FormActivity : AppCompatActivity() {
                 2 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan EditText di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 16dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             background = getDrawable(R.drawable.edit_text_background)
                             id = View.generateViewId()
                             tag = component.id
+                            setTextSize(16f) // Ukuran teks untuk input
+                            setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
                         }
                         inputValues[component.id] = ""
 
@@ -969,33 +1170,39 @@ class FormActivity : AppCompatActivity() {
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
+
+                        // TextView untuk label
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan EditText di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
+                        // EditText untuk input password
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             inputType =
                                 android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.pass_bg)
                             id = View.generateViewId()
-                            textSize = 18f
+                            setTextSize(16f) // Ukuran teks untuk input
+                            setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
 
                             // Adjust the padding to move the hint text slightly to the right
-                            setPadding(
-                                48,
-                                paddingTop,
-                                48,
-                                paddingBottom
-                            ) // Adjust left and right padding
+                            setPadding(48, paddingTop, 48, paddingBottom) // Adjust left and right padding
 
                             // Set the eye icon to the right of the EditText
-                            setCompoundDrawablesWithIntrinsicBounds(
-                                0,
-                                0,
-                                R.drawable.ic_eye_closed,
-                                0
-                            )
+                            setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
 
                             // Add padding between the text and eye icon
                             setCompoundDrawablePadding(16)
@@ -1035,15 +1242,28 @@ class FormActivity : AppCompatActivity() {
                         addView(editText)
                     }
                 }
+
                 4 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        addView(TextView(this@FormActivity).apply {
+                        // TextView untuk label
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             textSize = 16f
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan Spinner di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
 
                         var compOption = component.compValues?.compValue
 
@@ -1094,10 +1314,14 @@ class FormActivity : AppCompatActivity() {
                                 )
                                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                                 this.adapter = adapter
+
+                                // Set margin untuk spinner
                                 layoutParams = LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
-                                )
+                                ).apply {
+                                    setMargins(0, 0, 0, 20) // Margin bawah 20dp untuk jarak antar elemen
+                                }
                             }
 
                             spinner.onItemSelectedListener =
@@ -1122,7 +1346,7 @@ class FormActivity : AppCompatActivity() {
                                         val selectedCompValue = selectedPair.second
 
                                         if (screen.id == "CCIF001") {
-                                            inputRekening[component.id] = selectedValue ?: "" // Now storing selectedValue
+                                            inputRekening[component.id] = selectedValue ?: "" // Menyimpan selectedValue
                                         }
 
                                         Log.d(
@@ -1136,7 +1360,7 @@ class FormActivity : AppCompatActivity() {
                                         )
 
                                         when (component.id) {
-                                            "PIL03"-> {
+                                            "PIL03" -> {
                                                 pickOTP = selectedValue
                                                 pickOTP = selectedValue
                                                 Log.d("Form", "PICK OTP: $selectedValue")
@@ -1154,7 +1378,8 @@ class FormActivity : AppCompatActivity() {
                                                     pickOTP = ""
 
                                                     Toast.makeText(this@FormActivity, "Validasi gagal: Pilih WA atau SMS", Toast.LENGTH_SHORT).show()
-                                                }                                            }
+                                                }
+                                            }
                                             "CB001" -> {
                                                 if (selectedCompValue != null) {
                                                     inputValues[component.id] = selectedCompValue.replace("[OI]", "")
@@ -1183,8 +1408,7 @@ class FormActivity : AppCompatActivity() {
                                                 )
                                             }
 
-                                            "CIF23" -> inputValues[component.id] =
-                                                (position - 1).toString()
+                                            "CIF23" -> inputValues[component.id] = (position - 1).toString()
 
                                             "CIF14" -> {
                                                 if (selectedCompValue != null) {
@@ -1210,11 +1434,18 @@ class FormActivity : AppCompatActivity() {
 
                             addView(spinner)
                         }
+                    }.let { view ->
+                        container.addView(view, LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            setMargins(20, 20, 20, 20) // Margin untuk seluruh view
+                        })
                     }
                 }
 
                 5 -> {
-                    LinearLayout(this).apply {
+                    LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@FormActivity).apply {
                             text = component.label
@@ -1222,33 +1453,58 @@ class FormActivity : AppCompatActivity() {
                             setTypeface(null, Typeface.BOLD)
                         })
 
+                        val selectedValues = mutableSetOf<Int>() // Set to track selected values
+
                         component.values.forEachIndexed { index, value ->
                             val checkBox = CheckBox(this@FormActivity).apply {
                                 text = value.first
                             }
+
                             checkBox.setOnCheckedChangeListener { _, isChecked ->
                                 if (screen.id == "CCIF001") {
                                     inputRekening[component.id] = inputValues[component.id] ?: ""
                                 }
+
                                 if (isChecked) {
-                                    inputValues[component.id] = index.toString()
+                                    selectedValues.add(index)
                                 } else {
-                                    inputValues.remove(component.id)
+                                    selectedValues.remove(index)
                                 }
+
+                                inputValues[component.id] = selectedValues.joinToString(",") { it.toString() }
+
+                                Log.d(
+                                    "FormActivity",
+                                    "Component ID: ${component.id}, Selected Values: ${inputValues[component.id]}"
+                                )
                             }
+
                             addView(checkBox)
                         }
                     }
                 }
                 6 -> {
-                    LinearLayout(this).apply {
+                    LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
 
-                        addView(TextView(this@FormActivity).apply {
+                        // Label TextView
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
-                            textSize = 16f
-                        })
+                            setTypeface(null, Typeface.BOLD)
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
 
+                            // Atur jarak antara label dan RadioGroup di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
+                        // RadioGroup
                         val radioGroup = RadioGroup(this@FormActivity).apply {
                             orientation = RadioGroup.VERTICAL
                         }
@@ -1256,8 +1512,10 @@ class FormActivity : AppCompatActivity() {
                         component.values.forEachIndexed { index, value ->
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
-                                textSize = 18f
+                                textSize = 16f // Ukuran teks untuk RadioButton
+                                id = View.generateViewId() // Assign a unique ID to each radio button
                             }
+
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
                                 if (isChecked) {
                                     val selectedValue = value.first
@@ -1266,14 +1524,19 @@ class FormActivity : AppCompatActivity() {
                                         inputRekening[component.id] = selectedValue
                                     }
 
-                                    val valueToSave = if (component.id in listOf("CIF05", "CIF17", "CIF07", "CIF21")) {
-                                        (index + 1).toString()
-                                    } else {
-                                        index.toString()
+                                    val valueToSave = when (component.id) {
+                                        "CIF05", "CIF17", "CIF07", "CIF21" -> (index + 1).toString()
+                                        else -> index.toString()
                                     }
                                     inputValues[component.id] = valueToSave
+
+                                    Log.d(
+                                        "FormActivity",
+                                        "Component ID: ${component.id}, Selected Value: $selectedValue, Saved Value: $valueToSave"
+                                    )
                                 }
                             }
+
                             radioGroup.addView(radioButton)
                         }
 
@@ -1282,7 +1545,7 @@ class FormActivity : AppCompatActivity() {
                 }
 
                 7 -> {
-                    Button(this).apply {
+                    val button = Button(this).apply {
                         text = component.label
                         setTextColor(getColor(R.color.white))
                         textSize = 18f
@@ -1355,14 +1618,26 @@ class FormActivity : AppCompatActivity() {
                                 handleButtonClick(component, screen)
                             }
                         }
-                    }.let { view ->
-                        // Ensure view is added with proper layout parameters
-                        container.addView(view, LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            setMargins(20, 20, 20, 20)
-                        })
+                    }
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(20, 20, 20, 20)
+                }
+
+                    if (component.id == "KM005" || component.id == "MSG10") {
+                        // Ensure buttontf is properly initialized and add button to it
+                        val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
+                            ?: LinearLayout(this).apply {
+                                id = R.id.button_type_7_container
+                                orientation = LinearLayout.VERTICAL
+                                container.addView(this)
+                            }
+
+                        buttontf.addView(button, params)
+                    } else {
+                        container.addView(button, params)
                     }
                 }
                 15 -> {
@@ -1372,16 +1647,16 @@ class FormActivity : AppCompatActivity() {
 
                     val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
 
-                    if (resendOtpTextView != null) {
+                    // Setup Resend OTP TextView
+                    resendOtpTextView?.let {
                         Log.e("FormActivity", "RESEND OTP NOT null.")
-                        resendOtpTextView.setOnClickListener {
-                            resendOtp()
-                        }
+                        it.setOnClickListener { resendOtp() }
 
                         val text = "Resend OTP"
-                        val spannable = SpannableString(text)
-                        spannable.setSpan(UnderlineSpan(), 0, text.length, 0)
-                        resendOtpTextView.text = spannable
+                        val spannable = SpannableString(text).apply {
+                            setSpan(UnderlineSpan(), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        it.text = spannable
                     }
 
                     val countDownTimer = object : CountDownTimer(120000, 1000) {
@@ -1400,15 +1675,15 @@ class FormActivity : AppCompatActivity() {
 
                     countDownTimer.start()
 
-                    val otpDigit1 = otpView.findViewById<EditText>(R.id.otpDigit1)
-                    val otpDigit2 = otpView.findViewById<EditText>(R.id.otpDigit2)
-                    val otpDigit3 = otpView.findViewById<EditText>(R.id.otpDigit3)
-                    val otpDigit4 = otpView.findViewById<EditText>(R.id.otpDigit4)
-                    val otpDigit5 = otpView.findViewById<EditText>(R.id.otpDigit5)
-                    val otpDigit6 = otpView.findViewById<EditText>(R.id.otpDigit6)
-
-
-                    val otpDigits = listOf(otpDigit1, otpDigit2, otpDigit3, otpDigit4, otpDigit5, otpDigit6)
+                    // Setup OTP Digits
+                    val otpDigits = listOf(
+                        otpView.findViewById<EditText>(R.id.otpDigit1),
+                        otpView.findViewById<EditText>(R.id.otpDigit2),
+                        otpView.findViewById<EditText>(R.id.otpDigit3),
+                        otpView.findViewById<EditText>(R.id.otpDigit4),
+                        otpView.findViewById<EditText>(R.id.otpDigit5),
+                        otpView.findViewById<EditText>(R.id.otpDigit6)
+                    )
 
                     otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
@@ -1444,23 +1719,40 @@ class FormActivity : AppCompatActivity() {
                 16 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
+
+                        // TextView untuk label
+                        val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
                             setTypeface(null, Typeface.BOLD)
-                        })
+                            setTextSize(18f) // Ukuran teks untuk label
+                            setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
+
+                            // Atur jarak antara label dan EditText di bawahnya
+                            val params = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            layoutParams = params
+                        }
+                        addView(labelTextView)
+
+                        // EditText untuk input tanggal
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             background = getDrawable(R.drawable.date_input)
                             id = View.generateViewId()
                             tag = component.id
-                            inputType = android.text.InputType.TYPE_NULL
+                            inputType = android.text.InputType.TYPE_NULL // Menonaktifkan input keyboard
+                            setTextSize(16f) // Ukuran teks untuk input
+                            setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
+
                             setOnClickListener {
                                 Log.d("FormActivity", "EditText clicked: ${component.id}")
                                 showDatePickerDialog(this) { selectedDate ->
                                     inputValues[component.id as String] = selectedDate
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] =
-                                            inputValues[component.id] ?: ""
+                                        inputRekening[component.id] = inputValues[component.id] ?: ""
                                     }
                                 }
                             }
@@ -1472,10 +1764,11 @@ class FormActivity : AppCompatActivity() {
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
                         ).apply {
-                            setMargins(20, 20, 20, 20)
+                            setMargins(20, 20, 20, 20) // Margin untuk seluruh view
                         })
                     }
                 }
+
                 17 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -1656,6 +1949,144 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshDataTransfer(data: Map<String, List<JSONObject>>, container: LinearLayout, context: Context) {
+        container.removeAllViews()
+
+        data.forEach { (date, historyList) ->
+            container.addView(TextView(context).apply {
+                text = date
+                textSize = 15f
+                setTypeface(null, Typeface.BOLD)
+                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                setTextColor(Color.parseColor("#0A6E44"))
+            })
+
+            historyList.forEach { history ->
+                val replyTime = history.optString("reply_time", "")
+                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
+                val formattedReplyTime: String = try {
+                    val date = originalFormat.parse(replyTime)
+                    targetFormat.format(date)
+                } catch (e: ParseException) {
+                    Log.e("FormActivity", "Error parsing date: ${e.message}")
+                    replyTime
+                }
+
+                val status = history.optString("status", "")
+                val requestMessage = history.getString("request_message")
+
+                val no_rek = history.getString("no_rek")
+                val nama_rek = history.getString("nama_rek")
+                val nominal = history.getString("nominal")
+
+                val formatTrans = "$no_rek - $nama_rek \n $nominal"
+
+                val requestMessageJson = JSONObject(requestMessage.trim())
+                val msgObject = requestMessageJson.getJSONObject("msg")
+
+                val msgId = msgObject.getString("msg_id")
+                val msgSi = msgObject.getString("msg_si")
+
+                val actionText = when (msgSi) {
+                    "T00002" -> "Transfer"
+                    "OTT001" -> "Tarik Tunai"
+                    "OT0001" -> "Setor Tunai"
+                    else -> msgSi
+                }
+
+                val statusTrans = when (status) {
+                    "00" -> "Berhasil"
+                    else -> "Gagal"
+                }
+
+                val statusColor = when (status) {
+                    "00" -> ContextCompat.getColor(context, R.color.green)
+                    else -> ContextCompat.getColor(context, R.color.red)
+                }
+
+                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply {
+                    setOnClickListener {
+                        // Handle item click event
+                    }
+                }
+
+                itemView.findViewById<TextView>(R.id.text_action).text = actionText
+                itemView.findViewById<TextView>(R.id.text_format_trans).text = formatTrans
+                itemView.findViewById<TextView>(R.id.text_status).apply {
+                    text = statusTrans
+                    setTextColor(statusColor)
+                }
+                itemView.findViewById<TextView>(R.id.text_reply_time).text = formattedReplyTime
+
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, 16.dpToPx()) // Add margin between items
+                }
+
+                container.addView(itemView, params)
+            }
+        }
+    }
+
+    private fun refreshData(filteredDataList: List<JSONObject>, layout: LinearLayout, context: Context) {
+        layout.removeAllViews() // Clear existing views
+
+        // Group data by date
+        val groupedData = filteredDataList.groupBy {
+            val requestTime = it.getString("request_time")
+            requestTime.split(" ").getOrNull(0) ?: "Unknown Date"
+        }
+
+        // Add grouped data to the layout
+        groupedData.forEach { (date, nasabahList) ->
+            layout.addView(TextView(context).apply {
+                text = date
+                textSize = 15f
+                setTypeface(null, Typeface.BOLD)
+                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+            })
+
+            nasabahList.forEach { nasabah ->
+                // Inflate the item view layout
+                val itemView = LayoutInflater.from(context).inflate(R.layout.nasabah_item, null) as LinearLayout
+
+                val namaLengkap = nasabah.getString("nama_lengkap")
+                val noIdentitas = nasabah.getString("no_identitas")
+                val status = nasabah.getString("status")
+                val waktu = nasabah.getString("request_time").split(" ").getOrNull(1) ?: "Unknown Time"
+
+                itemView.findViewById<TextView>(R.id.textViewNamaLengkap).text = namaLengkap
+                itemView.findViewById<TextView>(R.id.textViewNoIdentitas).text = noIdentitas
+                itemView.findViewById<TextView>(R.id.textViewWaktu).text = waktu
+
+                val statusTextView = itemView.findViewById<TextView>(R.id.textViewStatus)
+                statusTextView.text = when (status) {
+                    "0", "1" -> "Sedang Diproses"
+                    "2" -> "Disetujui"
+                    "3" -> "Ditolak"
+                    else -> "Status Tidak Diketahui"
+                }
+                statusTextView.setTextColor(getStatusColor(context, status))
+
+                // Add margin to the item view
+                val layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin (adjust as needed)
+                }
+                itemView.layoutParams = layoutParams
+
+                // Add the item view to the layout
+                layout.addView(itemView)
+            }
+        }
+    }
+
     private fun createFileFromBitmap(bitmap: Bitmap, fileName: String): File {
         val file = File(cacheDir, fileName)
         try {
@@ -1754,7 +2185,7 @@ class FormActivity : AppCompatActivity() {
             "Kode Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                val savedKodeAgen = sharedPreferences.getInt("merchant_id", 0).toString()
+                val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
                 if (currentValue == "null" && savedKodeAgen != "0") {
                     Log.d("FormActivity", "Kode Agen diisi dengan nilai: $savedKodeAgen")
                     component.compValues?.compValue?.firstOrNull()?.value = savedKodeAgen
@@ -2081,6 +2512,8 @@ class FormActivity : AppCompatActivity() {
                     findViewById<EditText>(R.id.otpDigit2)?.text?.clear()
                     findViewById<EditText>(R.id.otpDigit3)?.text?.clear()
                     findViewById<EditText>(R.id.otpDigit4)?.text?.clear()
+                    findViewById<EditText>(R.id.otpDigit5)?.text?.clear()
+                    findViewById<EditText>(R.id.otpDigit6)?.text?.clear()
                     findViewById<EditText>(R.id.otpDigit1)?.error = "OTP salah"
                 }
             } else {
@@ -2165,7 +2598,6 @@ class FormActivity : AppCompatActivity() {
                                             putExtra("RETURN_TO_ROOT", false)
                                         }
                                         startActivity(intent)
-
                                     } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
                                         newScreen.id = "CCIF001"
                                         var newScreenId = newScreen.id
@@ -2281,7 +2713,7 @@ class FormActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
-            val savedKodeAgen = sharedPreferences.getString("merchant_id", "")?: ""
+            val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
@@ -2361,16 +2793,30 @@ class FormActivity : AppCompatActivity() {
                 }
 
             }
-            val unf03Value = componentValues["UNF03"] ?: ""
             val unf01Value = componentValues["AG009"] ?: ""
-            val unf04Value = componentValues["SET10"] ?: ""
             val rnr02Value = componentValues["RNR02"] ?: ""
+            val unf03Value = componentValues["UNF03"] ?: ""
+            val unf04Value = componentValues["SET10"] ?: ""
+            val unf05Value = componentValues["NAR01"] ?: ""
+            val rnr06Value = componentValues["TRF30"] ?: ""
+            val rnr07Value = componentValues["TRT07 "] ?: ""
+            val rnr08Value = componentValues["TRF31"] ?: ""
+            val rnr09Value = componentValues["TRF30"] ?: ""
+            val rnr10Value = componentValues["T0002"] ?: ""
+            val rnr11Value = componentValues["SET20"] ?: ""
+
             when (screen.id) {
                 "RCS0001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
+                    componentValues["MSG05"] = "Nasabah Yth.$unf05Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
                 }
-                "TF00003", "BR001", "BS001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $unf04Value.Transaksi berhasil dilakukan."
+                "TF00003" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr08Value , dengan nomor rekening: $rnr07Value . Berhasil melakukan transaksi transfer kepada $rnr09Value penerima dengan nominal $rnr10Value  ."
+                }
+                "BR001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $rnr11Value. Transaksi Tarik berhasil dilakukan."
+                }
+                "BS001" -> {
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan nomor rekening: $unf04Value. Transaksi Setor berhasil dilakukan."
                 }
                 else -> {
                     componentValues["MSG05"] = "Pesan tidak diketahui."

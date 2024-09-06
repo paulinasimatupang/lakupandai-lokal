@@ -198,7 +198,7 @@ class MenuActivity : AppCompatActivity() {
 
         // Set up check saldo button click listener
 //        findViewById<ImageButton>(R.id.check_saldo_button)?.setOnClickListener {
-            checkSaldo()
+        checkSaldo()
 //        }
 
         findViewById<ImageButton>(R.id.dashboard_nav)?.setOnClickListener {
@@ -211,6 +211,14 @@ class MenuActivity : AppCompatActivity() {
             val intent = Intent(this@MenuActivity, FormActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 putExtra(Constants.KEY_FORM_ID, "HY00001")
+            }
+            startActivity(intent)
+        }
+
+        findViewById<ImageButton>(R.id.history_bsa_nav)?.setOnClickListener {
+            val intent = Intent(this@MenuActivity, FormActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(Constants.KEY_FORM_ID, "HR00001")
             }
             startActivity(intent)
         }
@@ -322,7 +330,7 @@ class MenuActivity : AppCompatActivity() {
         val spacing = (resources.displayMetrics.density * 8).toInt()
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
         menuList.clear()
-        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000")
+        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001")
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->
@@ -380,7 +388,7 @@ class MenuActivity : AppCompatActivity() {
             menuList.clear()
             menuList.addAll(originalMenuList)
 
-           // navigateToScreen("MN00000")
+            // navigateToScreen("MN00000")
         }
 
         bottomSheetDialog.show()
@@ -414,10 +422,10 @@ class MenuActivity : AppCompatActivity() {
 
                 Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
 
-                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false)
+                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false)
                 recyclerView.adapter = menuAdapter
 
-               menuAdapter.notifyDataSetChanged()
+                menuAdapter.notifyDataSetChanged()
                 Log.d("BOTTOM1", "Loaded ${menuList.size} menu items into BottomSheet RecyclerView")
 
             } catch (e: JSONException) {

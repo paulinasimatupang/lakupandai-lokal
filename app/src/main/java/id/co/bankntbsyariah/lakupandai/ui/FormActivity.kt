@@ -706,7 +706,6 @@ class FormActivity : AppCompatActivity() {
 
                     else if (component.id == "HY001") {
                         val context = this@FormActivity
-                        // Inflate the search and sort layout
                         val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
                         container.addView(searchLayout)
 
@@ -722,98 +721,232 @@ class FormActivity : AppCompatActivity() {
                         sortSpinner.adapter = sortAdapter
 
                         val dataList = mutableListOf<JSONObject>() // Use mutableListOf to store data
+                        LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+                        }.also { layout ->
+                            lifecycleScope.launch {
+                                val webCaller = WebCallerImpl()
+                                val fetchedValue = withContext(Dispatchers.IO) {
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val token = sharedPreferences.getString("token", "") ?: ""
+                                    val terminalId = sharedPreferences.getString("tid", "") ?: ""
+                                    val response = webCaller.fetchHistory(terminalId, token)
+                                    response?.string()
+                                }
 
-                        lifecycleScope.launch {
-                            val webCaller = WebCallerImpl()
-                            val fetchedValue = withContext(Dispatchers.IO) {
+                                if (!fetchedValue.isNullOrEmpty()) {
+                                    try {
+                                        // Debug log for the raw response
+                                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
-                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                                val token = sharedPreferences.getString("token", "") ?: ""
-                                val terminalId = sharedPreferences.getString("tid", "") ?: ""
-                                val response = webCaller.fetchHistory(terminalId, token)
-                                response?.string()
-                            }
+                                        val jsonResponse = JSONObject(fetchedValue)
+                                        val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
 
-                            if (!fetchedValue.isNullOrEmpty()) {
-                                try {
-                                    // Debug log for the raw response
-                                    Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+                                        // Convert JSONArray to List<JSONObject>
+                                        val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
 
-                                    val jsonResponse = JSONObject(fetchedValue)
-                                    val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
+                                        // Clear existing views before adding new data
+                                        layout.removeAllViews()
 
-                                    // Convert JSONArray to List<JSONObject>
-                                    for (i in 0 until dataArray.length()) {
-                                        dataList.add(dataArray.getJSONObject(i))
-                                    }
-
-                                    // Group data by date
-                                    val groupedData = dataList.groupBy {
-                                        val replyTime = it.optString("reply_time", "")
-                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                                    }
-
-                                    refreshDataTransfer(groupedData, searchContainer, context)
-
-                                    // Set up search functionality
-                                    searchBar.addTextChangedListener(object : TextWatcher {
-                                        override fun afterTextChanged(s: Editable?) {
-                                            val searchText = s.toString().lowercase()
-                                            val filteredDataList = dataList.filter {
-                                                it.optString("nama_rek", "").lowercase().contains(searchText) ||
-                                                        it.optString("status", "").lowercase().contains(searchText)
-                                            }
-                                            refreshDataTransfer(filteredDataList.groupBy {
-                                                val replyTime = it.optString("reply_time", "")
-                                                replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                                            }, searchContainer, context)
+                                        // Group data by date
+                                        val groupedData = dataList.groupBy {
+                                            val replyTime = it.optString("reply_time", "")
+                                            replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
                                         }
 
-                                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                                    })
+                                        groupedData.forEach { (date, historyList) ->
+                                            layout.addView(TextView(context).apply {
+                                                text = date
+                                                textSize = 15f
+                                                setTypeface(null, Typeface.BOLD)
+                                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                                setTextColor(Color.parseColor("#0A6E44"))
+                                            })
 
-                                    // Set up sort functionality
-                                    sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                                        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                                            val sortOption1 = parent?.getItemAtPosition(position) as String
-                                            val sortedDataList = when (sortOption1) {
-                                                "Sort by Date" -> dataList.sortedBy {
-                                                    try {
-                                                        val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                                                        val date = originalFormat.parse(it.optString("reply_time", ""))
-                                                        date ?: Date(0) // Default to epoch if parsing fails
-                                                    } catch (e: ParseException) {
-                                                        Date(0)
+                                            historyList.forEach { history ->
+                                                val replyTime = history.optString("reply_time", "")
+                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
+                                                val formattedReplyTime: String = try {
+                                                    val date = originalFormat.parse(replyTime)
+                                                    targetFormat.format(date)
+                                                } catch (e: ParseException) {
+                                                    Log.e("FormActivity", "Error parsing date: ${e.message}")
+                                                    replyTime
+                                                }
+
+                                                val status = history.optString("status", "")
+                                                val requestMessage = history.getString("request_message")
+
+                                                val no_rek = history.getString("no_rek")
+                                                val nama_rek = history.getString("nama_rek")
+                                                val nominal = history.getString("nominal")
+
+                                                val formatTrans = "$no_rek - $nama_rek \n $nominal"
+
+                                                val requestMessageJson = JSONObject(requestMessage.trim())
+                                                val msgObject = requestMessageJson.getJSONObject("msg")
+
+                                                val msgId = msgObject.getString("msg_id")
+                                                val msgSi = msgObject.getString("msg_si")
+
+                                                val actionText = when (msgSi) {
+                                                    "T00002" -> "Transfer"
+                                                    "OTT001" -> "Tarik Tunai"
+                                                    "OT0001" -> "Setor Tunai"
+                                                    else -> msgSi
+                                                }
+
+                                                val statusTrans = when (status) {
+                                                    "00" -> "Berhasil"
+                                                    else -> "Gagal"
+                                                }
+
+                                                val statusColor = when (status) {
+                                                    "00" -> ContextCompat.getColor(context, R.color.green)
+                                                    else -> ContextCompat.getColor(context, R.color.red)
+                                                }
+
+                                                // Inflate the item layout
+                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply{
+                                                    setOnClickListener {
+                                                        lifecycleScope.launch {
+                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                                            val token = preferences.getString("token", "") ?: ""
+                                                            val terminalId = preferences.getString("tid", "") ?: ""
+                                                            val messageId = msgId
+
+
+                                                            Log.d("FormActivity", "token: $token, tid: $terminalId, msg: $messageId")
+
+                                                            val responseBodyString = withContext(Dispatchers.IO) {
+                                                                try {
+                                                                    val responseBody = webCaller.fetchHistoryDetail(terminalId, messageId, token)
+
+                                                                    responseBody?.string()
+                                                                } catch (e: Exception) {
+                                                                    Log.e("FormActivity", "Error fetching history detail: ${e.message}", e)
+                                                                    null
+                                                                }
+                                                            }
+
+                                                            if (!responseBodyString.isNullOrEmpty()) {
+                                                                try {
+                                                                    val jsonResponse = JSONObject(responseBodyString)
+                                                                    val dataArray = jsonResponse.optJSONArray("data")
+
+                                                                    if (dataArray != null && dataArray.length() > 0) {
+                                                                        val dataObject = dataArray.getJSONObject(0)
+                                                                        val responseMessageString = dataObject.optString("response_message", "")
+                                                                        Log.d("FormActivity", "Response message ${responseMessageString}")
+                                                                        lifecycleScope.launch {
+                                                                            val screenJson =
+                                                                                JSONObject(responseMessageString)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(newScreen)
+                                                                        }
+                                                                    } else {
+                                                                        Log.d("FormActivity", "The JSON array is empty.")
+                                                                    }
+                                                                } catch (e: JSONException) {
+                                                                    Log.e("FormActivity", "Detail JSON parsing error: ${e.message}", e)
+                                                                    withContext(Dispatchers.Main) {
+                                                                        Toast.makeText(this@FormActivity, "Error parsing detail JSON response", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                withContext(Dispatchers.Main) {
+                                                                    Toast.makeText(this@FormActivity, "Failed to fetch detail", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                            searchBar.addTextChangedListener(object : TextWatcher {
+                                                                override fun afterTextChanged(s: Editable?) {
+                                                                    val searchText = s.toString().lowercase()
+                                                                    val filteredDataList = dataList.filter {
+                                                                        it.optString("nama_rek", "").lowercase().contains(searchText) ||
+                                                                                it.optString("status", "").lowercase().contains(searchText)
+                                                                    }
+                                                                    refreshDataTransfer(filteredDataList.groupBy {
+                                                                        val replyTime = it.optString("reply_time", "")
+                                                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                                                    }, searchContainer, context)
+                                                                }
+
+                                                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                                            })
+
+                                                            // Set up sort functionality
+                                                            sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                                                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                                                                    val sortOption1 = parent?.getItemAtPosition(position) as String
+                                                                    val sortedDataList = when (sortOption1) {
+                                                                        "Sort by Date" -> dataList.sortedBy {
+                                                                            try {
+                                                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                                                val date = originalFormat.parse(it.optString("reply_time", ""))
+                                                                                date ?: Date(0) // Default to epoch if parsing fails
+                                                                            } catch (e: ParseException) {
+                                                                                Date(0)
+                                                                            }
+                                                                        }
+                                                                        "Sort by Status" -> dataList.sortedBy { it.optString("status", "") }
+                                                                        "Sort by Transaction Type" -> dataList.sortedBy {
+                                                                            val requestMessage = it.optString("request_message", "")
+                                                                            val requestMessageJson = JSONObject(requestMessage.trim())
+                                                                            val msgObject = requestMessageJson.getJSONObject("msg")
+                                                                            msgObject.optString("msg_si", "")
+                                                                        }
+                                                                        else -> dataList
+                                                                    }
+                                                                    refreshDataTransfer(sortedDataList.groupBy {
+                                                                        val replyTime = it.optString("reply_time", "")
+                                                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                                                    }, searchContainer, context)
+                                                                }
+
+                                                                override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                                "Sort by Status" -> dataList.sortedBy { it.optString("status", "") }
-                                                "Sort by Transaction Type" -> dataList.sortedBy {
-                                                    val requestMessage = it.optString("request_message", "")
-                                                    val requestMessageJson = JSONObject(requestMessage.trim())
-                                                    val msgObject = requestMessageJson.getJSONObject("msg")
-                                                    msgObject.optString("msg_si", "")
+
+                                                // Populate the item view with data
+                                                itemView.findViewById<TextView>(R.id.text_action).text = actionText
+                                                itemView.findViewById<TextView>(R.id.text_format_trans).text = formatTrans
+                                                itemView.findViewById<TextView>(R.id.text_status).apply {
+                                                    text = statusTrans
+                                                    setTextColor(statusColor)
                                                 }
-                                                else -> dataList
+                                                itemView.findViewById<TextView>(R.id.text_reply_time).text = formattedReplyTime
+
+                                                // Add margin to the item view
+                                                val params = LinearLayout.LayoutParams(
+                                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                                ).apply {
+                                                    setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin for spacing between items
+                                                }
+                                                itemView.layoutParams = params
+
+                                                // Add the populated view to the layout
+                                                layout.addView(itemView)
                                             }
-                                            refreshDataTransfer(sortedDataList.groupBy {
-                                                val replyTime = it.optString("reply_time", "")
-                                                replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                                            }, searchContainer, context)
                                         }
-
-                                        override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                    } catch (e: JSONException) {
+                                        Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-
-                                } catch (e: JSONException) {
-                                    Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                } else {
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
                                     }
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Failed to fetch data", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }

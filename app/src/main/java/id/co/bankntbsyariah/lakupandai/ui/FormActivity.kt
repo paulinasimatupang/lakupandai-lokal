@@ -726,6 +726,7 @@ class FormActivity : AppCompatActivity() {
                         lifecycleScope.launch {
                             val webCaller = WebCallerImpl()
                             val fetchedValue = withContext(Dispatchers.IO) {
+
                                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                                 val token = sharedPreferences.getString("token", "") ?: ""
                                 val terminalId = sharedPreferences.getString("tid", "") ?: ""
@@ -775,8 +776,8 @@ class FormActivity : AppCompatActivity() {
                                     // Set up sort functionality
                                     sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                                         override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                                            val sortOption = parent?.getItemAtPosition(position) as String
-                                            val sortedDataList = when (sortOption) {
+                                            val sortOption1 = parent?.getItemAtPosition(position) as String
+                                            val sortedDataList = when (sortOption1) {
                                                 "Sort by Date" -> dataList.sortedBy {
                                                     try {
                                                         val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())

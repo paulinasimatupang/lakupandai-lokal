@@ -35,9 +35,9 @@
 
 
     <string-array name="sort_options1">
-        <item>Sort by Name</item>
-        <item>Sort by Time</item>
+        <item>Sort by Date</item>
         <item>Sort by Status</item>
+        <item>Sort by Transaction Type</item>
     </string-array>
 
     <!--    Templates-->

@@ -784,8 +784,17 @@ class FormActivity : AppCompatActivity() {
                                                 val no_rek = history.getString("no_rek")
                                                 val nama_rek = history.getString("nama_rek")
                                                 val nominal = history.getString("nominal")
+                                                val keterangan = history.getString("keterangan")
 
-                                                val formatTrans = "$no_rek - $nama_rek \n $nominal"
+
+                                                val nominalDouble = nominal?.toDoubleOrNull()
+                                                val nominal_rupiah = nominalDouble?.let {
+                                                    formatRupiah(
+                                                        it
+                                                    )
+                                                }
+
+                                                val formatTrans = "$no_rek - $nama_rek \n $nominal_rupiah \n $keterangan"
 
                                                 val requestMessageJson = JSONObject(requestMessage.trim())
                                                 val msgObject = requestMessageJson.getJSONObject("msg")

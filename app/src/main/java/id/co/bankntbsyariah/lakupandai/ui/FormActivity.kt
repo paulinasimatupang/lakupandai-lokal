@@ -356,13 +356,15 @@ class FormActivity : AppCompatActivity() {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
             Log.d("FormActivity", "Formatted title: $formattedTitle")
 
-            val cardTitleTextView = findViewById<TextView>(R.id.card_title)
-            if (cardTitleTextView != null) {
-                cardTitleTextView.text = formattedTitle
-                Log.d("FormActivity", "card_title successfully updated: ${cardTitleTextView.text}")
-            } else {
-                Log.e("FormActivity", "Error: TextView with ID card_title not found.")
-            }
+            val processedTitle = screenTitle.replace("Berhasil", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
+        if (screenTitle.contains("Transfer", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("Transfer", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
         }
     }
 
@@ -1874,26 +1876,29 @@ class FormActivity : AppCompatActivity() {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null && s.length == 1) { // Check if exactly one character is entered
-                                    if (index + 1 < pinDigits.size) {
-                                        // Move to the next digit after entering a character
-                                        pinDigits[index + 1].requestFocus()
+                                if (s != null) {
+                                    when {
+                                        count > 0 -> {
+                                            val nextIndex = index + 1
+                                            if (nextIndex < pinDigits.size) {
+                                                pinDigits[nextIndex].requestFocus()
+                                            }
+                                        }
+                                        before > 0 -> {
+                                            val prevIndex = index - 1
+                                            if (prevIndex >= 0) {
+                                                pinDigits[prevIndex].requestFocus()
+                                            }
+                                        }
                                     }
-                                } else if (s.isNullOrEmpty() && index > 0) {
-                                    // Move to the previous digit if the current one is cleared
-                                    pinDigits[index - 1].requestFocus()
+                                    val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
+                                    inputValues["PIN"] = pinValue
                                 }
                             }
 
-                            override fun afterTextChanged(s: Editable?) {
-                                // Optionally, you could update the PIN value here
-                            }
+                            override fun afterTextChanged(s: Editable?) {}
                         })
                     }
-
-// Optional: Update the input type programmatically to ensure it's set correctly
-                    pinDigits.forEach { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD }
-
 
                     container.addView(pinView)
                 }
@@ -2481,7 +2486,10 @@ class FormActivity : AppCompatActivity() {
                                         val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
                                         val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
                                         val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
-                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
+                                        if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
+                                            loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+                                        }
 
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
@@ -2507,7 +2515,10 @@ class FormActivity : AppCompatActivity() {
                                         val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
                                         val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
                                         val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
-                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
+                                        if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
+                                            loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+                                        }
 
                                     } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
                                         // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
@@ -2605,7 +2616,10 @@ class FormActivity : AppCompatActivity() {
                                     val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
                                     val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
                                     val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
-                                    loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
+                                    if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
+                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+                                    }
 
                                     otpScreen = newScreen
                                 }else {

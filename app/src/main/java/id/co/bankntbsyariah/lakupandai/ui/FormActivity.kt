@@ -1865,34 +1865,44 @@ class FormActivity : AppCompatActivity() {
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null) {
-                                    when {
-                                        count > 0 -> {
-                                            val nextIndex = index + 1
-                                            if (nextIndex < pinDigits.size) {
-                                                pinDigits[nextIndex].requestFocus()
-                                            }
-                                        }
-                                        before > 0 -> {
-                                            val prevIndex = index - 1
-                                            if (prevIndex >= 0) {
-                                                pinDigits[prevIndex].requestFocus()
-                                            }
-                                        }
+                                if (s != null && s.length == 1) { // Check if exactly one character is entered
+                                    if (index + 1 < pinDigits.size) {
+                                        // Move to the next digit after entering a character
+                                        pinDigits[index + 1].requestFocus()
                                     }
-                                    val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
-                                    inputValues["PIN"] = pinValue
+                                } else if (s.isNullOrEmpty() && index > 0) {
+                                    // Move to the previous digit if the current one is cleared
+                                    pinDigits[index - 1].requestFocus()
                                 }
                             }
 
-                            override fun afterTextChanged(s: Editable?) {}
+                            override fun afterTextChanged(s: Editable?) {
+                                // Optionally, you could update the PIN value here
+                            }
                         })
                     }
 
+// Optional: Update the input type programmatically to ensure it's set correctly
+                    pinDigits.forEach { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD }
+
+
                     container.addView(pinView)
                 }
+                20 -> {
+                    // Inflate the layout for displaying images
+                    val imagesView = layoutInflater.inflate(R.layout.activity_load_image, container, false)
 
+                    // Assign ImageView components from the layout
+                    val imageViewKTP = imagesView.findViewById<ImageView>(R.id.imageKTP)
+                    val imageViewOrang = imagesView.findViewById<ImageView>(R.id.imageOrang)
+                    val imageViewTTD = imagesView.findViewById<ImageView>(R.id.imageTTD)
 
+                    // Load images into the assigned ImageView components
+                    loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
+                    // Add the view to the container or appropriate layout
+                    container.addView(imagesView)
+                }
                 else -> {
                     null
                 }
@@ -2458,6 +2468,12 @@ class FormActivity : AppCompatActivity() {
                                             Log.d("Foto", "Tanda Tangan Kosong")
                                         }
                                         setupScreen(formValue)
+
+                                        val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
+                                        val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
+                                        val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
+                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                                             putExtra("MESSAGE_BODY", message)
@@ -2478,6 +2494,12 @@ class FormActivity : AppCompatActivity() {
                                             Log.i("FormActivity", "Fetched formValue: $formValue")
                                         }
                                         setupScreen(formValue)
+
+                                        val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
+                                        val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
+                                        val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
+                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
                                     } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
                                         // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
@@ -2570,6 +2592,12 @@ class FormActivity : AppCompatActivity() {
                                         Log.d("Foto", "Tanda Tangan Kosong")
                                     }
                                     setupScreen(formValue)
+
+                                    val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
+                                    val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
+                                    val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
+                                    loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
                                     otpScreen = newScreen
                                 }else {
                                     if (screen.id == "CCIF003" && newScreen.id == "000000D") {
@@ -3600,32 +3628,33 @@ class FormActivity : AppCompatActivity() {
     }
 
     // Fungsi untuk memuat 3 gambar dari server berdasarkan NIK
-    private fun loadImagesFromServer() {
-        // Ambil nilai NIK dari variabel global
+    private fun loadImagesFromServer(imageViewKTP: ImageView, imageViewOrang: ImageView, imageViewTTD: ImageView) {
+        // Retrieve NIK value or use "unknown" if null
         val nik = nikValue ?: "unknown"
         val ktpUrl = "http://108.137.154.8:8080/document/image/KTP_$nik.png"
         val fotoUrl = "http://108.137.154.8:8080/document/image/FOTO_$nik.png"
         val ttdUrl = "http://108.137.154.8:8080/document/image/TTD_$nik.png"
 
-        // Menggunakan Glide untuk memuat gambar KTP dari URL
+        // Load KTP image using Glide
         Glide.with(this)
             .load(ktpUrl)
-            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
-            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
-            .into(findViewById(R.id.imageKTP)) // Masukkan gambar ke dalam imageKTP
+            .placeholder(R.drawable.eye_closed) // Placeholder if the image isn't loaded yet
+            .error(R.drawable.eye_open) // Error image if loading fails
+            .into(imageViewKTP) // Set the loaded image into the ImageView for KTP
 
-        // Menggunakan Glide untuk memuat gambar Foto dari URL
+        // Load Foto image using Glide
         Glide.with(this)
             .load(fotoUrl)
-            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
-            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
-            .into(findViewById(R.id.imageOrang)) // Masukkan gambar ke dalam imageOrang
+            .placeholder(R.drawable.eye_closed) // Placeholder
+            .error(R.drawable.eye_open) // Error image
+            .into(imageViewOrang) // Set the image into the ImageView for Orang
 
-        // Menggunakan Glide untuk memuat gambar TTD dari URL
+        // Load TTD image using Glide
         Glide.with(this)
             .load(ttdUrl)
-            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
-            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
-            .into(findViewById(R.id.imageTTD)) // Masukkan gambar ke dalam imageTTD
+            .placeholder(R.drawable.eye_closed) // Placeholder
+            .error(R.drawable.eye_open) // Error image
+            .into(imageViewTTD) // Set the image into the ImageView for TTD
     }
+
 }

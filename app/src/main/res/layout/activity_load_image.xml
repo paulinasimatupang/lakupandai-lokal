@@ -42,17 +42,4 @@
         app:layout_constraintHeight_percent="0.3"
         tools:srcCompat="@tools:sample/avatars" />
 
-    <!-- Tombol untuk kembali -->
-    <Button
-        android:id="@+id/backButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Back"
-        app:layout_constraintTop_toBottomOf="@id/imageTTD"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

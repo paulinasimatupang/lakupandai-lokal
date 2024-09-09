@@ -1602,12 +1602,12 @@ class FormActivity : AppCompatActivity() {
                             }
                         }
                     }
-                val params = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(20, 20, 20, 20)
-                }
+                    val params = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        setMargins(20, 20, 20, 20)
+                    }
 
                     if (component.id == "KM005" || component.id == "MSG10") {
                         // Ensure buttontf is properly initialized and add button to it

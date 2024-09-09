@@ -44,6 +44,7 @@ import android.widget.ImageButton
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.text.NumberFormat
 import java.util.Locale
+import android.widget.ImageView
 
 class MenuActivity : AppCompatActivity() {
 
@@ -87,6 +88,65 @@ class MenuActivity : AppCompatActivity() {
             Log.d("MenuActivity", "Nama User : $Userfullname")
             userGreetingTextView.text = "HI, $Userfullname!"
         }
+
+        // Mendapatkan referensi ke TextView dan ImageView
+        val namaDepanTextView: TextView? = findViewById(R.id.namaDepanTextView)
+        val userTextView: TextView? = findViewById(R.id.user)
+        val usernameTextView: TextView? = findViewById(R.id.username)
+        val emailTextView: TextView? = findViewById(R.id.email)
+        val nomorTeleponTextView: TextView? = findViewById(R.id.nomor_telepon) // Referensi untuk nomor telepon
+        val formText: TextView? = findViewById(R.id.text)
+        val formImage: ImageView? = findViewById(R.id.image)
+        val alamatTextView: TextView? = findViewById(R.id.alamat)
+
+        if (userTextView != null && namaDepanTextView != null && usernameTextView != null && emailTextView != null && nomorTeleponTextView != null && alamatTextView != null) {
+
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val userFullName = sharedPreferences.getString("fullname", "") ?: ""
+            val username = sharedPreferences.getString("username", "-") ?: "-"
+            val email = sharedPreferences.getString("email", "-") ?: "-"
+            val nomorTelepon = sharedPreferences.getString("phone", "-") ?: "-"
+            val alamat = sharedPreferences.getString("address", "-") ?: "-" // Default alamat
+
+
+            val namaDepan = userFullName.split(" ").firstOrNull() ?: ""
+
+            val namaDepanDuaHuruf = if (namaDepan.length >= 2) {
+                namaDepan.substring(0, 2)
+            } else {
+                namaDepan
+            }
+
+
+            userTextView.text = userFullName
+
+            namaDepanTextView.text = namaDepanDuaHuruf
+
+            usernameTextView.text = username
+
+            emailTextView.text = email
+
+            nomorTeleponTextView.text = nomorTelepon
+
+            alamatTextView.text = if (alamat.isEmpty() || alamat == "-") "-" else alamat
+
+            // Log untuk debugging
+            Log.d("MenuActivity", "Nama User: $userFullName")
+            Log.d("MenuActivity", "Nama Depan Dua Huruf: $namaDepanDuaHuruf")
+            Log.d("MenuActivity", "Username: $username")
+            Log.d("MenuActivity", "Email: $email")
+            Log.d("MenuActivity", "Nomor Telepon: $nomorTelepon")
+            Log.d("MenuActivity", "Alamat: $alamat")
+        }
+
+        formText?.setOnClickListener {
+            navigateToScreen("MN00000")
+        }
+
+        formImage?.setOnClickListener {
+            navigateToScreen("MN00000")
+        }
+
 
         // Initialize Image Slider only if the current layout contains the image slider
         val imageSliderView: View? = findViewById(R.id.imageSlider)

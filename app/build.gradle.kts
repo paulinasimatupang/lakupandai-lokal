@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("com.google.gms.google-services")
 }
 
 
@@ -98,4 +99,9 @@ dependencies {
     annotationProcessor ("com.github.bumptech.glide:compiler:4.15.1")
     implementation ("com.google.code.gson:gson:2.8.9")
     implementation ("com.github.gcacace:signature-pad:1.3.1")
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.onesignal:OneSignal:[5.0.0, 5.99.99]")
 }
+

@@ -106,7 +106,7 @@ class FormActivity : AppCompatActivity() {
     private var photo: Bitmap? = null
     private lateinit var imageViewKTP: ImageView
     private lateinit var imageViewOrang: ImageView
-    private var photoCounter: Int = 0 // Counter untuk menandai foto pertama atau kedua
+    private var photoCounter: Int = 0
     private var currentImageView: ImageView? = null
     private var signatureFile: File? = null
     private var fileFotoKTP: File? = null
@@ -560,13 +560,13 @@ class FormActivity : AppCompatActivity() {
                         val layout = LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
 
-                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+                            setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
 
                             addView(TextView(context).apply {
                                 text = component.label
                                 textSize = 15f
                                 setTypeface(null, Typeface.BOLD)
-                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
                                 setTextColor(Color.parseColor("#0A6E44"))
                             })
 
@@ -705,7 +705,7 @@ class FormActivity : AppCompatActivity() {
                         val dataList = mutableListOf<JSONObject>() // Use mutableListOf to store data
                         LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
-                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+                            setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
                         }.also { layout ->
                             lifecycleScope.launch {
                                 val webCaller = WebCallerImpl()
@@ -737,7 +737,7 @@ class FormActivity : AppCompatActivity() {
                                                 text = date
                                                 textSize = 15f
                                                 setTypeface(null, Typeface.BOLD)
-                                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                                setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
                                                 setTextColor(Color.parseColor("#808080"))
                                             })
 

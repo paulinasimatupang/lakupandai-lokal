@@ -168,7 +168,7 @@
             <LinearLayout
                 android:id="@+id/button_type_7_container"
                 android:layout_width="match_parent"
-                android:layout_height="124dp"
+                android:layout_height="173dp"
                 android:layout_marginTop="5dp"
                 android:orientation="vertical"
                 android:padding="8dp" />

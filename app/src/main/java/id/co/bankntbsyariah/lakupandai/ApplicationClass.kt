@@ -1,4 +1,4 @@
-package id.co.bankntbsyariah.lakupandai.ui
+package id.co.bankntbsyariah.lakupandai
 
 import android.app.Application
 import kotlinx.coroutines.CoroutineScope
@@ -9,7 +9,7 @@ import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
 
 //ganti sama onesignal_app_id
-val ONESIGNAL_APP_ID = "bc4e8ee2-cb91-4f70-988d-c3215989bce4"
+val ONESIGNAL_APP_ID = "fcb80205-8864-474a-accf-87213d728bb1"
 
 class ApplicationClass : Application() {
     override fun onCreate() {

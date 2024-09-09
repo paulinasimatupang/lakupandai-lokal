@@ -5,6 +5,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- ImageView untuk menampilkan gambar -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
@@ -13,16 +14,43 @@
         android:scaleType="centerCrop"
         android:background="#cccccc" />
 
+    <!-- Tombol untuk mengambil gambar dengan kamera -->
     <Button
         android:id="@+id/buttonCapture"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Capture Image" />
 
+    <!-- Tombol untuk menyimpan gambar ke server -->
     <Button
         android:id="@+id/buttonSave"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Save Image"
         android:layout_marginTop="16dp"/>
+
+    <!-- Tombol untuk memuat foto KTP dari server -->
+    <Button
+        android:id="@+id/buttonLoadKTP"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load KTP Image"
+        android:layout_marginTop="16dp"/>
+
+    <!-- Tombol untuk memuat foto dari server -->
+    <Button
+        android:id="@+id/buttonLoadFoto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load FOTO Image"
+        android:layout_marginTop="16dp"/>
+
+    <!-- Tombol untuk memuat tanda tangan dari server -->
+    <Button
+        android:id="@+id/buttonLoadTTD"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load TTD Image"
+        android:layout_marginTop="16dp"/>
+
 </LinearLayout>

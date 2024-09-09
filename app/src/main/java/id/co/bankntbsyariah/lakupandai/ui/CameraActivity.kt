@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
 import id.co.bankntbsyariah.lakupandai.R
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -27,6 +28,9 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var buttonCapture: Button
     private lateinit var buttonSave: Button
+    private lateinit var buttonLoadKTP: Button
+    private lateinit var buttonLoadFoto: Button
+    private lateinit var buttonLoadTTD: Button
     private var photo: Bitmap? = null
 
     @SuppressLint("MissingInflatedId")
@@ -40,6 +44,9 @@ class CameraActivity : AppCompatActivity() {
         imageView = findViewById(R.id.imageView)
         buttonCapture = findViewById(R.id.buttonCapture)
         buttonSave = findViewById(R.id.buttonSave)
+        buttonLoadKTP = findViewById(R.id.buttonLoadKTP)
+        buttonLoadFoto = findViewById(R.id.buttonLoadFoto)
+        buttonLoadTTD = findViewById(R.id.buttonLoadTTD)
 
         buttonCapture.setOnClickListener {
             if (checkCameraPermission()) {
@@ -55,6 +62,21 @@ class CameraActivity : AppCompatActivity() {
             } ?: run {
                 Toast.makeText(this, "No photo to save!", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        // Load gambar KTP dari server
+        buttonLoadKTP.setOnClickListener {
+            loadImageFromServer("KTP_1234567890006533")
+        }
+
+        // Load gambar Foto dari server
+        buttonLoadFoto.setOnClickListener {
+            loadImageFromServer("FOTO_1234567890006533")
+        }
+
+        // Load gambar TTD dari server
+        buttonLoadTTD.setOnClickListener {
+            loadImageFromServer("TTD_1234567890006533")
         }
     }
 
@@ -83,9 +105,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_CODE) {
@@ -110,7 +130,6 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun uploadImage(bitmap: Bitmap, photoType: String) {
-        // URL endpoint tetap sama
         val url = "http://108.137.154.8:8081/ARRest/images"
         val client = OkHttpClient()
 
@@ -147,11 +166,27 @@ class CameraActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         Toast.makeText(this@CameraActivity, "Image uploaded successfully", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@CameraActivity, "Failed to upload image. Server response: ${response.code}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@CameraActivity,
+                            "Failed to upload image. Server response: ${response.code}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
                 Log.d("CameraActivity", "Server Response: $responseBody")
             }
         })
+    }
+
+    // Fungsi untuk memuat gambar dari server berdasarkan nama file
+    private fun loadImageFromServer(fileName: String) {
+        val imageUrl = "http://108.137.154.8:8080/document/image/$fileName.png"
+
+        // Menggunakan Glide untuk memuat gambar dari URL
+        Glide.with(this)
+            .load(imageUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder jika gambar belum dimuat
+            .error(R.drawable.eye_open) // Gambar error jika gagal memuat
+            .into(imageView)
     }
 }

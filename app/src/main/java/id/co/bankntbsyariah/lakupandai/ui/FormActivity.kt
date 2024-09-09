@@ -84,6 +84,9 @@ import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
 import android.graphics.Color
+import android.text.method.PasswordTransformationMethod
+import android.view.KeyEvent
+import com.bumptech.glide.Glide
 import okhttp3.RequestBody.Companion.asRequestBody
 
 class FormActivity : AppCompatActivity() {
@@ -355,20 +358,22 @@ class FormActivity : AppCompatActivity() {
             val formattedTitle = screenTitle.replace("Berhasil", "").trim()
             Log.d("FormActivity", "Formatted title: $formattedTitle")
 
-            val cardTitleTextView = findViewById<TextView>(R.id.card_title)
-            if (cardTitleTextView != null) {
-                cardTitleTextView.text = formattedTitle
-                Log.d("FormActivity", "card_title successfully updated: ${cardTitleTextView.text}")
-            } else {
-                Log.e("FormActivity", "Error: TextView with ID card_title not found.")
-            }
+            val processedTitle = screenTitle.replace("Berhasil", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
+        if (screenTitle.contains("Transfer", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("Transfer", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
         }
     }
 
     private fun getTransactionTitle(formId: String): String {
         val titleView = findViewById<TextView>(R.id.titleTransaction)
         val title = when (formId) {
-            "CCIF001" -> {
+            "TF00003" -> {
                 getString(R.string.transfer)
             }
             "BS001" -> {
@@ -550,47 +555,36 @@ class FormActivity : AppCompatActivity() {
                             findViewById<TextView>(R.id.nominalTextView).text =
                                 getComponentValue(component)
                         }
-                    }else if (component.id == "HR002") {
+                    } else if (component.id == "HR002") {
                         val context = this@FormActivity
-
-                        // Create and configure the main layout
                         val layout = LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
 
-                            // Adjust padding as per type 2
                             setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
 
-                            // Add label TextView with consistent styling
                             addView(TextView(context).apply {
                                 text = component.label
                                 textSize = 15f
                                 setTypeface(null, Typeface.BOLD)
                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks label
+                                setTextColor(Color.parseColor("#0A6E44"))
                             })
 
-                            // Add a placeholder TextView for "Loading..."
                             addView(TextView(context).apply {
                                 text = "Loading..."
                                 textSize = 18f
                                 setTypeface(null, Typeface.NORMAL)
                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 10.dpToPx())
-                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks placeholder
+                                setTextColor(Color.parseColor("#0A6E44"))
                             })
                         }
-                        // Inflate the search and sort layout
                         val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
                         container.addView(searchLayout)
-
-                        // Initialize search and sort views
                         val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
                         val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
                         val searchContainer = searchLayout.findViewById<LinearLayout>(R.id.container)
-
-                        // Add the main layout to the container
                         container.addView(layout)
 
-                        // Perform data fetching asynchronously
                         lifecycleScope.launch {
                             val fetchedValue = withContext(Dispatchers.IO) {
                                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -613,33 +607,25 @@ class FormActivity : AppCompatActivity() {
 
                             val jsonResponse = JSONObject(fetchedValue)
                             val dataArray = jsonResponse.getJSONArray("data")
-
-                            // Convert JSONArray to List<JSONObject>
                             val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
-
-                            // Clear existing views in the main layout
                             layout.removeAllViews()
 
-                            // Group data by date
                             val groupedData = dataList.groupBy {
                                 val requestTime = it.getString("request_time")
                                 requestTime.split(" ").getOrNull(0) ?: "Unknown Date"
                             }
 
-                            // Add grouped data to the main layout
                             groupedData.forEach { (date, nasabahList) ->
                                 layout.addView(TextView(context).apply {
                                     text = date
                                     textSize = 15f
                                     setTypeface(null, Typeface.BOLD)
                                     setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                    setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+                                    setTextColor(Color.parseColor("#808080"))
                                 })
 
                                 nasabahList.forEach { nasabah ->
-                                    // Inflate the item view layout
                                     val itemView = LayoutInflater.from(context).inflate(R.layout.nasabah_item, null) as LinearLayout
-
                                     val namaLengkap = nasabah.getString("nama_lengkap")
                                     val noIdentitas = nasabah.getString("no_identitas")
                                     val status = nasabah.getString("status")
@@ -658,7 +644,6 @@ class FormActivity : AppCompatActivity() {
                                     }
                                     statusTextView.setTextColor(getStatusColor(context, status))
 
-                                    // Add margin to the item view
                                     val layoutParams = LinearLayout.LayoutParams(
                                         LinearLayout.LayoutParams.MATCH_PARENT,
                                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -666,13 +651,10 @@ class FormActivity : AppCompatActivity() {
                                         setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin (adjust as needed)
                                     }
                                     itemView.layoutParams = layoutParams
-
-                                    // Add the item view to the main layout
                                     layout.addView(itemView)
                                 }
                             }
 
-                            // Set up search and sort functionality
                             searchBar.addTextChangedListener(object : TextWatcher {
                                 override fun afterTextChanged(s: Editable?) {
                                     val searchText = s.toString().lowercase()
@@ -706,7 +688,6 @@ class FormActivity : AppCompatActivity() {
 
                     else if (component.id == "HY001") {
                         val context = this@FormActivity
-                        // Inflate the search and sort layout
                         val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
                         container.addView(searchLayout)
 
@@ -722,102 +703,240 @@ class FormActivity : AppCompatActivity() {
                         sortSpinner.adapter = sortAdapter
 
                         val dataList = mutableListOf<JSONObject>() // Use mutableListOf to store data
+                        LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
+                        }.also { layout ->
+                            lifecycleScope.launch {
+                                val webCaller = WebCallerImpl()
+                                val fetchedValue = withContext(Dispatchers.IO) {
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val token = sharedPreferences.getString("token", "") ?: ""
+                                    val terminalId = sharedPreferences.getString("tid", "") ?: ""
+                                    val response = webCaller.fetchHistory(terminalId, token)
+                                    response?.string()
+                                }
 
-                        lifecycleScope.launch {
-                            val webCaller = WebCallerImpl()
-                            val fetchedValue = withContext(Dispatchers.IO) {
+                                if (!fetchedValue.isNullOrEmpty()) {
+                                    try {
+                                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
-                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                                val token = sharedPreferences.getString("token", "") ?: ""
-                                val terminalId = sharedPreferences.getString("tid", "") ?: ""
-                                val response = webCaller.fetchHistory(terminalId, token)
-                                response?.string()
-                            }
+                                        val jsonResponse = JSONObject(fetchedValue)
+                                        val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
+                                        val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
+                                        layout.removeAllViews()
 
-                            if (!fetchedValue.isNullOrEmpty()) {
-                                try {
-                                    // Debug log for the raw response
-                                    Log.d("FormActivity", "Fetched JSON: $fetchedValue")
-
-                                    val jsonResponse = JSONObject(fetchedValue)
-                                    val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
-
-                                    // Convert JSONArray to List<JSONObject>
-                                    for (i in 0 until dataArray.length()) {
-                                        dataList.add(dataArray.getJSONObject(i))
-                                    }
-
-                                    // Group data by date
-                                    val groupedData = dataList.groupBy {
-                                        val replyTime = it.optString("reply_time", "")
-                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                                    }
-
-                                    refreshDataTransfer(groupedData, searchContainer, context)
-
-                                    // Set up search functionality
-                                    searchBar.addTextChangedListener(object : TextWatcher {
-                                        override fun afterTextChanged(s: Editable?) {
-                                            val searchText = s.toString().lowercase()
-                                            val filteredDataList = dataList.filter {
-                                                it.optString("nama_rek", "").lowercase().contains(searchText) ||
-                                                        it.optString("status", "").lowercase().contains(searchText)
-                                            }
-                                            refreshDataTransfer(filteredDataList.groupBy {
-                                                val replyTime = it.optString("reply_time", "")
-                                                replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                                            }, searchContainer, context)
+                                        val groupedData = dataList.groupBy {
+                                            val replyTime = it.optString("reply_time", "")
+                                            replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
                                         }
 
-                                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                                    })
+                                        // Add grouped data to the layout
+                                        groupedData.forEach { (date, historyList) ->
+                                            layout.addView(TextView(context).apply {
+                                                text = date
+                                                textSize = 15f
+                                                setTypeface(null, Typeface.BOLD)
+                                                setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
+                                                setTextColor(Color.parseColor("#808080"))
+                                            })
 
-                                    // Set up sort functionality
-                                    sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                                        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                                            val sortOption1 = parent?.getItemAtPosition(position) as String
-                                            val sortedDataList = when (sortOption1) {
-                                                "Sort by Date" -> dataList.sortedBy {
-                                                    try {
-                                                        val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                                                        val date = originalFormat.parse(it.optString("reply_time", ""))
-                                                        date ?: Date(0) // Default to epoch if parsing fails
-                                                    } catch (e: ParseException) {
-                                                        Date(0)
+                                            historyList.forEach { history ->
+                                                val replyTime = history.optString("reply_time", "")
+                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                val targetFormat = SimpleDateFormat("dd MM yyyy HH:mm", Locale.getDefault())
+                                                val formattedReplyTime: String = try {
+                                                    val date = originalFormat.parse(replyTime)
+                                                    targetFormat.format(date)
+                                                } catch (e: ParseException) {
+                                                    Log.e("FormActivity", "Error parsing date: ${e.message}")
+                                                    replyTime
+                                                }
+
+                                                val status = history.optString("status", "")
+                                                val requestMessage = history.getString("request_message")
+
+                                                val no_rek = history.getString("no_rek")
+                                                val nama_rek = history.getString("nama_rek")
+                                                val nominal = history.getString("nominal")
+                                                val keterangan = history.getString("keterangan")
+
+
+                                                val nominalDouble = nominal?.toDoubleOrNull()
+                                                val nominal_rupiah = nominalDouble?.let {
+                                                    formatRupiah(
+                                                        it
+                                                    )
+                                                }
+
+                                                val formatTrans = "$no_rek - $nama_rek \n $nominal_rupiah \n $keterangan"
+
+                                                val requestMessageJson = JSONObject(requestMessage.trim())
+                                                val msgObject = requestMessageJson.getJSONObject("msg")
+
+                                                val msgId = msgObject.getString("msg_id")
+                                                val msgSi = msgObject.getString("msg_si")
+
+                                                val actionText = when (msgSi) {
+                                                    "T00002" -> "Transfer"
+                                                    "OTT001" -> "Tarik Tunai"
+                                                    "OT0001" -> "Setor Tunai"
+                                                    else -> msgSi
+                                                }
+
+                                                val statusTrans = when (status) {
+                                                    "00" -> "Berhasil"
+                                                    else -> "Gagal"
+                                                }
+
+                                                val statusColor = when (status) {
+                                                    "00" -> ContextCompat.getColor(context, R.color.green)
+                                                    else -> ContextCompat.getColor(context, R.color.red)
+                                                }
+
+                                                // Inflate the item layout
+                                                val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply{
+                                                    setOnClickListener {
+                                                        lifecycleScope.launch {
+                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                                            val token = preferences.getString("token", "") ?: ""
+                                                            val terminalId = preferences.getString("tid", "") ?: ""
+                                                            val messageId = msgId
+
+
+                                                            Log.d("FormActivity", "token: $token, tid: $terminalId, msg: $messageId")
+
+                                                            val responseBodyString = withContext(Dispatchers.IO) {
+                                                                try {
+                                                                    val responseBody = webCaller.fetchHistoryDetail(terminalId, messageId, token)
+
+                                                                    responseBody?.string()
+                                                                } catch (e: Exception) {
+                                                                    Log.e("FormActivity", "Error fetching history detail: ${e.message}", e)
+                                                                    null
+                                                                }
+                                                            }
+
+                                                            if (!responseBodyString.isNullOrEmpty()) {
+                                                                try {
+                                                                    val jsonResponse = JSONObject(responseBodyString)
+                                                                    val dataArray = jsonResponse.optJSONArray("data")
+
+                                                                    if (dataArray != null && dataArray.length() > 0) {
+                                                                        val dataObject = dataArray.getJSONObject(0)
+                                                                        val responseMessageString = dataObject.optString("response_message", "")
+                                                                        Log.d("FormActivity", "Response message ${responseMessageString}")
+                                                                        lifecycleScope.launch {
+                                                                            val screenJson =
+                                                                                JSONObject(responseMessageString)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(newScreen)
+                                                                        }
+                                                                    } else {
+                                                                        Log.d("FormActivity", "The JSON array is empty.")
+                                                                    }
+                                                                } catch (e: JSONException) {
+                                                                    Log.e("FormActivity", "Detail JSON parsing error: ${e.message}", e)
+                                                                    withContext(Dispatchers.Main) {
+                                                                        Toast.makeText(this@FormActivity, "Error parsing detail JSON response", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                withContext(Dispatchers.Main) {
+                                                                    Toast.makeText(this@FormActivity, "Failed to fetch detail", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                            searchBar.addTextChangedListener(object : TextWatcher {
+                                                                override fun afterTextChanged(s: Editable?) {
+                                                                    val searchText = s.toString().lowercase()
+                                                                    val filteredDataList = dataList.filter {
+                                                                        it.optString("nama_rek", "").lowercase().contains(searchText) ||
+                                                                                it.optString("status", "").lowercase().contains(searchText)
+                                                                    }
+                                                                    refreshDataTransfer(filteredDataList.groupBy {
+                                                                        val replyTime = it.optString("reply_time", "")
+                                                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                                                    }, searchContainer, context)
+                                                                }
+
+                                                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                                            })
+
+                                                            sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                                                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                                                                    val sortOption1 = parent?.getItemAtPosition(position) as String
+                                                                    val sortedDataList = when (sortOption1) {
+                                                                        "Sort by Date" -> dataList.sortedBy {
+                                                                            try {
+                                                                                val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                                                                val date = originalFormat.parse(it.optString("reply_time", ""))
+                                                                                date ?: Date(0) // Default to epoch if parsing fails
+                                                                            } catch (e: ParseException) {
+                                                                                Date(0)
+                                                                            }
+                                                                        }
+                                                                        "Sort by Status" -> dataList.sortedBy { it.optString("status", "") }
+                                                                        "Sort by Transaction Type" -> dataList.sortedBy {
+                                                                            val requestMessage = it.optString("request_message", "")
+                                                                            val requestMessageJson = JSONObject(requestMessage.trim())
+                                                                            val msgObject = requestMessageJson.getJSONObject("msg")
+                                                                            msgObject.optString("msg_si", "")
+                                                                        }
+                                                                        else -> dataList
+                                                                    }
+                                                                    refreshDataTransfer(sortedDataList.groupBy {
+                                                                        val replyTime = it.optString("reply_time", "")
+                                                                        replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
+                                                                    }, searchContainer, context)
+                                                                }
+
+                                                                override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                                "Sort by Status" -> dataList.sortedBy { it.optString("status", "") }
-                                                "Sort by Transaction Type" -> dataList.sortedBy {
-                                                    val requestMessage = it.optString("request_message", "")
-                                                    val requestMessageJson = JSONObject(requestMessage.trim())
-                                                    val msgObject = requestMessageJson.getJSONObject("msg")
-                                                    msgObject.optString("msg_si", "")
+
+                                                // Populate the item view with data
+                                                itemView.findViewById<TextView>(R.id.text_action).text = actionText
+                                                itemView.findViewById<TextView>(R.id.text_format_trans).text = formatTrans
+                                                itemView.findViewById<TextView>(R.id.text_status).apply {
+                                                    text = statusTrans
+                                                    setTextColor(statusColor)
                                                 }
-                                                else -> dataList
+                                                itemView.findViewById<TextView>(R.id.text_reply_time).text = formattedReplyTime
+
+                                                // Add margin to the item view
+                                                val params = LinearLayout.LayoutParams(
+                                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                                ).apply {
+                                                    setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin for spacing between items
+                                                }
+                                                itemView.layoutParams = params
+
+                                                // Add the populated view to the layout
+                                                layout.addView(itemView)
                                             }
-                                            refreshDataTransfer(sortedDataList.groupBy {
-                                                val replyTime = it.optString("reply_time", "")
-                                                replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                                            }, searchContainer, context)
                                         }
-
-                                        override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                    } catch (e: JSONException) {
+                                        Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-
-                                } catch (e: JSONException) {
-                                    Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                } else {
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
                                     }
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Failed to fetch data", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
                     }
+
 
                     else {
                         LinearLayout(this@FormActivity).apply {
@@ -1030,6 +1149,7 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
 
+
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -1100,6 +1220,7 @@ class FormActivity : AppCompatActivity() {
                         inputValues[component.id] = ""
                         editText.addTextChangedListener {
                             inputValues[component.id] = it.toString()
+
                         }
                         addView(editText)
                     }
@@ -1112,6 +1233,7 @@ class FormActivity : AppCompatActivity() {
                         // TextView untuk label
                         val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
+                            textSize = 16f
                             setTypeface(null, Typeface.BOLD)
                             setTextSize(18f) // Ukuran teks untuk label
                             setTextColor(Color.parseColor("#0A6E44")) // Warna teks untuk label
@@ -1222,6 +1344,7 @@ class FormActivity : AppCompatActivity() {
 
                                         when (component.id) {
                                             "PIL03" -> {
+                                                pickOTP = selectedValue
                                                 pickOTP = selectedValue
                                                 Log.d("Form", "PICK OTP: $selectedValue")
 
@@ -1343,7 +1466,6 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 6 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
@@ -1501,11 +1623,11 @@ class FormActivity : AppCompatActivity() {
                         container.addView(button, params)
                     }
                 }
-
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
                     val timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
+
                     val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
 
                     // Setup Resend OTP TextView
@@ -1520,7 +1642,6 @@ class FormActivity : AppCompatActivity() {
                         it.text = spannable
                     }
 
-                    // Setup CountDownTimer
                     val countDownTimer = object : CountDownTimer(120000, 1000) {
                         override fun onTick(millisUntilFinished: Long) {
                             val minutes = millisUntilFinished / 60000
@@ -1534,6 +1655,7 @@ class FormActivity : AppCompatActivity() {
                             // Handle timeout scenario, e.g., disable inputs or show a message
                         }
                     }
+
                     countDownTimer.start()
 
                     // Setup OTP Digits
@@ -1548,34 +1670,36 @@ class FormActivity : AppCompatActivity() {
 
                     otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
+                            private var isSelfChange = false
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null) {
-                                    when {
-                                        count > 0 -> {
-                                            val nextIndex = index + 1
-                                            if (nextIndex < otpDigits.size) {
-                                                otpDigits[nextIndex].requestFocus()
-                                            }
-                                        }
+                                if (isSelfChange) return
+                                if (s?.isNotEmpty() == true) {
+                                    isSelfChange = true
 
-                                        before > 0 -> {
-                                            val prevIndex = index - 1
-                                            if (prevIndex >= 0) {
-                                                otpDigits[prevIndex].requestFocus()
-                                            }
-                                        }
+                                    if (count > 0 && index < otpDigits.size - 1) {
+                                        otpDigits[index + 1].requestFocus()
                                     }
                                     val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
                                     inputValues["OTP"] = otpValue
+
+                                    isSelfChange = false
                                 }
                             }
 
                             override fun afterTextChanged(s: Editable?) {}
                         })
-                    }
 
+                        digit.setOnKeyListener { _, keyCode, event ->
+                            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+                                if (digit.text.isEmpty() && index > 0) {
+                                    otpDigits[index - 1].requestFocus()
+                                    otpDigits[index - 1].setText("")
+                                }
+                            }
+                            false
+                        }
+                    }
                     container.addView(otpView)
                 }
 
@@ -1710,6 +1834,7 @@ class FormActivity : AppCompatActivity() {
 
                     container.addView(cameraView)
                 }
+
                 19 -> {
                     val inflater = layoutInflater
                     val pinView = inflater.inflate(R.layout.activity_pin, container, false)
@@ -1723,39 +1848,78 @@ class FormActivity : AppCompatActivity() {
 
                     val pinDigits = listOf(pinDigit1, pinDigit2, pinDigit3, pinDigit4, pinDigit5, pinDigit6)
 
-                    pinDigits.forEachIndexed { index, digit ->
-                        digit.addTextChangedListener(object : TextWatcher {
-                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null) {
-                                    when {
-                                        count > 0 -> {
-                                            val nextIndex = index + 1
-                                            if (nextIndex < pinDigits.size) {
-                                                pinDigits[nextIndex].requestFocus()
-                                            }
-                                        }
-                                        before > 0 -> {
-                                            val prevIndex = index - 1
-                                            if (prevIndex >= 0) {
-                                                pinDigits[prevIndex].requestFocus()
-                                            }
-                                        }
-                                    }
-                                    val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
-                                    inputValues["PIN"] = pinValue
-                                }
-                            }
-
-                            override fun afterTextChanged(s: Editable?) {}
-                        })
+                    pinDigits.forEach { digit ->
+                        digit.transformationMethod = PasswordTransformationMethod.getInstance()
+                        digit.filters = arrayOf(android.text.InputFilter.LengthFilter(1))
                     }
 
+                    fun handlePinInput(index: Int, pinDigits: List<EditText>) {
+                        val digit = pinDigits[index]
+
+                        digit.addTextChangedListener(object : TextWatcher {
+                            private var isSelfChange = false
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                            override fun afterTextChanged(s: Editable?) {
+                                if (isSelfChange) return
+                                if (s?.isNotEmpty() == true) {
+                                    isSelfChange = true
+                                    digit.transformationMethod = null
+                                    digit.setText(s.toString())
+                                    digit.transformationMethod = PasswordTransformationMethod.getInstance()
+                                    digit.setSelection(digit.text.length)
+
+                                    if (index < pinDigits.size - 1) {
+                                        pinDigits[index + 1].requestFocus()
+                                    }
+                                    isSelfChange = false
+                                }
+                                val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
+                                inputValues["PIN"] = pinValue
+                            }
+                        })
+                        digit.setOnKeyListener { _, keyCode, event ->
+                            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+                                if (digit.text.isEmpty() && index > 0) {
+                                    val previousDigit = pinDigits[index - 1]
+                                    previousDigit.requestFocus()
+                                    previousDigit.setText("")
+                                }
+                            }
+                            false
+                        }
+                    }
+                    pinDigits.forEachIndexed { index, _ ->
+                        handlePinInput(index, pinDigits)
+                    }
+                    pinDigit6.setOnKeyListener { _, keyCode, event ->
+                        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+                            if (pinDigit6.text.isEmpty()) {
+                                pinDigit5.requestFocus()
+                                pinDigit5.setText("")
+                            }
+                        }
+                        false
+                    }
                     container.addView(pinView)
+
                 }
+                20 -> {
+                    // Inflate the layout for displaying images
+                    val imagesView = layoutInflater.inflate(R.layout.activity_load_image, container, false)
 
+                    // Assign ImageView components from the layout
+                    val imageViewKTP = imagesView.findViewById<ImageView>(R.id.imageKTP)
+                    val imageViewOrang = imagesView.findViewById<ImageView>(R.id.imageOrang)
+                    val imageViewTTD = imagesView.findViewById<ImageView>(R.id.imageTTD)
 
+                    // Load images into the assigned ImageView components
+                    loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+
+                    // Add the view to the container or appropriate layout
+                    container.addView(imagesView)
+                }
                 else -> {
                     null
                 }
@@ -1795,55 +1959,13 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
 
+
             }
 
             Log.d("INPUT REKENING", "INPUT REKENING : $inputRekening")
         }
 
     }
-
-
-//    private fun saveSignatureToServer(file: File) {
-//        CoroutineScope(Dispatchers.IO).launch {
-//            val client = OkHttpClient.Builder()
-//                .connectTimeout(30, TimeUnit.SECONDS) // Increase connection timeout
-//                .writeTimeout(30, TimeUnit.SECONDS) // Increase write timeout
-//                .readTimeout(30, TimeUnit.SECONDS) // Increase read timeout
-//                .build()
-//
-//            val mediaType = "image/png".toMediaTypeOrNull()
-//            val requestBody = MultipartBody.Builder()
-//                .setType(MultipartBody.FORM)
-//                .addFormDataPart("file", file.name,
-//                    RequestBody.create(mediaType, file))
-//                .build()
-//
-//            val request = Request.Builder()
-//                .url("http://108.137.154.8:8081/ARRest/images")
-//                .post(requestBody)
-//                .build()
-//
-//            try {
-//                val response = client.newCall(request).execute()
-//                Log.d("FormActivity", "Response code: ${response.code}")
-//                Log.d("FormActivity", "Response body: ${response.body?.string()}")
-//                withContext(Dispatchers.Main) {
-//                    if (response.isSuccessful) {
-//                        Log.d("FormActivity", "Signature uploaded successfully")
-//                        Toast.makeText(this@FormActivity, "Signature uploaded successfully", Toast.LENGTH_SHORT).show()
-//                    } else {
-//                        Log.e("FormActivity", "Failed to upload signature: ${response.message}")
-//                        Toast.makeText(this@FormActivity, "Failed to upload signature", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                Log.e("FormActivity", "Error uploading signature: ${e.message}")
-//                withContext(Dispatchers.Main) {
-//                    Toast.makeText(this@FormActivity, "Error uploading signature", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
 
     private fun getStatusColor(context: Context, status: String): Int {
         return when (status) {
@@ -2363,6 +2485,15 @@ class FormActivity : AppCompatActivity() {
                                             Log.d("Foto", "Tanda Tangan Kosong")
                                         }
                                         setupScreen(formValue)
+
+                                        val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
+                                        val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
+                                        val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
+
+                                        if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
+                                            loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+                                        }
+
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                                             putExtra("MESSAGE_BODY", message)
@@ -2383,6 +2514,15 @@ class FormActivity : AppCompatActivity() {
                                             Log.i("FormActivity", "Fetched formValue: $formValue")
                                         }
                                         setupScreen(formValue)
+
+                                        val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
+                                        val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
+                                        val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
+
+                                        if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
+                                            loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+                                        }
+
                                     } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
                                         // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
@@ -2475,6 +2615,15 @@ class FormActivity : AppCompatActivity() {
                                         Log.d("Foto", "Tanda Tangan Kosong")
                                     }
                                     setupScreen(formValue)
+
+                                    val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
+                                    val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
+                                    val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
+
+                                    if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
+                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
+                                    }
+
                                     otpScreen = newScreen
                                 }else {
                                     if (screen.id == "CCIF003" && newScreen.id == "000000D") {
@@ -2727,7 +2876,7 @@ class FormActivity : AppCompatActivity() {
                     componentValues["MSG05"] = "Pesan tidak diketahui."
                 }
             }
-            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03")
+            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03", "SIG04", "SIG05", "SIG06")
 
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
@@ -2818,6 +2967,7 @@ class FormActivity : AppCompatActivity() {
                         val merchantData = userData?.optJSONObject("merchant")
                         val terminalArray = merchantData?.optJSONArray("terminal")
                         val terminalData = terminalArray?.getJSONObject(0)
+
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
@@ -3324,20 +3474,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-//
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-//            // Dapatkan foto yang diambil
-//            photo = data?.extras?.get("data") as? Bitmap
-//
-//            // Tampilkan foto yang diambil di ImageView yang sesuai
-//            when (photoType) {
-//                "KTP" -> imageViewKTP.setImageBitmap(photo)
-//                "Orang" -> imageViewOrang.setImageBitmap(photo)
-//            }
-//        }
-//    }
 
     private fun openCameraIntent() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
@@ -3517,31 +3653,34 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    // Tambahkan logika untuk mengunggah file setelah service dengan ID CC0003 dijalankan
-    private fun uploadFilesAfterService(serviceId: String) {
-        if (serviceId == "CC0003") {
-            val delayMillis: Long = 15000 // Delay 15 detik sebelum mengunggah
-            val handler = Handler(Looper.getMainLooper())
+    // Fungsi untuk memuat 3 gambar dari server berdasarkan NIK
+    private fun loadImagesFromServer(imageViewKTP: ImageView, imageViewOrang: ImageView, imageViewTTD: ImageView) {
+        // Retrieve NIK value or use "unknown" if null
+        val nik = nikValue ?: "unknown"
+        val ktpUrl = "http://108.137.154.8:8080/document/image/KTP_$nik.png"
+        val fotoUrl = "http://108.137.154.8:8080/document/image/FOTO_$nik.png"
+        val ttdUrl = "http://108.137.154.8:8080/document/image/TTD_$nik.png"
 
-            handler.postDelayed({
-                val url = "http://108.137.154.8:8080/ARRest/fileupload"
+        // Load KTP image using Glide
+        Glide.with(this)
+            .load(ktpUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder if the image isn't loaded yet
+            .error(R.drawable.eye_open) // Error image if loading fails
+            .into(imageViewKTP) // Set the loaded image into the ImageView for KTP
 
-                // Mengunggah foto orang
-                fileFotoOrang?.let { file ->
-                    uploadImageFile(file, url)
-                }
+        // Load Foto image using Glide
+        Glide.with(this)
+            .load(fotoUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder
+            .error(R.drawable.eye_open) // Error image
+            .into(imageViewOrang) // Set the image into the ImageView for Orang
 
-                // Mengunggah KTP
-                fileFotoKTP?.let { file ->
-                    uploadImageFile(file, url)
-                }
-
-                // Mengunggah tanda tangan
-                signatureFile?.let { file ->
-                    uploadImageFile(file, url)
-                }
-
-            }, delayMillis)
-        }
+        // Load TTD image using Glide
+        Glide.with(this)
+            .load(ttdUrl)
+            .placeholder(R.drawable.eye_closed) // Placeholder
+            .error(R.drawable.eye_open) // Error image
+            .into(imageViewTTD) // Set the image into the ImageView for TTD
     }
+
 }

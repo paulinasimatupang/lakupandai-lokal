@@ -103,5 +103,8 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.onesignal:OneSignal:[5.0.0, 5.99.99]")
+    implementation ("com.github.bumptech.glide:glide:4.12.0")
+    implementation ("com.github.bumptech.glide:compiler:4.12.0")
+
 }
 

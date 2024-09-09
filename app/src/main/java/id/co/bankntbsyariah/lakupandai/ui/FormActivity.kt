@@ -84,6 +84,8 @@ import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
 import android.graphics.Color
+import android.text.method.PasswordTransformationMethod
+import android.view.KeyEvent
 import com.bumptech.glide.Glide
 import okhttp3.RequestBody.Companion.asRequestBody
 
@@ -371,7 +373,7 @@ class FormActivity : AppCompatActivity() {
     private fun getTransactionTitle(formId: String): String {
         val titleView = findViewById<TextView>(R.id.titleTransaction)
         val title = when (formId) {
-            "CCIF001" -> {
+            "TF00003" -> {
                 getString(R.string.transfer)
             }
             "BS001" -> {
@@ -555,45 +557,34 @@ class FormActivity : AppCompatActivity() {
                         }
                     } else if (component.id == "HR002") {
                         val context = this@FormActivity
-
-                        // Create and configure the main layout
                         val layout = LinearLayout(context).apply {
                             orientation = LinearLayout.VERTICAL
 
-                            // Adjust padding as per type 2
                             setPadding(8.dpToPx(), 8.dpToPx(), 32.dpToPx(), 16.dpToPx())
 
-                            // Add label TextView with consistent styling
                             addView(TextView(context).apply {
                                 text = component.label
                                 textSize = 15f
                                 setTypeface(null, Typeface.BOLD)
                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks label
+                                setTextColor(Color.parseColor("#0A6E44"))
                             })
 
-                            // Add a placeholder TextView for "Loading..."
                             addView(TextView(context).apply {
                                 text = "Loading..."
                                 textSize = 18f
                                 setTypeface(null, Typeface.NORMAL)
                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 10.dpToPx())
-                                setTextColor(Color.parseColor("#0A6E44")) // Warna teks placeholder
+                                setTextColor(Color.parseColor("#0A6E44"))
                             })
                         }
-                        // Inflate the search and sort layout
                         val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
                         container.addView(searchLayout)
-
-                        // Initialize search and sort views
                         val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
                         val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
                         val searchContainer = searchLayout.findViewById<LinearLayout>(R.id.container)
-
-                        // Add the main layout to the container
                         container.addView(layout)
 
-                        // Perform data fetching asynchronously
                         lifecycleScope.launch {
                             val fetchedValue = withContext(Dispatchers.IO) {
                                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -616,33 +607,25 @@ class FormActivity : AppCompatActivity() {
 
                             val jsonResponse = JSONObject(fetchedValue)
                             val dataArray = jsonResponse.getJSONArray("data")
-
-                            // Convert JSONArray to List<JSONObject>
                             val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
-
-                            // Clear existing views in the layout
                             layout.removeAllViews()
 
-                            // Group data by date
                             val groupedData = dataList.groupBy {
                                 val requestTime = it.getString("request_time")
                                 requestTime.split(" ").getOrNull(0) ?: "Unknown Date"
                             }
 
-                            // Add grouped data to the main layout
                             groupedData.forEach { (date, nasabahList) ->
                                 layout.addView(TextView(context).apply {
                                     text = date
                                     textSize = 15f
                                     setTypeface(null, Typeface.BOLD)
                                     setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                    setTextColor(Color.parseColor("#0A6E44")) // Warna teks date
+                                    setTextColor(Color.parseColor("#808080"))
                                 })
 
                                 nasabahList.forEach { nasabah ->
-                                    // Inflate the item view layout
                                     val itemView = LayoutInflater.from(context).inflate(R.layout.nasabah_item, null) as LinearLayout
-
                                     val namaLengkap = nasabah.getString("nama_lengkap")
                                     val noIdentitas = nasabah.getString("no_identitas")
                                     val status = nasabah.getString("status")
@@ -661,7 +644,6 @@ class FormActivity : AppCompatActivity() {
                                     }
                                     statusTextView.setTextColor(getStatusColor(context, status))
 
-                                    // Add margin to the item view
                                     val layoutParams = LinearLayout.LayoutParams(
                                         LinearLayout.LayoutParams.MATCH_PARENT,
                                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -669,13 +651,10 @@ class FormActivity : AppCompatActivity() {
                                         setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin (adjust as needed)
                                     }
                                     itemView.layoutParams = layoutParams
-
-                                    // Add the item view to the main layout
                                     layout.addView(itemView)
                                 }
                             }
 
-                            // Set up search and sort functionality
                             searchBar.addTextChangedListener(object : TextWatcher {
                                 override fun afterTextChanged(s: Editable?) {
                                     val searchText = s.toString().lowercase()
@@ -740,19 +719,13 @@ class FormActivity : AppCompatActivity() {
 
                                 if (!fetchedValue.isNullOrEmpty()) {
                                     try {
-                                        // Debug log for the raw response
                                         Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
                                         val jsonResponse = JSONObject(fetchedValue)
                                         val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
-
-                                        // Convert JSONArray to List<JSONObject>
                                         val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
-
-                                        // Clear existing views before adding new data
                                         layout.removeAllViews()
 
-                                        // Group data by date
                                         val groupedData = dataList.groupBy {
                                             val replyTime = it.optString("reply_time", "")
                                             replyTime.split(" ").getOrNull(0) ?: "Unknown Date"
@@ -765,7 +738,7 @@ class FormActivity : AppCompatActivity() {
                                                 textSize = 15f
                                                 setTypeface(null, Typeface.BOLD)
                                                 setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 8.dpToPx())
-                                                setTextColor(Color.parseColor("#0A6E44"))
+                                                setTextColor(Color.parseColor("#808080"))
                                             })
 
                                             historyList.forEach { history ->
@@ -893,7 +866,6 @@ class FormActivity : AppCompatActivity() {
                                                                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                                                             })
 
-                                                            // Set up sort functionality
                                                             sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                                                                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                                                                     val sortOption1 = parent?.getItemAtPosition(position) as String
@@ -1698,31 +1670,35 @@ class FormActivity : AppCompatActivity() {
 
                     otpDigits.forEachIndexed { index, digit ->
                         digit.addTextChangedListener(object : TextWatcher {
+                            private var isSelfChange = false
                             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
                             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null) {
-                                    when {
-                                        count > 0 -> {
-                                            val nextIndex = index + 1
-                                            if (nextIndex < otpDigits.size) {
-                                                otpDigits[nextIndex].requestFocus()
-                                            }
-                                        }
+                                if (isSelfChange) return
+                                if (s?.isNotEmpty() == true) {
+                                    isSelfChange = true
 
-                                        before > 0 -> {
-                                            val prevIndex = index - 1
-                                            if (prevIndex >= 0) {
-                                                otpDigits[prevIndex].requestFocus()
-                                            }
-                                        }
+                                    if (count > 0 && index < otpDigits.size - 1) {
+                                        otpDigits[index + 1].requestFocus()
                                     }
                                     val otpValue = otpDigits.joinToString(separator = "") { it.text.toString() }
                                     inputValues["OTP"] = otpValue
+
+                                    isSelfChange = false
                                 }
                             }
+
                             override fun afterTextChanged(s: Editable?) {}
                         })
+
+                        digit.setOnKeyListener { _, keyCode, event ->
+                            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+                                if (digit.text.isEmpty() && index > 0) {
+                                    otpDigits[index - 1].requestFocus()
+                                    otpDigits[index - 1].setText("")
+                                }
+                            }
+                            false
+                        }
                     }
                     container.addView(otpView)
                 }
@@ -1858,6 +1834,7 @@ class FormActivity : AppCompatActivity() {
 
                     container.addView(cameraView)
                 }
+
                 19 -> {
                     val inflater = layoutInflater
                     val pinView = inflater.inflate(R.layout.activity_pin, container, false)
@@ -1871,36 +1848,62 @@ class FormActivity : AppCompatActivity() {
 
                     val pinDigits = listOf(pinDigit1, pinDigit2, pinDigit3, pinDigit4, pinDigit5, pinDigit6)
 
-                    pinDigits.forEachIndexed { index, digit ->
-                        digit.addTextChangedListener(object : TextWatcher {
-                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                if (s != null) {
-                                    when {
-                                        count > 0 -> {
-                                            val nextIndex = index + 1
-                                            if (nextIndex < pinDigits.size) {
-                                                pinDigits[nextIndex].requestFocus()
-                                            }
-                                        }
-                                        before > 0 -> {
-                                            val prevIndex = index - 1
-                                            if (prevIndex >= 0) {
-                                                pinDigits[prevIndex].requestFocus()
-                                            }
-                                        }
-                                    }
-                                    val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
-                                    inputValues["PIN"] = pinValue
-                                }
-                            }
-
-                            override fun afterTextChanged(s: Editable?) {}
-                        })
+                    pinDigits.forEach { digit ->
+                        digit.transformationMethod = PasswordTransformationMethod.getInstance()
+                        digit.filters = arrayOf(android.text.InputFilter.LengthFilter(1))
                     }
 
+                    fun handlePinInput(index: Int, pinDigits: List<EditText>) {
+                        val digit = pinDigits[index]
+
+                        digit.addTextChangedListener(object : TextWatcher {
+                            private var isSelfChange = false
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                            override fun afterTextChanged(s: Editable?) {
+                                if (isSelfChange) return
+                                if (s?.isNotEmpty() == true) {
+                                    isSelfChange = true
+                                    digit.transformationMethod = null
+                                    digit.setText(s.toString())
+                                    digit.transformationMethod = PasswordTransformationMethod.getInstance()
+                                    digit.setSelection(digit.text.length)
+
+                                    if (index < pinDigits.size - 1) {
+                                        pinDigits[index + 1].requestFocus()
+                                    }
+                                    isSelfChange = false
+                                }
+                                val pinValue = pinDigits.joinToString(separator = "") { it.text.toString() }
+                                inputValues["PIN"] = pinValue
+                            }
+                        })
+                        digit.setOnKeyListener { _, keyCode, event ->
+                            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+                                if (digit.text.isEmpty() && index > 0) {
+                                    val previousDigit = pinDigits[index - 1]
+                                    previousDigit.requestFocus()
+                                    previousDigit.setText("")
+                                }
+                            }
+                            false
+                        }
+                    }
+                    pinDigits.forEachIndexed { index, _ ->
+                        handlePinInput(index, pinDigits)
+                    }
+                    pinDigit6.setOnKeyListener { _, keyCode, event ->
+                        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+                            if (pinDigit6.text.isEmpty()) {
+                                pinDigit5.requestFocus()
+                                pinDigit5.setText("")
+                            }
+                        }
+                        false
+                    }
                     container.addView(pinView)
+
                 }
                 20 -> {
                     // Inflate the layout for displaying images

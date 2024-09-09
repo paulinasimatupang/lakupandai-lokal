@@ -1,3 +1,5 @@
+package id.co.bankntbsyariah.lakupandai.ui
+
 import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

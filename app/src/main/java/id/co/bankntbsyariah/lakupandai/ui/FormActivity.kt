@@ -1806,6 +1806,11 @@ class FormActivity : AppCompatActivity() {
                     val imageViewPreview = cameraView.findViewById<ImageView>(R.id.imageViewPreview)
                     val buttonCapture = cameraView.findViewById<Button>(R.id.buttonCapture)
 
+                    if (photoCounter == 0) {
+                        buttonCapture.text = "Ambil foto nasabah"
+                    } else {
+                        buttonCapture.text = "Ambil foto KTP"
+                    }
 
                     buttonCapture.setOnClickListener {
                         val fileName = if (photoCounter == 0) {
@@ -1824,6 +1829,11 @@ class FormActivity : AppCompatActivity() {
                         photoCounter++ // Inkrementasi nilai photoCounter setelah foto diambil
                         currentImageView = imageViewPreview
                         Log.d("PhotoApp", "Current ImageView Updated: ${currentImageView != null}")
+
+                        // Ubah teks buttonCapture sesuai dengan photoCounter
+                        if (photoCounter == 1) {
+                            buttonCapture.text = "Ambil foto KTP"
+                        }
 
                         if (checkCameraPermission()) {
                             openCameraIntent()

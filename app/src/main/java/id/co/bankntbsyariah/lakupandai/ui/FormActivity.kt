@@ -1771,9 +1771,10 @@ class FormActivity : AppCompatActivity() {
                         val signaturePad = signaturePadView.findViewById<SignaturePad>(R.id.signature_pad)
                         val clearButton = signaturePadView.findViewById<Button>(R.id.clear_button)
                         val saveButton = signaturePadView.findViewById<Button>(R.id.save_button)
+                        val titleCapture = signaturePadView.findViewById<TextView>(R.id.JudulTTD)
 
                         addView(signaturePadView)
-
+                        titleCapture.text = "Tanda Tangan Nasabah"
                         clearButton.setOnClickListener {
                             signaturePad.clear()
                             Log.d("FormActivity", "SignaturePad cleared")
@@ -1805,11 +1806,22 @@ class FormActivity : AppCompatActivity() {
                     val cameraView = layoutInflater.inflate(R.layout.camera_preview, null, false)
                     val imageViewPreview = cameraView.findViewById<ImageView>(R.id.imageViewPreview)
                     val buttonCapture = cameraView.findViewById<Button>(R.id.buttonCapture)
+                    val titleCapture = cameraView.findViewById<TextView>(R.id.JudulFoto)
 
-                    if (photoCounter == 0) {
-                        buttonCapture.text = "Ambil foto nasabah"
-                    } else {
-                        buttonCapture.text = "Ambil foto KTP"
+                    if (component.id == "SIG02" || component.id == "SIG03") {
+                        // Mengatur teks button
+                        buttonCapture.text = if (component.id == "SIG02") {
+                            "Ambil Gambar Nasabah"  // Jika comp_id adalah SIG02
+                        } else {
+                            "Ambil Gambar KTP"      // Jika comp_id adalah SIG03
+                        }
+
+                        // Mengatur teks judul
+                        titleCapture.text = if (component.id == "SIG02") {
+                            "Foto Nasabah"  // Judul untuk foto nasabah
+                        } else {
+                            "Foto KTP"      // Judul untuk foto KTP
+                        }
                     }
 
                     buttonCapture.setOnClickListener {
@@ -1829,11 +1841,6 @@ class FormActivity : AppCompatActivity() {
                         photoCounter++ // Inkrementasi nilai photoCounter setelah foto diambil
                         currentImageView = imageViewPreview
                         Log.d("PhotoApp", "Current ImageView Updated: ${currentImageView != null}")
-
-                        // Ubah teks buttonCapture sesuai dengan photoCounter
-                        if (photoCounter == 1) {
-                            buttonCapture.text = "Ambil foto KTP"
-                        }
 
                         if (checkCameraPermission()) {
                             openCameraIntent()

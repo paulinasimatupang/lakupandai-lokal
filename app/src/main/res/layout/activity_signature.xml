@@ -5,6 +5,18 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- TextView untuk judul -->
+    <TextView
+        android:id="@+id/JudulTTD"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Judul TTD"
+        android:textSize="18sp"
+        android:textColor="@color/green"
+        android:gravity="left|center"
+        android:layout_marginBottom="8dp"/>
+
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="200dp"

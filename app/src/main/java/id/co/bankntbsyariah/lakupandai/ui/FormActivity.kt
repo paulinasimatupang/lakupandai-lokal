@@ -2854,7 +2854,7 @@ class FormActivity : AppCompatActivity() {
                     componentValues["MSG05"] = "Pesan tidak diketahui."
                 }
             }
-            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03", "SIG04", "SIG05", "SIG06")
+            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03")
 
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")

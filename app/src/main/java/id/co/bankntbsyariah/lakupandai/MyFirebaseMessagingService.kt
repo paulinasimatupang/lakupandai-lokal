@@ -10,6 +10,7 @@ import android.app.PendingIntent
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
 
 const val channelId = "notification_channel"
 const val channelName =  "id.co.bankntbsyariah.lakupandai"
@@ -44,6 +45,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 //        notificationManager.notify(0, builder.build())
 //    }
 
+    override fun onMessageReceived(remoteMessage: RemoteMessage) {
+
+        if(remoteMessage.getNotification() != null){
+            generateNotification(remoteMessage.notification!!.title!!,remoteMessage.notification!!.body!!)
+        }
+
+    }
+
+    @SuppressLint("RemoteViewLayout")
     fun getRemoteView(title: String, message: String): RemoteViews{
         val remoteView = RemoteViews("id.co.bankntbsyariah.lakupandai", R.layout.notification)
 
@@ -61,7 +71,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val pendingIntent = PendingIntent.getActivity(this,0,intent,PendingIntent.FLAG_ONE_SHOT)
 
-        val builder: NotificationCompat.Builder = NotificationCompat.Builder(applicationConteext, channelId)
+        val builder: NotificationCompat.Builder = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(R.mipmap.logo_aja_ntbs)
             .setAutoCancel(true)
             .setVibrate(longArrayOf(1000,1000,1000,1000))
@@ -73,9 +83,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.0){
-            val notificationChannel = NotificationChannel(channelID, channelName,NotificationManager.IMPORTANCE_HIGH)
-            notificationManager
+            val notificationChannel = NotificationChannel(channelId, channelName,NotificationManager.IMPORTANCE_HIGH)
+            notificationManager.createNotificationChannel(notificationChannel)
         }
+
+        notificationManager.notify(0,builder.build())
 
     }
 }

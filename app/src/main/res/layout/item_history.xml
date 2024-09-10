@@ -20,36 +20,39 @@
 
         <TextView
             android:id="@+id/text_action"
-            android:layout_width="wrap_content"
+            android:layout_width="135dp"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textColor="@color/black"
-
+            android:layout_marginStart="10dp"
+            android:layout_marginLeft="14dp"
+            android:layout_marginTop="8dp"
             android:paddingBottom="4dp"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentTop="true"
+            android:text="Action"
+            android:textColor="@color/black"
             android:textColorLink="@color/green"
-            android:text="Action"/>
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/text_format_trans"
-            android:layout_width="250dp"
+            android:layout_width="315dp"
             android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="@color/dark_grey"
-            android:paddingBottom="4dp"
-            android:layout_marginBottom="2dp"
             android:layout_below="@id/text_action"
             android:layout_alignParentStart="true"
             android:layout_alignParentLeft="true"
-            android:text="Transaction Format"/>
+            android:layout_marginStart="5dp"
+            android:layout_marginLeft="7dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="2dp"
+            android:maxLines="3"
+            android:paddingBottom="4dp"
+            android:text="Transaction Format"
+            android:textColor="@color/dark_grey"
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/text_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="@color/green"
             android:paddingBottom="4dp"
             android:layout_marginBottom="8dp"
@@ -60,16 +63,15 @@
 
         <TextView
             android:id="@+id/text_reply_time"
-            android:layout_width="wrap_content"
+            android:layout_width="82dp"
             android:layout_height="wrap_content"
-            android:layout_below="@id/text_status"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
-            android:layout_marginTop="-10dp"
+            android:layout_marginTop="23dp"
             android:layout_marginEnd="0dp"
-            android:gravity="start|center_vertical"
-            android:layout_marginRight="5dp"
+            android:layout_marginRight="10dp"
             android:layout_marginBottom="8dp"
+            android:gravity="start|right|end"
             android:paddingBottom="2dp"
             android:text="Reply Time"
             android:textColor="@color/dark_grey"

@@ -103,7 +103,7 @@
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.910" />
+                        app:layout_constraintVertical_bias="0.95" />
 
                     <TextView
                         android:id="@+id/saldo"
@@ -146,13 +146,13 @@
                         android:id="@+id/saldo_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="55dp"
+                        android:layout_marginTop="44dp"
                         android:text="XXXXXXXXX"
                         android:textColor="@android:color/white"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         app:layout_constraintTop_toBottomOf="@+id/account_number_text"
-                        tools:layout_editor_absoluteX="2dp" />
+                        tools:layout_editor_absoluteX="3dp" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </androidx.cardview.widget.CardView>

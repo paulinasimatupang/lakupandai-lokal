@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "987667272922",
+    "project_id": "ntbs-lakupandai",
+    "storage_bucket": "ntbs-lakupandai.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:987667272922:android:6eca8436273e2ba49f41e3",
+        "android_client_info": {
+          "package_name": "id.co.bankntbsyariah.lakupandai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClyX0GTJrLarmJ90Kv_hbl9AgLZUidkCY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

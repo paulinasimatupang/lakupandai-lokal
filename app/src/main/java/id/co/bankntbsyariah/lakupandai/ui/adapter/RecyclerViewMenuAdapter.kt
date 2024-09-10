@@ -91,7 +91,6 @@ class RecyclerViewMenuAdapter(
             if (isProfile) {
                 holder.menuSubtitle?.visibility = View.GONE
                 holder.menuDescription?.visibility = View.GONE
-                holder.menuImage?.visibility = View.GONE
             } else {
                 holder.menuSubtitle?.text = menuItem.subtitle
                 holder.menuDescription?.text = menuItem.description
@@ -107,6 +106,8 @@ class RecyclerViewMenuAdapter(
     fun isIconNameInCompIcon(iconName: String): Boolean {
         // Example mapping from component to icon
         val compIconMapping = mapOf(
+            "Lupa pin" to "lupa_pin.png",
+            "lupa sandi" to "lupa_sandi.png",
             "pdam" to "pdam.png",
             "ppob" to "lainnya.png",
             "transaksi" to "lainnya.png",
@@ -163,13 +164,12 @@ class RecyclerViewMenuAdapter(
     class MenuViewHolder(itemView: View, isProfile: Boolean) : RecyclerView.ViewHolder(itemView) {
         val menuTitle: TextView = itemView.findViewById(R.id.title)
 
-        val menuImage: ImageView? = if (!isProfile) itemView.findViewById(R.id.header_image) else null
+        val menuImage: ImageView? = itemView.findViewById(R.id.header_image)
         val menuSubtitle: TextView? = if (!isProfile) itemView.findViewById(R.id.subhead) else null
         val menuDescription: TextView? = if (!isProfile) itemView.findViewById(R.id.body) else null
 
         init {
             if (isProfile) {
-                menuImage?.visibility = View.GONE
                 menuSubtitle?.visibility = View.GONE
                 menuDescription?.visibility = View.GONE
             }

@@ -1,7 +1,8 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
-    alias(libs.plugins.googleGmsGoogleServices)
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 
@@ -90,6 +91,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.15.1")
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.messaging.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -106,8 +108,7 @@ dependencies {
     implementation("com.onesignal:OneSignal:[5.0.0, 5.99.99]")
     implementation ("com.github.bumptech.glide:glide:4.12.0")
     implementation ("com.github.bumptech.glide:compiler:4.12.0")
-    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+    implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-analytics")
 }
-
 

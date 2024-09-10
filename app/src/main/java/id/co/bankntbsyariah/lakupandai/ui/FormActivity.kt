@@ -1922,21 +1922,6 @@ class FormActivity : AppCompatActivity() {
                     container.addView(pinView)
 
                 }
-                20 -> {
-                    // Inflate the layout for displaying images
-                    val imagesView = layoutInflater.inflate(R.layout.activity_load_image, container, false)
-
-                    // Assign ImageView components from the layout
-                    val imageViewKTP = imagesView.findViewById<ImageView>(R.id.imageKTP)
-                    val imageViewOrang = imagesView.findViewById<ImageView>(R.id.imageOrang)
-                    val imageViewTTD = imagesView.findViewById<ImageView>(R.id.imageTTD)
-
-                    // Load images into the assigned ImageView components
-                    loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
-
-                    // Add the view to the container or appropriate layout
-                    container.addView(imagesView)
-                }
                 else -> {
                     null
                 }
@@ -2503,14 +2488,6 @@ class FormActivity : AppCompatActivity() {
                                         }
                                         setupScreen(formValue)
 
-                                        val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
-                                        val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
-                                        val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
-
-                                        if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
-                                            loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
-                                        }
-
                                         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
                                             putExtra("MESSAGE_BODY", message)
@@ -2531,14 +2508,6 @@ class FormActivity : AppCompatActivity() {
                                             Log.i("FormActivity", "Fetched formValue: $formValue")
                                         }
                                         setupScreen(formValue)
-
-                                        val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
-                                        val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
-                                        val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
-
-                                        if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
-                                            loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
-                                        }
 
                                     } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
                                         // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
@@ -2632,14 +2601,6 @@ class FormActivity : AppCompatActivity() {
                                         Log.d("Foto", "Tanda Tangan Kosong")
                                     }
                                     setupScreen(formValue)
-
-                                    val imageViewKTP = findViewById<ImageView>(R.id.imageKTP)
-                                    val imageViewOrang = findViewById<ImageView>(R.id.imageOrang)
-                                    val imageViewTTD = findViewById<ImageView>(R.id.imageTTD)
-
-                                    if (imageViewKTP != null && imageViewOrang != null && imageViewTTD != null) {
-                                        loadImagesFromServer(imageViewKTP, imageViewOrang, imageViewTTD)
-                                    }
 
                                     otpScreen = newScreen
                                 }else {
@@ -3669,35 +3630,4 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
-    // Fungsi untuk memuat 3 gambar dari server berdasarkan NIK
-    private fun loadImagesFromServer(imageViewKTP: ImageView, imageViewOrang: ImageView, imageViewTTD: ImageView) {
-        // Retrieve NIK value or use "unknown" if null
-        val nik = nikValue ?: "unknown"
-        val ktpUrl = "http://108.137.154.8:8080/document/image/KTP_$nik.png"
-        val fotoUrl = "http://108.137.154.8:8080/document/image/FOTO_$nik.png"
-        val ttdUrl = "http://108.137.154.8:8080/document/image/TTD_$nik.png"
-
-        // Load KTP image using Glide
-        Glide.with(this)
-            .load(ktpUrl)
-            .placeholder(R.drawable.eye_closed) // Placeholder if the image isn't loaded yet
-            .error(R.drawable.eye_open) // Error image if loading fails
-            .into(imageViewKTP) // Set the loaded image into the ImageView for KTP
-
-        // Load Foto image using Glide
-        Glide.with(this)
-            .load(fotoUrl)
-            .placeholder(R.drawable.eye_closed) // Placeholder
-            .error(R.drawable.eye_open) // Error image
-            .into(imageViewOrang) // Set the image into the ImageView for Orang
-
-        // Load TTD image using Glide
-        Glide.with(this)
-            .load(ttdUrl)
-            .placeholder(R.drawable.eye_closed) // Placeholder
-            .error(R.drawable.eye_open) // Error image
-            .into(imageViewTTD) // Set the image into the ImageView for TTD
-    }
-
 }

@@ -51,8 +51,8 @@
 
     <ImageView
         android:id="@+id/image1"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="55dp"
+        android:layout_height="55dp"
         android:layout_marginTop="248dp"
         android:src="@mipmap/user"
         app:layout_constraintEnd_toStartOf="@+id/username"
@@ -89,9 +89,9 @@
 
     <ImageView
         android:id="@+id/image2"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginTop="328dp"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_marginTop="323dp"
         android:src="@mipmap/email"
         app:layout_constraintEnd_toStartOf="@+id/email"
         app:layout_constraintHorizontal_bias="0.508"
@@ -126,8 +126,8 @@
 
     <ImageView
         android:id="@+id/image3"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
         android:layout_marginTop="405dp"
         android:src="@mipmap/phone"
         app:layout_constraintEnd_toStartOf="@+id/nomor_telepon"
@@ -163,8 +163,8 @@
 
     <ImageView
         android:id="@+id/image4"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
         android:layout_marginTop="485dp"
         android:src="@mipmap/address"
         app:layout_constraintEnd_toStartOf="@+id/alamat"
@@ -209,7 +209,7 @@
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.188"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textView3"
         app:layout_constraintVertical_bias="0.834"

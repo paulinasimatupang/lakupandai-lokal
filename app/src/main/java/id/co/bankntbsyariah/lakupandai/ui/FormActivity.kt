@@ -64,6 +64,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import android.Manifest
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Environment
 import android.os.CountDownTimer
@@ -165,15 +166,22 @@ class FormActivity : AppCompatActivity() {
     private fun handleBackPress() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                finish()
-                startActivity(
-                    Intent(this@FormActivity, MenuActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                )
+                if (formId == "AU00001") {
+                    // If formId is "AU000001", do not navigate to MenuActivity
+                    finish()
+                } else {
+                    // Otherwise, navigate to MenuActivity
+                    finish()
+                    startActivity(
+                        Intent(this@FormActivity, MenuActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    )
+                }
             }
         })
     }
+
 
     private suspend fun loadForm(): String? {
         var formValue = StorageImpl(applicationContext).fetchForm(formId)
@@ -2746,6 +2754,7 @@ class FormActivity : AppCompatActivity() {
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
+//            val imei = sharedPreferences.getString("imei", "")?: ""
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
@@ -2757,7 +2766,9 @@ class FormActivity : AppCompatActivity() {
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
 
-            // Concatenate msg_ui with timestamp to generate msg_id
+//            val imei = sharedPreferences.getString("imei", "")?: ""
+//            Log.e("FormActivity", "Saved Imei: $imei")
+//            val msgUi = imei
             val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
@@ -2944,8 +2955,9 @@ class FormActivity : AppCompatActivity() {
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
                         val terminalArray = merchantData?.optJSONArray("terminal")
-                        val terminalData = terminalArray?.getJSONObject(0)
 
+                        Log.d(TAG, "User status: $userStatus")
+                        Log.d(TAG, "Terminal array: $terminalArray")
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
@@ -3005,13 +3017,95 @@ class FormActivity : AppCompatActivity() {
                             editor.putInt("merchant_status", merchantData.optInt("status"))
                             editor.putString("kode_agen", merchantData.optString("mid"))
                             editor.putInt("pin", merchantData.optInt("pin"))
+                            editor.putString("mid", merchantData.optString("mid"))
 
-                            if (terminalData != null) {
-                                editor.putString("tid", terminalData.optString("tid"))
+                            editor.apply()
+
+                            val midTerminal = sharedPreferences.getString("mid", null)
+                            Log.e ("MID TERMINAL", "MID TERMINAL : $midTerminal")
+                            Log.e ("USERNAME", "USERNAME : $username")
+
+                            val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) // ambil IMEI dari perangkat
+
+                            if (terminalArray == null || terminalArray.length() == 0) {
+                                Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
+
+                                if (imei != null && midTerminal != null) {
+                                    val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
+                                    val createTerminalRequest = Request.Builder()
+                                        .url(createTerminalUrl)
+                                        .post(FormBody.Builder().build())
+                                        .addHeader("Authorization", "Bearer $token")
+                                        .build()
+
+                                    Log.d(TAG, "Request Method: ${createTerminalRequest.method}")
+                                    Log.d(TAG, "Request URL: ${createTerminalRequest.url}")
+                                    Log.d(TAG, "Request Headers: ${createTerminalRequest.headers}")
+                                    Log.d(TAG, "Creating terminal with URL: $createTerminalUrl")
+
+                                    try {
+                                        val terminalResponse = client.newCall(createTerminalRequest).execute()
+                                        val terminalResponseData = terminalResponse.body?.string()
+
+                                        Log.d(TAG, "Received terminal creation response. Response code: ${terminalResponse.code}, Response body: $terminalResponseData")
+
+                                        if (terminalResponse.isSuccessful && terminalResponseData != null) {
+                                            val terminalJsonResponse = JSONObject(terminalResponseData)
+                                            val terminalStatus = terminalJsonResponse.optBoolean("success", false)
+                                            Log.d(TAG, "Terminal STATUS $terminalStatus")
+
+                                            if (terminalStatus) {
+                                                Log.d(TAG, "Terminal berhasil dibuat")
+
+                                                val terminalData = terminalJsonResponse.optJSONObject("data")  // Ganti dengan path yang sesuai jika berbeda
+                                                val tid = terminalData?.optString("tid") ?: ""
+                                                val imeiTerminal = terminalData?.optString("imei") ?: ""
+
+                                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                                val editor = sharedPreferences.edit()
+
+                                                editor.putString("tid", tid)
+                                                editor.putString("imei", imeiTerminal)
+                                                editor.apply()
+
+                                                Log.d(TAG, "Saved terminal TID and IMEI to SharedPreferences")
+                                            } else {
+                                                Log.d(TAG, "Gagal Membuat Terminal Baru")
+                                            }
+                                        } else {
+                                            Log.d(TAG, "Gagal membuat terminal: ${terminalResponse.message}")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error occurred while creating terminal", e)
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "IMEI atau MID tidak ditemukan", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } else {
+                                Log.d(TAG, "Terminal already exists.")
+                                val terminalData = terminalArray?.getJSONObject(0)
+                                if (terminalData != null) {
+                                    editor.putString("tid", terminalData.optString("tid"))
+                                    editor.putString("imei", terminalData.optString("imei"))
+                                    editor.apply()
+                                }
+                            }
+
+                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                            if (imei != null && imei != storedImeiTerminal) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+                                }
+                                return@launch
                             }
 
                             editor.putInt("login_attempts", 0)
-                            editor.apply()
 
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
@@ -3039,6 +3133,7 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+
     private suspend fun handleFailedPinAttempt() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()

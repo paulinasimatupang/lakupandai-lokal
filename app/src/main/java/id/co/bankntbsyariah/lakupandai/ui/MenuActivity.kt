@@ -548,6 +548,9 @@ class MenuActivity : AppCompatActivity() {
             val username = "lakupandai"
             val msg = JSONObject()
             val msgId = "353471045058692200995" //stan + timestamp
+            //            val imei = sharedPreferences.getString("imei", "")?: ""
+//            Log.e("FormActivity", "Saved Imei: $imei")
+//            val msgUi = imei
             val msgUi = "353471045058692"
             val msgSi = "N00001"
             val accountNumber = norekening

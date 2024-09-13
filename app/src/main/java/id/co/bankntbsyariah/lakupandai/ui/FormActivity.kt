@@ -87,7 +87,10 @@ import android.text.style.StyleSpan
 import android.graphics.Color
 import android.text.method.PasswordTransformationMethod
 import android.view.KeyEvent
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.recyclerview.widget.GridLayoutManager
 import com.bumptech.glide.Glide
+import id.co.bankntbsyariah.lakupandai.ui.adapter.ProdukAdapter
 import okhttp3.RequestBody.Companion.asRequestBody
 
 class FormActivity : AppCompatActivity() {
@@ -1259,172 +1262,252 @@ class FormActivity : AppCompatActivity() {
                         var compOption = component.compValues?.compValue
 
                         lifecycleScope.launch {
-                            val options: List<Pair<String?, String?>> = if (compOption.isNullOrEmpty() ||
-                                compOption.all { it.value == "" }) {
+                            val options: List<Pair<String?, String?>> =
+                                if (compOption.isNullOrEmpty() ||
+                                    compOption.all { it.value == "" }
+                                ) {
 
-                                var formValue = StorageImpl(applicationContext).fetchForm(screen.id)
+                                    var formValue =
+                                        StorageImpl(applicationContext).fetchForm(screen.id)
 
-                                if (formValue.isNullOrEmpty()) {
-                                    formValue = withContext(Dispatchers.IO) {
-                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
+                                    if (formValue.isNullOrEmpty()) {
+                                        formValue = withContext(Dispatchers.IO) {
+                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
+                                        }
+                                        Log.i("FormActivity", "Fetched formValue: $formValue")
                                     }
-                                    Log.i("FormActivity", "Fetched formValue: $formValue")
-                                }
 
-                                if (formValue.isNullOrEmpty()) {
-                                    Log.e(
-                                        "FormActivity",
-                                        "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
-                                    )
-                                    mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                    if (formValue.isNullOrEmpty()) {
+                                        Log.e(
+                                            "FormActivity",
+                                            "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
+                                        )
+                                        mutableListOf(
+                                            Pair(
+                                                "Pilih ${component.label}",
+                                                ""
+                                            )
+                                        ) // Return a list with default placeholder
+                                    } else {
+                                        try {
+                                            val screenJson = JSONObject(formValue)
+                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
+                                            val selectedOptions =
+                                                screen.comp.firstOrNull { it.id == component.id }
+                                                    ?.compValues?.compValue?.mapNotNull {
+                                                        Pair(
+                                                            it.print,
+                                                            it.value
+                                                        )
+                                                    }
+                                                    ?: emptyList()
+
+                                            Log.d(
+                                                "FormActivity",
+                                                "SELECTED OPTIONS : $selectedOptions")
+                                            if (component.id == "PR006") {
+                                                selectedOptions
+                                            } else {
+                                                mutableListOf(
+                                                    Pair(
+                                                        "Pilih ${component.label}",
+                                                        ""
+                                                    )
+                                                ) + selectedOptions
+                                            }
+                                        } catch (e: JSONException) {
+                                            Log.e(
+                                                "FormActivity",
+                                                "JSON Parsing error: ${e.message}"
+                                            )
+                                            mutableListOf(
+                                                Pair(
+                                                    "Pilih ${component.label}",
+                                                    ""
+                                                )
+                                            ) // Return a list with default placeholder
+                                        }
+                                    }
                                 } else {
-                                    try {
-                                        val screenJson = JSONObject(formValue)
-                                        val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                        val selectedOptions = screen.comp.firstOrNull { it.id == component.id }
-                                            ?.compValues?.compValue?.mapNotNull { Pair(it.print, it.value) }
-                                            ?: emptyList()
-
-                                        Log.d("FormActivity", "SELECTED OPTIONS : $selectedOptions")
-                                        mutableListOf(Pair("Pilih ${component.label}", "")) + selectedOptions
-                                    } catch (e: JSONException) {
-                                        Log.e("FormActivity", "JSON Parsing error: ${e.message}")
-                                        mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                    if (component.id == "PR006") {
+                                        compOption.map { Pair(it.print, it.value) }
+                                    } else {
+                                        mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
                                     }
                                 }
-                            } else {
-                                mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
-                            }
+                            if (component.id == "PR006") {
+                                val recyclerView = RecyclerView(this@FormActivity).apply {
+                                    layoutManager = GridLayoutManager(this@FormActivity, 2)
+                                    adapter = ProdukAdapter(options) { selectedItem ->
+                                        val selectedValue = selectedItem.first
+                                        val selectedCompValue = selectedItem.second
 
-                            val spinner = Spinner(this@FormActivity).apply {
-                                background = getDrawable(R.drawable.combo_box)
-                                val adapter = ArrayAdapter(
-                                    this@FormActivity,
-                                    android.R.layout.simple_spinner_item,
-                                    options.map { it.first } // Display only the 'print' value
-                                )
-                                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                                this.adapter = adapter
+                                        inputValues[component.id] = selectedCompValue ?: ""
+                                        Log.d("FormActivity", "Component ID: ${component.id}, Selected Value: $selectedValue")
+                                    }
+                                }
 
-                                // Set margin untuk spinner
                                 layoutParams = LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 ).apply {
-                                    setMargins(0, 0, 0, 20) // Margin bawah 20dp untuk jarak antar elemen
+                                    setMargins(0, 0, 0, 20)
                                 }
+
+                                addView(recyclerView)
                             }
 
-                            spinner.onItemSelectedListener =
-                                object : AdapterView.OnItemSelectedListener {
-                                    override fun onItemSelected(
-                                        parent: AdapterView<*>,
-                                        view: View,
-                                        position: Int,
-                                        id: Long
-                                    ) {
-                                        if (position == 0) {
-                                            inputValues[component.id] = ""
-                                            Log.d(
-                                                "FormActivity",
-                                                "Component ID: ${component.id}, No Value Selected"
-                                            )
-                                            return
-                                        }
+                            else {
+                                val spinner = Spinner(this@FormActivity).apply {
+                                    background = getDrawable(R.drawable.combo_box)
+                                    val adapter = ArrayAdapter(
+                                        this@FormActivity,
+                                        android.R.layout.simple_spinner_item,
+                                        options.map { it.first } // Display only the 'print' value
+                                    )
+                                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                    this.adapter = adapter
 
-                                        val selectedPair = options[position]
-                                        val selectedValue = selectedPair.first
-                                        val selectedCompValue = selectedPair.second
-
-                                        if (screen.id == "CCIF001") {
-                                            inputRekening[component.id] = selectedValue ?: "" // Menyimpan selectedValue
-                                        }
-
-                                        Log.d(
-                                            "FormActivity",
-                                            "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
-                                        )
-
-                                        Log.d(
-                                            "FormActivity",
-                                            "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
-                                        )
-
-                                        when (component.id) {
-                                            "PIL03" -> {
-                                                pickOTP = selectedValue
-                                                pickOTP = selectedValue
-                                                Log.d("Form", "PICK OTP: $selectedValue")
-
-                                                // Cek jika nilai tidak valid
-                                                if (selectedValue != "WA" && selectedValue != "SMS") {
-                                                    // Tampilkan AlertDialog
-                                                    AlertDialog.Builder(this@FormActivity)
-                                                        .setTitle("Invalid Option")
-                                                        .setMessage("Harus memilih WA atau SMS.")
-                                                        .setPositiveButton("OK", null)
-                                                        .show()
-
-                                                    // Set pickOTP kembali ke nilai kosong atau default
-                                                    pickOTP = ""
-
-                                                    Toast.makeText(this@FormActivity, "Validasi gagal: Pilih WA atau SMS", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                            "CB001" -> {
-                                                if (selectedCompValue != null) {
-                                                    inputValues[component.id] = selectedCompValue.replace("[OI]", "")
-                                                }
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Branch Code set to: ${inputValues[component.id]}"
-                                                )
-                                            }
-
-                                            "CR002" -> if (selectedValue == "BSA Lakupandai") {
-                                                inputValues[component.id] = "36"
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Special case for CR002: Value set to 36"
-                                                )
-                                            }
-
-                                            "CIF13" -> {
-                                                if (selectedCompValue != null) {
-                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CK", "")
-                                                }
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Kab Kota set to: ${inputValues[component.id]}"
-                                                )
-                                            }
-
-                                            "CIF23" -> inputValues[component.id] = (position - 1).toString()
-
-                                            "CIF14" -> {
-                                                if (selectedCompValue != null) {
-                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CIFP", "")
-                                                }
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Provinsi set to: ${inputValues[component.id]}"
-                                                )
-                                            }
-                                            else -> inputValues[component.id] = (position ?: selectedValue).toString()
-                                        }
-
-                                    }
-
-                                    override fun onNothingSelected(parent: AdapterView<*>) {
-                                        Log.d(
-                                            "FormActivity",
-                                            "Nothing selected for Component ID: ${component.id}"
-                                        )
+                                    // Set margin untuk spinner
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        LinearLayout.LayoutParams.WRAP_CONTENT
+                                    ).apply {
+                                        setMargins(
+                                            0,
+                                            0,
+                                            0,
+                                            20
+                                        ) // Margin bawah 20dp untuk jarak antar elemen
                                     }
                                 }
 
-                            addView(spinner)
-                        }
+                                spinner.onItemSelectedListener =
+                                    object : AdapterView.OnItemSelectedListener {
+                                        override fun onItemSelected(
+                                            parent: AdapterView<*>,
+                                            view: View,
+                                            position: Int,
+                                            id: Long
+                                        ) {
+                                            if (position == 0) {
+                                                inputValues[component.id] = ""
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Component ID: ${component.id}, No Value Selected"
+                                                )
+                                                return
+                                            }
+
+                                            val selectedPair = options[position]
+                                            val selectedValue = selectedPair.first
+                                            val selectedCompValue = selectedPair.second
+
+                                            if (screen.id == "CCIF001") {
+                                                inputRekening[component.id] =
+                                                    selectedValue ?: "" // Menyimpan selectedValue
+                                            }
+
+                                            Log.d(
+                                                "FormActivity",
+                                                "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
+                                            )
+
+                                            Log.d(
+                                                "FormActivity",
+                                                "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
+                                            )
+
+                                            when (component.id) {
+                                                "PIL03" -> {
+                                                    pickOTP = selectedValue
+                                                    pickOTP = selectedValue
+                                                    Log.d("Form", "PICK OTP: $selectedValue")
+
+                                                    // Cek jika nilai tidak valid
+                                                    if (selectedValue != "WA" && selectedValue != "SMS") {
+                                                        // Tampilkan AlertDialog
+                                                        AlertDialog.Builder(this@FormActivity)
+                                                            .setTitle("Invalid Option")
+                                                            .setMessage("Harus memilih WA atau SMS.")
+                                                            .setPositiveButton("OK", null)
+                                                            .show()
+
+                                                        // Set pickOTP kembali ke nilai kosong atau default
+                                                        pickOTP = ""
+
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "Validasi gagal: Pilih WA atau SMS",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                }
+
+                                                "CB001" -> {
+                                                    if (selectedCompValue != null) {
+                                                        inputValues[component.id] =
+                                                            selectedCompValue.replace("[OI]", "")
+                                                    }
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Branch Code set to: ${inputValues[component.id]}"
+                                                    )
+                                                }
+
+                                                "CR002" -> if (selectedValue == "BSA Lakupandai") {
+                                                    inputValues[component.id] = "36"
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Special case for CR002: Value set to 36"
+                                                    )
+                                                }
+
+                                                "CIF13" -> {
+                                                    if (selectedCompValue != null) {
+                                                        inputValues[component.id] =
+                                                            selectedCompValue.replace("[OI]CK", "")
+                                                    }
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Kab Kota set to: ${inputValues[component.id]}"
+                                                    )
+                                                }
+
+                                                "CIF23" -> inputValues[component.id] =
+                                                    (position - 1).toString()
+
+                                                "CIF14" -> {
+                                                    if (selectedCompValue != null) {
+                                                        inputValues[component.id] =
+                                                            selectedCompValue.replace(
+                                                                "[OI]CIFP",
+                                                                ""
+                                                            )
+                                                    }
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Provinsi set to: ${inputValues[component.id]}"
+                                                    )
+                                                }
+
+                                                else -> inputValues[component.id] =
+                                                    (position ?: selectedValue).toString()
+                                            }
+
+                                        }
+
+                                        override fun onNothingSelected(parent: AdapterView<*>) {
+                                            Log.d(
+                                                "FormActivity",
+                                                "Nothing selected for Component ID: ${component.id}"
+                                            )
+                                        }
+                                    }
+
+                                addView(spinner)
+                            }
+                                                    }
                     }.let { view ->
                         container.addView(view, LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1433,6 +1516,7 @@ class FormActivity : AppCompatActivity() {
                             setMargins(20, 20, 20, 20) // Margin untuk seluruh view
                         })
                     }
+
                 }
 
                 5 -> {
@@ -2755,7 +2839,7 @@ class FormActivity : AppCompatActivity() {
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
-            val username = "lakupandai"
+            val username = "admin"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")

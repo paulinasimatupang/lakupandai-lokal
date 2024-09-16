@@ -1620,6 +1620,7 @@ class FormActivity : AppCompatActivity() {
                 }
 
                 7 -> {
+                    Log.d("FormActivity", "Form ID BUTTON: $formId")
                     val button = Button(this).apply {
                         text = component.label
                         setTextColor(getColor(R.color.white))
@@ -1672,7 +1673,7 @@ class FormActivity : AppCompatActivity() {
                                         handleButtonClick(component, screen)
                                     }
                                 }
-                            }else if (formId == "AU00001") {
+                            }else if (formId == "AU00001" && component.id != "OTP10") {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
@@ -2525,99 +2526,105 @@ class FormActivity : AppCompatActivity() {
                     isOtpValidated = true
                     otpDialog?.dismiss()
                     cancelOtpTimer()
-                    val messageBody = createMessageBody(screen)
-                    if (messageBody != null) {
-                        Log.d("FormActivity", "Message Body: $messageBody")
-                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                            responseBody?.let { body ->
-                                lifecycleScope.launch {
-                                    val screenJson = JSONObject(body)
-                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
-                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                    if (screen.id == "CCIF003" && newScreen.id == "000000D") {
-                                        val message = newScreen?.comp?.find { it.id == "0000A" }
-                                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
-                                        newScreen.id = "RCCIF02"
-                                        var newScreenId = newScreen.id
-                                        var formValue =
-                                            StorageImpl(applicationContext).fetchForm(newScreenId)
-                                        if (formValue.isNullOrEmpty()) {
-                                            formValue = withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                    newScreenId
-                                                )
+                    Log.e("OTP", "SCREEN SEKARANG: $screen.id")
+                    if(screen.id == "WS0001"){
+                        Log.e("OTP", "Create Terminal: $otpValue")
+                        createTerminalAndLogin(screen)
+                    }else{
+                        val messageBody = createMessageBody(screen)
+                        if (messageBody != null) {
+                            Log.d("FormActivity", "Message Body: $messageBody")
+                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                responseBody?.let { body ->
+                                    lifecycleScope.launch {
+                                        val screenJson = JSONObject(body)
+                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                        Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                        Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                        if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                            val message = newScreen?.comp?.find { it.id == "0000A" }
+                                                ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
+                                            newScreen.id = "RCCIF02"
+                                            var newScreenId = newScreen.id
+                                            var formValue =
+                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                            if (formValue.isNullOrEmpty()) {
+                                                formValue = withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                                Log.i("FormActivity", "Fetched formValue: $formValue")
                                             }
-                                            Log.i("FormActivity", "Fetched formValue: $formValue")
-                                        }
-                                        val url = "http://108.137.154.8:8080/ARRest/fileupload"
-                                        if(fileFotoOrang != null){
-                                            // Mengunggah foto orang
-                                            fileFotoOrang?.let { file ->
-                                                uploadImageFile(file, url)
-                                                Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
+                                            val url = "http://108.137.154.8:8080/ARRest/fileupload"
+                                            if(fileFotoOrang != null){
+                                                // Mengunggah foto orang
+                                                fileFotoOrang?.let { file ->
+                                                    uploadImageFile(file, url)
+                                                    Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
+                                                }
+                                            }else{
+                                                Log.d("Foto", "Foto Orang Kosong")
                                             }
-                                        }else{
-                                            Log.d("Foto", "Foto Orang Kosong")
-                                        }
-                                        if(fileFotoKTP != null){
-                                            // Mengunggah KTP
-                                            fileFotoKTP?.let { file ->
-                                                uploadImageFile(file, url)
-                                                Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                            if(fileFotoKTP != null){
+                                                // Mengunggah KTP
+                                                fileFotoKTP?.let { file ->
+                                                    uploadImageFile(file, url)
+                                                    Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                                }
+                                            }else{
+                                                Log.d("Foto", "Foto KTP Kosong")
                                             }
-                                        }else{
-                                            Log.d("Foto", "Foto KTP Kosong")
-                                        }
-                                        if(signatureFile != null){
-                                            // Mengunggah tanda tangan
-                                            signatureFile?.let { file ->
-                                                uploadImageFile(file, url)
-                                                Log.d("Foto", "Signature Ada : $signatureFile")
+                                            if(signatureFile != null){
+                                                // Mengunggah tanda tangan
+                                                signatureFile?.let { file ->
+                                                    uploadImageFile(file, url)
+                                                    Log.d("Foto", "Signature Ada : $signatureFile")
+                                                }
+                                            }else{
+                                                Log.d("Foto", "Tanda Tangan Kosong")
                                             }
-                                        }else{
-                                            Log.d("Foto", "Tanda Tangan Kosong")
-                                        }
-                                        setupScreen(formValue)
+                                            setupScreen(formValue)
 
-                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", message)
-                                            putExtra("RETURN_TO_ROOT", false)
-                                        }
-                                        startActivity(intent)
-                                    } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
-                                        newScreen.id = "CCIF001"
-                                        var newScreenId = newScreen.id
-                                        var formValue =
-                                            StorageImpl(applicationContext).fetchForm(newScreenId)
-                                        if (formValue.isNullOrEmpty()) {
-                                            formValue = withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                    newScreenId
-                                                )
+                                            val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", message)
+                                                putExtra("RETURN_TO_ROOT", false)
                                             }
-                                            Log.i("FormActivity", "Fetched formValue: $formValue")
-                                        }
-                                        setupScreen(formValue)
+                                            startActivity(intent)
+                                        } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                            newScreen.id = "CCIF001"
+                                            var newScreenId = newScreen.id
+                                            var formValue =
+                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                            if (formValue.isNullOrEmpty()) {
+                                                formValue = withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                            }
+                                            setupScreen(formValue)
 
-                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                        // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
-                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                            putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                        } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                            // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                            val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                            }
+                                            startActivity(intent)
+                                        } else {
+                                            handleScreenType(newScreen)
                                         }
-                                        startActivity(intent)
-                                    } else {
-                                        handleScreenType(newScreen)
                                     }
+                                } ?: run {
+                                    Log.e("FormActivity", "Failed to fetch response body")
                                 }
-                            } ?: run {
-                                Log.e("FormActivity", "Failed to fetch response body")
                             }
+                        } else {
+                            Log.e("FormActivity", "Failed to create message body, request not sent")
                         }
-                    } else {
-                        Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
                 } else if (msg03Value == null) {
                     Toast.makeText(
@@ -2850,10 +2857,10 @@ class FormActivity : AppCompatActivity() {
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
 
-//            val imei = sharedPreferences.getString("imei", "")?: ""
-//            Log.e("FormActivity", "Saved Imei: $imei")
-//            val msgUi = imei
-            val msgUi = "353471045058692"
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val msgUi = imei
+//            val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
 
@@ -3113,63 +3120,23 @@ class FormActivity : AppCompatActivity() {
 
                             if (terminalArray == null || terminalArray.length() == 0) {
                                 Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
-
-                                if (imei != null && midTerminal != null) {
-                                    val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
-                                    val createTerminalRequest = Request.Builder()
-                                        .url(createTerminalUrl)
-                                        .post(FormBody.Builder().build())
-                                        .addHeader("Authorization", "Bearer $token")
-                                        .build()
-
-                                    Log.d(TAG, "Request Method: ${createTerminalRequest.method}")
-                                    Log.d(TAG, "Request URL: ${createTerminalRequest.url}")
-                                    Log.d(TAG, "Request Headers: ${createTerminalRequest.headers}")
-                                    Log.d(TAG, "Creating terminal with URL: $createTerminalUrl")
-
-                                    try {
-                                        val terminalResponse = client.newCall(createTerminalRequest).execute()
-                                        val terminalResponseData = terminalResponse.body?.string()
-
-                                        Log.d(TAG, "Received terminal creation response. Response code: ${terminalResponse.code}, Response body: $terminalResponseData")
-
-                                        if (terminalResponse.isSuccessful && terminalResponseData != null) {
-                                            val terminalJsonResponse = JSONObject(terminalResponseData)
-                                            val terminalStatus = terminalJsonResponse.optBoolean("success", false)
-                                            Log.d(TAG, "Terminal STATUS $terminalStatus")
-
-                                            if (terminalStatus) {
-                                                Log.d(TAG, "Terminal berhasil dibuat")
-
-                                                val terminalData = terminalJsonResponse.optJSONObject("data")  // Ganti dengan path yang sesuai jika berbeda
-                                                val tid = terminalData?.optString("tid") ?: ""
-                                                val imeiTerminal = terminalData?.optString("imei") ?: ""
-
-                                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                                                val editor = sharedPreferences.edit()
-
-                                                editor.putString("tid", tid)
-                                                editor.putString("imei", imeiTerminal)
-                                                editor.apply()
-
-                                                Log.d(TAG, "Saved terminal TID and IMEI to SharedPreferences")
-                                            } else {
-                                                Log.d(TAG, "Gagal Membuat Terminal Baru")
+                                val messageBody = createOTP()
+                                Log.d("LOGIN OTP", "Create OTP : $messageBody")
+                                if (messageBody != null) {
+                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                        responseBody?.let { body ->
+                                            lifecycleScope.launch {
+                                                val screenJson = JSONObject(body)
+                                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                handleScreenType(newScreen)
                                             }
-                                        } else {
-                                            Log.d(TAG, "Gagal membuat terminal: ${terminalResponse.message}")
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Error occurred while creating terminal", e)
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } ?: run {
+                                            Log.e("FormActivity", "Failed to fetch response body")
                                         }
                                     }
                                 } else {
-                                    Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@FormActivity, "IMEI atau MID tidak ditemukan", Toast.LENGTH_SHORT).show()
-                                    }
+                                    Log.e("FormActivity", "Failed to create message body, request not sent")
                                 }
                             } else {
                                 Log.d(TAG, "Terminal already exists.")
@@ -3179,21 +3146,23 @@ class FormActivity : AppCompatActivity() {
                                     editor.putString("imei", terminalData.optString("imei"))
                                     editor.apply()
                                 }
-                            }
 
-                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
-                            if (imei != null && imei != storedImeiTerminal) {
+                                editor.putInt("login_attempts", 0)
+                                editor.apply()
+
+//                                comment dulu biar bisa login
+//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+//                                if (imei != null && imei != storedImeiTerminal) {
+//                                    withContext(Dispatchers.Main) {
+//                                        Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+//                                    }
+//                                    return@launch
+//                                }
+
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
                                 }
-                                return@launch
-                            }
-
-                            editor.putInt("login_attempts", 0)
-
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                navigateToScreen()
                             }
                         } else {
                             withContext(Dispatchers.Main) {
@@ -3809,4 +3778,124 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun createOTP(): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val merchant_phone = sharedPreferences.getString("merchant_phone", "") ?: ""
+            val username = "admin"
+            val msg = JSONObject()
+
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgUi = imei
+//            val msgUi = "353471045058692"
+            val msgId = msgUi + timestamp
+//            val msgUi = "353471045058692"
+            val msgSi = "SV0001"
+            val msgDt = "$username|$merchant_phone"
+
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi)
+                put("msg_dt", msgDt)
+            }
+
+            msg.put("msg", msgObject)
+
+            // Logging the JSON message details
+            Log.d("MenuActivity", "Message ID: $msgId")
+            Log.d("MenuActivity", "Message UI: $msgUi")
+            Log.d("MenuActivity", "Message SI: $msgSi")
+            Log.d("MenuActivity", "Message DT: $msgDt")
+            Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
+            msg
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    private fun createTerminalAndLogin(screen: Screen?) {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val midTerminal = sharedPreferences.getString("mid", null)
+        val token = sharedPreferences.getString("token", "")
+        val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+
+        Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
+
+            if (imei != null && midTerminal != null) {
+                val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
+                val createTerminalRequest = Request.Builder()
+                    .url(createTerminalUrl)
+                    .post(FormBody.Builder().build())
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val terminalResponse = client.newCall(createTerminalRequest).execute()
+                        val terminalResponseData = terminalResponse.body?.string()
+
+                        if (terminalResponse.isSuccessful && terminalResponseData != null) {
+                            val terminalJsonResponse = JSONObject(terminalResponseData)
+                            val terminalStatus = terminalJsonResponse.optBoolean("success", false)
+
+                            if (terminalStatus) {
+                                Log.d(TAG, "Terminal berhasil dibuat")
+
+                                saveTerminalData(terminalJsonResponse)
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val editor = sharedPreferences.edit()
+                                editor.putInt("login_attempts", 0)
+                                editor.apply()
+
+//                                comment dulu biar bisa login
+//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+//                                if (imei != null && imei != storedImeiTerminal) {
+//                                    withContext(Dispatchers.Main) {
+//                                        Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+//                                    }
+//                                    return@launch
+//                                }
+
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                }
+                            } else {
+                                Log.d(TAG, "Gagal Membuat Terminal Baru")
+                            }
+                        } else {
+                            Log.d(TAG, "Gagal membuat terminal: ${terminalResponse.message}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error occurred while creating terminal", e)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+        } else {
+            Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
+        }
+    }
+
+    private fun saveTerminalData(terminalJsonResponse: JSONObject) {
+        val terminalData = terminalJsonResponse.optJSONObject("data")
+        val tid = terminalData?.optString("tid") ?: ""
+        val imeiTerminal = terminalData?.optString("imei") ?: ""
+
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+
+        editor.putString("tid", tid)
+        editor.putString("imei", imeiTerminal)
+        editor.apply()
+
+        Log.d(TAG, "Saved terminal TID and IMEI to SharedPreferences")
+    }
+
 }

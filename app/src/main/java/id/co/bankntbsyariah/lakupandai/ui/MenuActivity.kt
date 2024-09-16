@@ -45,6 +45,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.text.NumberFormat
 import java.util.Locale
 import android.widget.ImageView
+import java.text.SimpleDateFormat
+import java.util.Date
 
 class MenuActivity : AppCompatActivity() {
 
@@ -545,13 +547,16 @@ class MenuActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-            val username = "lakupandai"
+            val username = "admin"
             val msg = JSONObject()
-            val msgId = "353471045058692200995" //stan + timestamp
-            //            val imei = sharedPreferences.getString("imei", "")?: ""
-//            Log.e("FormActivity", "Saved Imei: $imei")
-//            val msgUi = imei
-            val msgUi = "353471045058692"
+
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val msgUi = imei
+//            val msgUi = "353471045058692"
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = msgUi + timestamp
+
             val msgSi = "N00001"
             val accountNumber = norekening
             val name = merchant_name

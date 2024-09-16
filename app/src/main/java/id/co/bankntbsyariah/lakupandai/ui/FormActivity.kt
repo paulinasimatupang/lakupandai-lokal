@@ -158,6 +158,7 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -340,6 +341,7 @@ class FormActivity : AppCompatActivity() {
 //            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
+            screenTitle.contains("Saldo", ignoreCase = true) -> R.layout.activity_saldo
             screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
             screenTitle.contains("Berhasil", ignoreCase = true) ->
             {
@@ -465,7 +467,6 @@ class FormActivity : AppCompatActivity() {
                     Log.e("FormActivity", "TextView with ID success not found")
                 }
             }
-
             if (component.id == "TRF27" && component.label.contains("Penerima")) {
                 extraText = "Penerima"
             } else if ((component.id == "AG001" || component.id == "TRF26") && component.label.contains(
@@ -2928,10 +2929,10 @@ class FormActivity : AppCompatActivity() {
 
             }
             val unf01Value = componentValues["AG009"] ?: ""
-            val rnr02Value = componentValues["RNR02"] ?: ""
-            val unf03Value = componentValues["UNF03"] ?: ""
+            val rnr02Value = componentValues["RNR05"] ?: ""
+            val unf03Value = componentValues["UNF05"] ?: ""
             val unf04Value = componentValues["SET10"] ?: ""
-            val unf05Value = componentValues["NAR01"] ?: ""
+            val unf05Value = componentValues["NAR05"] ?: ""
             val rnr06Value = componentValues["TRF30"] ?: ""
             val rnr07Value = componentValues["TRT07 "] ?: ""
             val rnr08Value = componentValues["TRF31"] ?: ""
@@ -2941,7 +2942,9 @@ class FormActivity : AppCompatActivity() {
 
             when (screen.id) {
                 "RCS0001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf05Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
+                    val currentDate = getCurrentDate()
+                    val currentTime = getCurrentTime()
+                    componentValues["MSG05"] = "Saldo no.rek $unf03Value a.n $unf05Value Rp.$rnr02Value pada $currentDate waktu: $currentTime."
                 }
                 "TF00003" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$rnr08Value , dengan nomor rekening: $rnr07Value . Berhasil melakukan transaksi transfer kepada $rnr09Value penerima dengan nominal $rnr10Value  ."

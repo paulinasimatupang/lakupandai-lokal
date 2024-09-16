@@ -392,7 +392,7 @@ class MenuActivity : AppCompatActivity() {
         val spacing = (resources.displayMetrics.density * 8).toInt()
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
         menuList.clear()
-        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001")
+        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001", menuId == "PR00000")
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->
@@ -484,7 +484,7 @@ class MenuActivity : AppCompatActivity() {
 
                 Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
 
-                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false)
+                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false)
                 recyclerView.adapter = menuAdapter
 
                 menuAdapter.notifyDataSetChanged()

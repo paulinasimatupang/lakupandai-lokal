@@ -30,14 +30,33 @@
             android:src="@mipmap/logo_aja_ntbs" />
 
         <TextView
-            android:id="@+id/product_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/header_image"
-            android:layout_marginTop="2dp"
+            android:id="@+id/title"
+            android:layout_width="125dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="70dp"
             android:gravity="center"
             android:text="Buka Rekening"
             android:textColor="@color/black"
-            android:textSize="11sp"/>
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/subhead"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="Laku Pandai"
+            android:textColor="@color/broken_white"
+            android:textSize="9sp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="Membuka rekening baru untuk calon nasabah Bank NTB Syariah"
+            android:textColor="@color/broken_white"
+            android:textSize="9sp"
+            android:visibility="gone"/>
     </RelativeLayout>
 </LinearLayout>

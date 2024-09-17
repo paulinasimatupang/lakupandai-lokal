@@ -2537,7 +2537,14 @@ class FormActivity : AppCompatActivity() {
                     Log.e("OTP", "SCREEN SEKARANG: $screen.id")
                     if(screen.id == "WS0001"){
                         Log.e("OTP", "Create Terminal: $otpValue")
-                        createTerminalAndLogin(screen)
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                        val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                        Log.e ("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
+                        if(storedImeiTerminal == "null"){
+//                            createNewImei()
+                        }else{
+                            createTerminalAndLogin(screen)
+                        }
                     }else{
                         val messageBody = createMessageBody(screen)
                         if (messageBody != null) {
@@ -3128,7 +3135,9 @@ class FormActivity : AppCompatActivity() {
 
                             val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) // ambil IMEI dari perangkat
 
-                            if (terminalArray == null || terminalArray.length() == 0) {
+                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                            Log.e ("Imei Terminal", "Imei Terminal : $storedImeiTerminal")
+                            if (terminalArray == null || terminalArray.length() == 0 || storedImeiTerminal == "null") {
                                 Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
                                 val messageBody = createOTP()
                                 Log.d("LOGIN OTP", "Create OTP : $messageBody")
@@ -3890,6 +3899,76 @@ class FormActivity : AppCompatActivity() {
                 }
         } else {
             Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
+        }
+    }
+
+    private fun createNewImei() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val midTerminal = sharedPreferences.getString("mid", null)
+        val tidTerminal = sharedPreferences.getString("tid", null)
+        val token = sharedPreferences.getString("token", "")
+        val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+
+        Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
+
+        if (imei != null && midTerminal != null && tidTerminal != null) {
+            val createTerminalUrl = "http://127.0.0.1:8000/api/imei/store"
+
+            val jsonBody = """
+        {
+            "tid": "$tidTerminal",
+                    "imei": "$imei",
+                    "mid": "$midTerminal"
+        }
+        """.trimIndent()
+
+            // Buat RequestBody untuk JSON
+            val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody)
+
+            // Membangun request dengan body JSON dan header Authorization
+            val createTerminalRequest = Request.Builder()
+                .url(createTerminalUrl)
+                .post(requestBody)
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json")  // Pastikan menambahkan header Content-Type
+                .build()
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val imeiResponse = client.newCall(createTerminalRequest).execute()
+                    val terminalResponseData = imeiResponse.body?.string()
+
+                    if (imeiResponse.isSuccessful && terminalResponseData != null) {
+                        val imeiJsonResponse = JSONObject(terminalResponseData)
+                        val terminalStatus = imeiJsonResponse.optBoolean("success", false)
+
+                        if (terminalStatus) {
+                            Log.d(TAG, "Imei baru berhasil dibuat")
+
+                            saveTerminalData(imeiJsonResponse)
+                            val editor = sharedPreferences.edit()
+                            editor.putInt("login_attempts", 0)
+                            editor.apply()
+
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                navigateToScreen()
+                            }
+                        } else {
+                            Log.d(TAG, "Gagal Membuat Imei Baru")
+                        }
+                    } else {
+                        Log.d(TAG, "Gagal membuat terminal: ${imeiResponse.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error occurred while creating imei", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            Log.d(TAG, "IMEI or MID is null. Cannot create imei.")
         }
     }
 

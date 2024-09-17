@@ -156,8 +156,15 @@ class FormActivity : AppCompatActivity() {
             val formValue = loadForm()
             setupScreen(formValue)
         }
-    }
 
+        findViewById<TextView>(R.id.forgot_password)?.setOnClickListener {
+            val intent = Intent(this, FormActivity::class.java).apply {
+                putExtra(Constants.KEY_FORM_ID, "LPW0000")
+            }
+            startActivity(intent)
+        }
+    }
+[]
 
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->

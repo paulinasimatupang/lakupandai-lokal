@@ -164,7 +164,6 @@ class FormActivity : AppCompatActivity() {
             startActivity(intent)
         }
     }
-[]
 
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->

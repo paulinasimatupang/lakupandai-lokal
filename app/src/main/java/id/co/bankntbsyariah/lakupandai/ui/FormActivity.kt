@@ -341,7 +341,7 @@ class FormActivity : AppCompatActivity() {
 //            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
-            screenTitle.contains("Saldo", ignoreCase = true) -> R.layout.activity_saldo
+            screenTitle.contains("Cek Saldo Berhasil", ignoreCase = true) -> R.layout.activity_saldo
             screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
             screenTitle.contains("Berhasil", ignoreCase = true) ->
             {
@@ -436,7 +436,7 @@ class FormActivity : AppCompatActivity() {
             when {
                 component.id == "TRF27" ||
                         (component.id == "AG001" && screen.title.contains("Form")) ||
-                        component.id == "TRF26" -> {
+                        component.id == "TRF26" || component.id == "NAG02"  -> {
                     norekComponent = component
                 }
                 component.id == "TFR24" ||
@@ -447,6 +447,7 @@ class FormActivity : AppCompatActivity() {
                     namaDepan = fullName?.split(" ")?.firstOrNull()?.take(1) ?: ""
                 }
             }
+
             if (screen.title.contains("Transfer") && component.id == "ST003") {
                 val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
                 val dateTransferTextView = findViewById<TextView>(R.id.dateTransfer)
@@ -517,7 +518,7 @@ class FormActivity : AppCompatActivity() {
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
 
-            if (component.id == "TRF27" || component.id == "TFR24" || (component.id == "AG001" && screen.title.contains("Form")) ||
+            if (component.id == "TRF27" || component.id == "TFR24" || (component.id == "AG001" && screen.title.contains("Form")) || (component.id == "NAG02" && screen.title.contains("Form")) ||
                 (component.id == "AG002" && screen.title.contains("Form")) || component.id == "TRF26" || (component.id == "AG005" && screen.title.contains("Form")) ||
                 (component.id == "ST003" && screen.title.contains("Transfer")) || component.id == "D1004"
             ) continue

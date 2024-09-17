@@ -45,7 +45,7 @@ class RecyclerViewMenuAdapter(
             } else if(isProfile){
                 R.layout.recycler_profile_list
             } else if(isList){
-                R.layout.recycler_profile_list
+                R.layout.recycler_combo_box_provider
             } else {
                 R.layout.recycler_view_menu_item
             },

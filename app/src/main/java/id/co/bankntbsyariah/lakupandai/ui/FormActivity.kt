@@ -3429,6 +3429,7 @@ class FormActivity : AppCompatActivity() {
                 var newPassword: String? = null
                 var username: String? = null
 
+                // Mengumpulkan data dari inputValues
                 for ((key, value) in inputValues) {
                     when (key) {
                         "LP000" -> {
@@ -3449,15 +3450,19 @@ class FormActivity : AppCompatActivity() {
 
                 val formBody = formBodyBuilder.build()
 
+                // Buat instance WebCallerImpl
                 val webCaller = WebCallerImpl()
-                val response = withContext(Dispatchers.IO) {
+
+                // Lakukan panggilan HTTP dengan data yang dikumpulkan
+                val fetchedValue = withContext(Dispatchers.IO) {
                     webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
+                        ?.string()
                 }
 
-                val fetchedValue = response?.body?.string() // Ensure this is valid
-
+                // Proses respons
                 if (!fetchedValue.isNullOrEmpty()) {
                     try {
+                        // Debug log untuk respons mentah
                         Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
                         val jsonResponse = JSONObject(fetchedValue)
@@ -3466,7 +3471,7 @@ class FormActivity : AppCompatActivity() {
                         if (status) {
                             Log.d(TAG, "Password changed successfully.")
                             Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
-                            navigateToLogin()  // Replace with your navigation function
+                            navigateToLogin()  // Ganti dengan fungsi navigasi ke login
                         } else {
                             Log.e(TAG, "Failed to change password.")
                             Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()

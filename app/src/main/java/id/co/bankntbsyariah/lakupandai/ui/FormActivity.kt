@@ -3993,8 +3993,7 @@ class FormActivity : AppCompatActivity() {
         {
             "username": "$username",
             "old_password": "$oldPassword",
-            "new_password": "$newPassword",
-            "code": "$forgotPasswordCode"
+            "new_password": "$newPassword"
         }
         """.trimIndent()
 

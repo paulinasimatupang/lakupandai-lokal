@@ -11,6 +11,7 @@ interface WebCaller {
     fun fetchHistory(terminalId: String, token: String): ResponseBody?
     fun fetchHistoryDetail(terminalId: String, messageId: String, token: String): ResponseBody?
     fun changePassword(id: String, old_password: String, new_password: String, token: String): ResponseBody?
+    fun forgotPassword(old_password: String, new_password: String, username: String): ResponseBody?
     fun changePin(id: String, old_pin: String, new_pin: String, token: String): ResponseBody?
     fun blockAgen(id: String, token: String): ResponseBody?
 }

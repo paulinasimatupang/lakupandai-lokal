@@ -1698,6 +1698,8 @@ class FormActivity : AppCompatActivity() {
                                 changePassword()
                             } else if (formId == "LS00002") {
                                 changePin()
+                            } else if (formId == "LPW0000") {
+                                forgotPassword()
                             }else {
                                 handleButtonClick(component, screen)
                             }
@@ -3419,7 +3421,69 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun forgotPassword() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var oldPassword: String? = null
+                var newPassword: String? = null
+                var username: String? = null
 
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "LP000" -> {
+                            oldPassword = value
+                            formBodyBuilder.add("old_password", value)
+                        }
+                        "LP001" -> {
+                            newPassword = value
+                            formBodyBuilder.add("new_password", value)
+                        }
+                        "UN001" -> {
+                            username = value
+                            formBodyBuilder.add("username", value)
+                        }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    // Assuming webCaller.forgotPassword() returns an OkHttp Response
+                    val response = webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
+                    response?.body?.string() // Ensure that body is of type ResponseBody
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        // Ensure the JSONObject import is correct
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optBoolean("status", false)
+                        val message = jsonResponse.optString("message", "")
+                        if (status) {
+                            Log.d(TAG, "Password changed successfully.")
+                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
+                            navigateToLogin()  // Ganti dengan fungsi navigasi yang sesuai
+                        } else {
+                            Log.e(TAG, "Failed to change password.")
+                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+            }
+        }
+    }
 
     private fun setKeyboard(editText: EditText, component: Component) {
         val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
@@ -3513,6 +3577,17 @@ class FormActivity : AppCompatActivity() {
             putExtra(Constants.KEY_MENU_ID, "MN00000")
         })
     }
+
+    private fun navigateToLogin() {
+        val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "AU00001")
+        }
+        startActivity(intent)
+        finish()
+    }
+
+
 
     fun formatMutasi(mutasiText: String): String {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
@@ -3899,149 +3974,6 @@ class FormActivity : AppCompatActivity() {
                 }
         } else {
             Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
-        }
-    }
-
-    private fun createNewImei() {
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-        val midTerminal = sharedPreferences.getString("mid", null)
-        val tidTerminal = sharedPreferences.getString("tid", null)
-        val token = sharedPreferences.getString("token", "")
-        val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-
-        Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
-
-        if (imei != null && midTerminal != null && tidTerminal != null) {
-            val createTerminalUrl = "http://127.0.0.1:8000/api/imei/store"
-
-            val jsonBody = """
-        {
-            "tid": "$tidTerminal",
-                    "imei": "$imei",
-                    "mid": "$midTerminal"
-        }
-        """.trimIndent()
-
-            // Buat RequestBody untuk JSON
-            val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody)
-
-            // Membangun request dengan body JSON dan header Authorization
-            val createTerminalRequest = Request.Builder()
-                .url(createTerminalUrl)
-                .post(requestBody)
-                .addHeader("Authorization", "Bearer $token")
-                .addHeader("Content-Type", "application/json")  // Pastikan menambahkan header Content-Type
-                .build()
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val imeiResponse = client.newCall(createTerminalRequest).execute()
-                    val terminalResponseData = imeiResponse.body?.string()
-
-                    if (imeiResponse.isSuccessful && terminalResponseData != null) {
-                        val imeiJsonResponse = JSONObject(terminalResponseData)
-                        val terminalStatus = imeiJsonResponse.optBoolean("success", false)
-
-                        if (terminalStatus) {
-                            Log.d(TAG, "Imei baru berhasil dibuat")
-
-                            saveTerminalData(imeiJsonResponse)
-                            val editor = sharedPreferences.edit()
-                            editor.putInt("login_attempts", 0)
-                            editor.apply()
-
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                navigateToScreen()
-                            }
-                        } else {
-                            Log.d(TAG, "Gagal Membuat Imei Baru")
-                        }
-                    } else {
-                        Log.d(TAG, "Gagal membuat terminal: ${imeiResponse.message}")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error occurred while creating imei", e)
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        } else {
-            Log.d(TAG, "IMEI or MID is null. Cannot create imei.")
-        }
-    }
-
-    private fun forgotPassword() {
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("token", "")
-
-        // Ambil input dari SharedPreferences atau sumber laina
-        val username = sharedPreferences.getString("username", null)
-        val oldPassword = sharedPreferences.getString("old_password", null)  // Ambil password lama dari SharedPreferences
-        val newPassword = sharedPreferences.getString("new_password", null)  // Ambil password baru dari SharedPreferences
-
-        // Kode halaman lupa password dari database
-        val forgotPasswordCode = "LPW0000"
-
-        // Periksa apakah username, oldPassword, dan newPassword tidak null atau kosong
-        if (username != null && oldPassword != null && newPassword != null) {
-            val forgotPasswordUrl = "http://127.0.0.1:8000/api/password/forgot"
-
-            // Buat JSON body untuk request
-            val jsonBody = """
-        {
-            "username": "$username",
-            "old_password": "$oldPassword",
-            "new_password": "$newPassword"
-        }
-        """.trimIndent()
-
-            // Buat RequestBody untuk JSON
-            val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody)
-
-            // Membangun request dengan body JSON dan header Authorization
-            val forgotPasswordRequest = Request.Builder()
-                .url(forgotPasswordUrl)
-                .post(requestBody)
-                .addHeader("Authorization", "Bearer $token")
-                .addHeader("Content-Type", "application/json")
-                .build()
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val passwordResponse = client.newCall(forgotPasswordRequest).execute()
-                    val passwordResponseData = passwordResponse.body?.string()
-
-                    if (passwordResponse.isSuccessful && passwordResponseData != null) {
-                        val jsonResponse = JSONObject(passwordResponseData)
-                        val success = jsonResponse.optBoolean("success", false)
-
-                        if (success) {
-                            Log.d(TAG, "Password berhasil diperbarui")
-
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@FormActivity, "Password berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            Log.d(TAG, "Gagal memperbarui password: ${jsonResponse.optString("message", "Unknown error")}")
-
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@FormActivity, "Gagal memperbarui password", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } else {
-                        Log.d(TAG, "Gagal memperbarui password: ${passwordResponse.message}")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error occurred while updating password", e)
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        } else {
-            Log.d(TAG, "Username atau password lama dan baru tidak valid")
         }
     }
 

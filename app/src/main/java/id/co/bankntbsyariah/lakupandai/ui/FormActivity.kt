@@ -3972,6 +3972,81 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun forgotPassword() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("token", "")
+
+        // Ambil input dari SharedPreferences atau sumber laina
+        val username = sharedPreferences.getString("username", null)
+        val oldPassword = sharedPreferences.getString("old_password", null)  // Ambil password lama dari SharedPreferences
+        val newPassword = sharedPreferences.getString("new_password", null)  // Ambil password baru dari SharedPreferences
+
+        // Kode halaman lupa password dari database
+        val forgotPasswordCode = "LPW0000"
+
+        // Periksa apakah username, oldPassword, dan newPassword tidak null atau kosong
+        if (username != null && oldPassword != null && newPassword != null) {
+            val forgotPasswordUrl = "http://127.0.0.1:8000/api/password/forgot"
+
+            // Buat JSON body untuk request
+            val jsonBody = """
+        {
+            "username": "$username",
+            "old_password": "$oldPassword",
+            "new_password": "$newPassword",
+            "code": "$forgotPasswordCode"
+        }
+        """.trimIndent()
+
+            // Buat RequestBody untuk JSON
+            val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody)
+
+            // Membangun request dengan body JSON dan header Authorization
+            val forgotPasswordRequest = Request.Builder()
+                .url(forgotPasswordUrl)
+                .post(requestBody)
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json")
+                .build()
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val passwordResponse = client.newCall(forgotPasswordRequest).execute()
+                    val passwordResponseData = passwordResponse.body?.string()
+
+                    if (passwordResponse.isSuccessful && passwordResponseData != null) {
+                        val jsonResponse = JSONObject(passwordResponseData)
+                        val success = jsonResponse.optBoolean("success", false)
+
+                        if (success) {
+                            Log.d(TAG, "Password berhasil diperbarui")
+
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Password berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Log.d(TAG, "Gagal memperbarui password: ${jsonResponse.optString("message", "Unknown error")}")
+
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Gagal memperbarui password", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "Gagal memperbarui password: ${passwordResponse.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error occurred while updating password", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            Log.d(TAG, "Username atau password lama dan baru tidak valid")
+        }
+    }
+
+
     private fun saveTerminalData(terminalJsonResponse: JSONObject) {
         val terminalData = terminalJsonResponse.optJSONObject("data")
         val tid = terminalData?.optString("tid") ?: ""

@@ -90,6 +90,8 @@ import android.view.KeyEvent
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.GridLayoutManager
 import com.bumptech.glide.Glide
+import id.co.bankntbsyariah.lakupandai.common.CompValues
+import id.co.bankntbsyariah.lakupandai.common.ComponentValue
 import id.co.bankntbsyariah.lakupandai.ui.adapter.ProdukAdapter
 import okhttp3.RequestBody.Companion.asRequestBody
 
@@ -1528,43 +1530,43 @@ class FormActivity : AppCompatActivity() {
                 }
 
                 5 -> {
-                    LinearLayout(this@FormActivity).apply {
-                        orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
-                            text = component.label
+                    val inflater = LayoutInflater.from(this@FormActivity)
+                    val newLayout = inflater.inflate(R.layout.checkbox_layout, null) as LinearLayout
+
+                    val titleView = newLayout.findViewById<TextView>(R.id.checkbox_title) // Correct ID
+                    val checkboxContainer = newLayout.findViewById<LinearLayout>(R.id.checkbox_container)
+
+                    titleView.text = component.label
+
+                    val selectedValues = mutableSetOf<Int>()
+
+                    component.values.forEachIndexed { index, value ->
+                        val checkBox = CheckBox(this@FormActivity).apply {
+                            text = value.first
                             textSize = 16f
-                            setTypeface(null, Typeface.BOLD)
-                        })
-
-                        val selectedValues = mutableSetOf<Int>() // Set to track selected values
-
-                        component.values.forEachIndexed { index, value ->
-                            val checkBox = CheckBox(this@FormActivity).apply {
-                                text = value.first
-                            }
-
-                            checkBox.setOnCheckedChangeListener { _, isChecked ->
-                                if (screen.id == "CCIF001") {
-                                    inputRekening[component.id] = inputValues[component.id] ?: ""
-                                }
-
-                                if (isChecked) {
-                                    selectedValues.add(index)
-                                } else {
-                                    selectedValues.remove(index)
-                                }
-
-                                inputValues[component.id] = selectedValues.joinToString(",") { it.toString() }
-
-                                Log.d(
-                                    "FormActivity",
-                                    "Component ID: ${component.id}, Selected Values: ${inputValues[component.id]}"
-                                )
-                            }
-
-                            addView(checkBox)
+                            setPadding(16, 8, 16, 8)
                         }
+
+                        checkBox.setOnCheckedChangeListener { _, isChecked ->
+                            if (isChecked) {
+                                selectedValues.add(index)
+                            } else {
+                                selectedValues.remove(index)
+                            }
+
+                            inputValues[component.id] = selectedValues.joinToString(",") { it.toString() }
+
+                            Log.d(
+                                "FormActivity",
+                                "Component ID: ${component.id}, Selected Values: ${inputValues[component.id]}"
+                            )
+                        }
+
+                        checkboxContainer.addView(checkBox)
                     }
+                    val parentLayout = findViewById<LinearLayout>(R.id.menu_container)
+                    parentLayout?.addView(newLayout)
+
                 }
                 6 -> {
                     LinearLayout(this@FormActivity).apply {
@@ -2025,6 +2027,127 @@ class FormActivity : AppCompatActivity() {
                     container.addView(pinView)
 
                 }
+                22 -> {
+                    val inflater = LayoutInflater.from(this@FormActivity)
+                    val newLayout = inflater.inflate(R.layout.activity_akad, null) as LinearLayout
+
+                    val akadTitle = newLayout.findViewById<TextView>(R.id.akad_title)
+                    val akadDescription = newLayout.findViewById<TextView>(R.id.akad_description)
+                    val btnPilih = newLayout.findViewById<Button>(R.id.btn_pilih)
+                    val toggleButton = newLayout.findViewById<ImageView>(R.id.toggle_button)
+
+                    if (akadTitle != null && akadDescription != null && btnPilih != null && toggleButton != null) {
+                        when (component.id) {
+                            "AKD01" -> {
+                                akadTitle.text = "Mudharabah Muthlaqah"
+                                akadDescription.text = "Akad Mudharabah Muqayyadah merupakan jenis akad dimana penggunaannya bagi nasabah skala komersil yg membatasi Bank dalam mengelola simpanannya."
+                            }
+                            "AKD02" -> {
+                                akadTitle.text = "Wadiah yad Ad dhamanah"
+                                akadDescription.text = "Akad Wadi'ah yad Al Amanah merupakan jenis akad dimana nasabah BSA tidak membolehkan Bank mengelola dananya (safe deposit box)."
+                            }
+                            else -> {
+                                akadTitle.text = "Unknown"
+                                akadDescription.text = "Description not available"
+                            }
+                        }
+
+                        // Adjust margins and paddings
+                        val layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        layoutParams.setMargins(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 16.dpToPx())
+                        newLayout.layoutParams = layoutParams
+
+                        val titleParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        titleParams.setMargins(0, 0, 0, 8.dpToPx())
+                        akadTitle.layoutParams = titleParams
+
+                        val descriptionParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        descriptionParams.setMargins(0, 0, 0, 16.dpToPx())
+                        akadDescription.layoutParams = descriptionParams
+
+                        val buttonParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        buttonParams.setMargins(0, 8.dpToPx(), 0, 0)
+                        btnPilih.layoutParams = buttonParams
+
+                        toggleButton.setOnClickListener {
+                            if (akadDescription.visibility == View.GONE) {
+                                akadDescription.visibility = View.VISIBLE
+                                btnPilih.visibility = View.VISIBLE
+                                toggleButton.setImageResource(R.mipmap.arrow)
+                            } else {
+                                akadDescription.visibility = View.GONE
+                                btnPilih.visibility = View.GONE
+                                toggleButton.setImageResource(R.mipmap.arrow)
+                            }
+                        }
+
+                        btnPilih.setOnClickListener {
+                            val selectedAkad = akadTitle.text.toString()
+
+                            val akadDescriptionValue = when (selectedAkad) {
+                                "Mudharabah Muthlaqah" -> "Mudharabah adalah"
+                                "Wadiah yad Ad dhamanah" -> "Wadiah adalah"
+                                else -> "Description not available"
+                            }
+
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val editor = sharedPreferences.edit()
+                            editor.putString("akad", selectedAkad)
+                            editor.putString("penjelasan", akadDescriptionValue) // Save akadDescriptionValue
+                            editor.apply()
+
+                            val compValueList: MutableList<ComponentValue> = component.compValues?.compValue?.toMutableList() ?: mutableListOf()
+
+                            if (component.id == "AKD03") {
+                                val savedAkad = sharedPreferences.getString("akad", "") ?: ""
+                                val existingCompValue = compValueList.firstOrNull { it.print == "AKD03" }
+                                if (existingCompValue != null) {
+                                    existingCompValue.value = savedAkad
+                                } else {
+                                    compValueList.add(ComponentValue(print = "AKD03", value = savedAkad))
+                                }
+                                component.compValues = CompValues(compValueList)
+                                Log.d("FormActivity", "Updated AKD03 with selected Akad: $savedAkad")
+                            }
+
+                            if (component.id == "AKD04") {
+                                val existingCompValue = compValueList.firstOrNull { it.print == "AKD04" }
+                                if (existingCompValue != null) {
+                                    existingCompValue.value = akadDescriptionValue
+                                } else {
+                                    compValueList.add(ComponentValue(print = "AKD04", value = akadDescriptionValue))
+                                }
+                                component.compValues = CompValues(compValueList)
+                                Log.d("FormActivity", "Updated AKD04 with description: $akadDescriptionValue")
+                            }
+
+                            val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+                                putExtra(Constants.KEY_FORM_ID, "CACIF01")
+                                putExtra("SELECTED_AKAD", selectedAkad)
+                            }
+                            startActivity(intent)
+                            Log.d("Selected Value", "SELECTED VALUE : $selectedAkad")
+                        }
+
+                        val parentLayout = findViewById<LinearLayout>(R.id.menu_container)
+                        parentLayout?.addView(newLayout)
+                    } else {
+                        Log.e("FormActivity", "One or more views are null in activity_akad layout")
+                    }
+                }
+
                 else -> {
                     null
                 }
@@ -2295,6 +2418,27 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
                 }
             }
+            "Pilihan Akad" -> {
+                val sharedPreferences =
+                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val selectedAkad = sharedPreferences.getString("akad", "") ?: ""
+                if (currentValue == "null" && selectedAkad != "0") {
+                    Log.d("FormActivity", "Nilai akad AKD03: $selectedAkad")
+                    component.compValues?.compValue?.firstOrNull()?.value = selectedAkad
+                } else {
+                    Log.d("FormActivity", "Pilihan akad terisi dengan: $selectedAkad")
+                }
+            }
+            "Penjelasan Akad" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val akadDesc = sharedPreferences.getString("akadDescription", "")
+                if (currentValue == "null" && akadDesc != "0") {
+                    Log.d("FormActivity", "Nilai akad AKD04: $akadDesc")
+                    component.compValues?.compValue?.firstOrNull()?.value = akadDesc
+                } else {
+                    Log.d("FormActivity", "Penjelasan akad terisi dengan: $akadDesc")
+                }
+            }
             "Nama Rekening Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -2431,6 +2575,21 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun areCheckBoxesChecked(): Boolean {
+        val checkBoxContainer = findViewById<LinearLayout>(R.id.checkbox_container)
+        var isChecked = false
+
+        for (i in 0 until checkBoxContainer.childCount) {
+            val child = checkBoxContainer.getChildAt(i)
+            if (child is CheckBox && child.isChecked) {
+                isChecked = true
+                break
+            }
+        }
+
+        return isChecked
+    }
+
     private fun handleButtonClick(component: Component, screen: Screen?) {
         val allErrors = mutableListOf<String>()
 
@@ -2503,7 +2662,19 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "MN00000")
             })
             finish()
-        } else if (component.id == "OUT00") {
+        } else if (component.id == "STJ01") {
+
+            if (areCheckBoxesChecked()) {
+                startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    putExtra(Constants.KEY_MENU_ID, "CCIF000")
+                })
+                finish()
+            } else {
+                Toast.makeText(this, "Harap centang setidaknya satu opsi sebelum melanjutkan.", Toast.LENGTH_SHORT).show()
+            }
+
+        }else if (component.id == "OUT00") {
 
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

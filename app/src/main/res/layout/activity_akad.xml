@@ -1,0 +1,53 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/akad_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/card_border"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Judul Akad -->
+    <TextView
+        android:id="@+id/akad_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="Judul Akad"
+        android:textColor="@color/black"
+        android:gravity="center"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- ImageView Toggle untuk menampilkan deskripsi -->
+    <ImageView
+        android:id="@+id/toggle_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@mipmap/arrow"
+        android:layout_gravity="end"
+        android:contentDescription="Toggle Description" />
+
+    <!-- Deskripsi Akad, disembunyikan dulu -->
+    <TextView
+        android:id="@+id/akad_description"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Deskripsi Akad ini akan muncul setelah diklik"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Button Pilih, disembunyikan dulu -->
+    <Button
+        android:id="@+id/btn_pilih"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/green"
+        android:text="Pilih"
+        android:textColor="@color/grey"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:background="?attr/selectableItemBackgroundBorderless"/>
+</LinearLayout>

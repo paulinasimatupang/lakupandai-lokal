@@ -11,7 +11,7 @@ data class Component(
     var seq: Int,
     var opt: String,
     var values: List<Pair<String, String>> = emptyList(),
-    val compValues: CompValues? = null
+    var compValues: CompValues? = null
 )
 
 data class ComponentValue(

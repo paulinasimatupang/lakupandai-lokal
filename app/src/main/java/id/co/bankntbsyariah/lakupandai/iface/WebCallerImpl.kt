@@ -148,7 +148,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             .build()
 
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/forgot_password") // Ensure this is the correct URL
+            .url("http://reportntbs.selada.id/api/reset/password") // Ensure this is the correct URL
             .post(formBody)
             .build()
 

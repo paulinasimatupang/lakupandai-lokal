@@ -140,29 +140,29 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun forgotPassword(old_password: String, new_password: String, username: String): ResponseBody? {
-        val requestBody = FormBody.Builder()
-            .add("old_password", old_password)
-            .add("new_password", new_password)
+    override fun forgotPassword(username: String, oldPassword: String, newPassword: String): ResponseBody? {
+        val formBody = FormBody.Builder()
             .add("username", username)
+            .add("old_password", oldPassword)
+            .add("new_password", newPassword)
             .build()
 
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/auth/forgotPassword")
-            .post(requestBody)
+            .url("http://reportntbs.selada.id/api/forgot_password") // Ensure this is the correct URL
+            .post(formBody)
             .build()
 
         return try {
             client.newCall(request).execute().let { response ->
-                if (!response.isSuccessful) {
+                if (response.isSuccessful) {
+                    response.body // Return the response body if successful
+                } else {
                     Log.e(TAG, "Failed to forgot password: ${response.message}")
                     null
-                } else {
-                    response.body
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception occurred while forgetting password", e)
+            Log.e(TAG, "Exception occurred while requesting forgot password", e)
             null
         }
     }

@@ -3450,25 +3450,23 @@ class FormActivity : AppCompatActivity() {
                 val formBody = formBodyBuilder.build()
 
                 val webCaller = WebCallerImpl()
-                val fetchedValue = withContext(Dispatchers.IO) {
-                    // Assuming webCaller.forgotPassword() returns an OkHttp Response
-                    val response = webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
-                    response?.body?.string() // Ensure that body is of type ResponseBody
+                val response = withContext(Dispatchers.IO) {
+                    webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
                 }
+
+                val fetchedValue = response?.body?.string() // Ensure this is valid
 
                 if (!fetchedValue.isNullOrEmpty()) {
                     try {
-                        // Debug log for the raw response
                         Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
-                        // Ensure the JSONObject import is correct
                         val jsonResponse = JSONObject(fetchedValue)
                         val status = jsonResponse.optBoolean("status", false)
                         val message = jsonResponse.optString("message", "")
                         if (status) {
                             Log.d(TAG, "Password changed successfully.")
                             Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
-                            navigateToLogin()  // Ganti dengan fungsi navigasi yang sesuai
+                            navigateToLogin()  // Replace with your navigation function
                         } else {
                             Log.e(TAG, "Failed to change password.")
                             Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()

@@ -28,7 +28,8 @@ class RecyclerViewMenuAdapter(
     private val menuList: ArrayList<MenuItem>,
     private val context: Context,
     private val isHamburger: Boolean,
-    private val isProfile: Boolean
+    private val isProfile: Boolean,
+    private val isList: Boolean
 
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
     val TAG: String  // Define a tag for logging
@@ -43,6 +44,8 @@ class RecyclerViewMenuAdapter(
                 R.layout.recycler_list_menu
             } else if(isProfile){
                 R.layout.recycler_profile_list
+            } else if(isList){
+                R.layout.recycler_combo_box_provider
             } else {
                 R.layout.recycler_view_menu_item
             },

@@ -54,6 +54,8 @@ import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import java.text.SimpleDateFormat
+import java.util.Date
 
 class MenuActivity : AppCompatActivity() {
 
@@ -404,7 +406,7 @@ class MenuActivity : AppCompatActivity() {
         val spacing = (resources.displayMetrics.density * 8).toInt()
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
         menuList.clear()
-        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001")
+        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001", menuId == "PR00000")
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->
@@ -496,7 +498,7 @@ class MenuActivity : AppCompatActivity() {
 
                 Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
 
-                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false)
+                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false)
                 recyclerView.adapter = menuAdapter
 
                 menuAdapter.notifyDataSetChanged()
@@ -559,10 +561,16 @@ class MenuActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-            val username = "lakupandai"
+            val username = "admin"
             val msg = JSONObject()
-            val msgId = "353471045058692200995" //stan + timestamp
-            val msgUi = "353471045058692"
+
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val msgUi = imei
+//            val msgUi = "353471045058692"
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = msgUi + timestamp
+
             val msgSi = "N00001"
             val accountNumber = norekening
             val name = merchant_name
@@ -764,4 +772,3 @@ class MenuActivity : AppCompatActivity() {
         notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
     }
 }
-

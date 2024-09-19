@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="160dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:background="@drawable/card_grey"
+    android:layout_margin="8dp"
+    android:layout_gravity="center"
+    android:elevation="4dp"
+    android:layout_marginTop="15dp"
+    android:layout_marginBottom="10dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="1dp"
+        android:background="@drawable/card_background"
+        android:padding="10dp">
+
+        <ImageView
+            android:id="@+id/header_image"
+            android:layout_width="133dp"
+            android:layout_height="58dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="0dp"
+            android:background="@drawable/rounded_white"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:src="@mipmap/logo_aja_ntbs" />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="125dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="70dp"
+            android:gravity="center"
+            android:text="Buka Rekening"
+            android:textColor="@color/black"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/subhead"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="Laku Pandai"
+            android:textColor="@color/broken_white"
+            android:textSize="9sp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="Membuka rekening baru untuk calon nasabah Bank NTB Syariah"
+            android:textColor="@color/broken_white"
+            android:textSize="9sp"
+            android:visibility="gone"/>
+    </RelativeLayout>
+</LinearLayout>

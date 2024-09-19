@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Base64
@@ -28,6 +29,7 @@ import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import id.co.bankntbsyariah.lakupandai.ui.SignatureActivity
 import com.github.gcacace.signaturepad.views.SignaturePad
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Component
@@ -39,6 +41,7 @@ import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -72,14 +75,24 @@ import android.text.style.UnderlineSpan
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
+import okhttp3.*
+import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
 import org.json.JSONArray
 import java.text.ParseException
+import android.os.Handler
+import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
 import android.graphics.Color
 import android.text.method.PasswordTransformationMethod
 import android.view.KeyEvent
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.recyclerview.widget.GridLayoutManager
+import com.bumptech.glide.Glide
+import id.co.bankntbsyariah.lakupandai.common.CompValues
+import id.co.bankntbsyariah.lakupandai.common.ComponentValue
+import id.co.bankntbsyariah.lakupandai.ui.adapter.ProdukAdapter
 import com.google.firebase.messaging.FirebaseMessaging
 import id.co.bankntbsyariah.lakupandai.MyFirebaseMessagingService
 import id.co.bankntbsyariah.lakupandai.api.ApiService
@@ -156,6 +169,13 @@ class FormActivity : AppCompatActivity() {
             val formValue = loadForm()
             setupScreen(formValue)
         }
+
+        findViewById<TextView>(R.id.forgot_password)?.setOnClickListener {
+            val intent = Intent(this, FormActivity::class.java).apply {
+                putExtra(Constants.KEY_FORM_ID, "LPW0000")
+            }
+            startActivity(intent)
+        }
     }
 
     private fun setupWindowInsets() {
@@ -169,12 +189,18 @@ class FormActivity : AppCompatActivity() {
     private fun handleBackPress() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                finish()
-                startActivity(
-                    Intent(this@FormActivity, MenuActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                )
+                if (formId == "AU00001") {
+                    // If formId is "AU000001", do not navigate to MenuActivity
+                    finish()
+                } else {
+                    // Otherwise, navigate to MenuActivity
+                    finish()
+                    startActivity(
+                        Intent(this@FormActivity, MenuActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    )
+                }
             }
         })
     }
@@ -333,6 +359,7 @@ class FormActivity : AppCompatActivity() {
 //            screenTitle.contains("Bayar", ignoreCase = true) -> R.layout.activity_bayar
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
+            screenTitle.contains("Cek Saldo Berhasil", ignoreCase = true) -> R.layout.activity_saldo
             screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
             screenTitle.contains("Berhasil", ignoreCase = true) ->
             {
@@ -427,7 +454,7 @@ class FormActivity : AppCompatActivity() {
             when {
                 component.id == "TRF27" ||
                         (component.id == "AG001" && screen.title.contains("Form")) ||
-                        component.id == "TRF26" -> {
+                        component.id == "TRF26" || component.id == "NAG02"  -> {
                     norekComponent = component
                 }
                 component.id == "TFR24" ||
@@ -509,7 +536,7 @@ class FormActivity : AppCompatActivity() {
         for (component in screen.comp) {
             Log.d("FormActivity", "Component: $component")
 
-            if (component.id == "TRF27" || component.id == "TFR24" || (component.id == "AG001" && screen.title.contains("Form")) ||
+            if (component.id == "TRF27" || component.id == "TFR24" || (component.id == "AG001" && screen.title.contains("Form")) || (component.id == "NAG02" && screen.title.contains("Form")) ||
                 (component.id == "AG002" && screen.title.contains("Form")) || component.id == "TRF26" || (component.id == "AG005" && screen.title.contains("Form")) ||
                 (component.id == "ST003" && screen.title.contains("Transfer")) || component.id == "D1004"
             ) continue
@@ -1255,172 +1282,252 @@ class FormActivity : AppCompatActivity() {
                         var compOption = component.compValues?.compValue
 
                         lifecycleScope.launch {
-                            val options: List<Pair<String?, String?>> = if (compOption.isNullOrEmpty() ||
-                                compOption.all { it.value == "" }) {
+                            val options: List<Pair<String?, String?>> =
+                                if (compOption.isNullOrEmpty() ||
+                                    compOption.all { it.value == "" }
+                                ) {
 
-                                var formValue = StorageImpl(applicationContext).fetchForm(screen.id)
+                                    var formValue =
+                                        StorageImpl(applicationContext).fetchForm(screen.id)
 
-                                if (formValue.isNullOrEmpty()) {
-                                    formValue = withContext(Dispatchers.IO) {
-                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
+                                    if (formValue.isNullOrEmpty()) {
+                                        formValue = withContext(Dispatchers.IO) {
+                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(screen.id)
+                                        }
+                                        Log.i("FormActivity", "Fetched formValue: $formValue")
                                     }
-                                    Log.i("FormActivity", "Fetched formValue: $formValue")
-                                }
 
-                                if (formValue.isNullOrEmpty()) {
-                                    Log.e(
-                                        "FormActivity",
-                                        "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
-                                    )
-                                    mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                    if (formValue.isNullOrEmpty()) {
+                                        Log.e(
+                                            "FormActivity",
+                                            "Failed to fetch form data or form data is empty for screen ID: ${screen.id}"
+                                        )
+                                        mutableListOf(
+                                            Pair(
+                                                "Pilih ${component.label}",
+                                                ""
+                                            )
+                                        ) // Return a list with default placeholder
+                                    } else {
+                                        try {
+                                            val screenJson = JSONObject(formValue)
+                                            val screen: Screen = ScreenParser.parseJSON(screenJson)
+                                            val selectedOptions =
+                                                screen.comp.firstOrNull { it.id == component.id }
+                                                    ?.compValues?.compValue?.mapNotNull {
+                                                        Pair(
+                                                            it.print,
+                                                            it.value
+                                                        )
+                                                    }
+                                                    ?: emptyList()
+
+                                            Log.d(
+                                                "FormActivity",
+                                                "SELECTED OPTIONS : $selectedOptions")
+                                            if (component.id == "PR006") {
+                                                selectedOptions
+                                            } else {
+                                                mutableListOf(
+                                                    Pair(
+                                                        "Pilih ${component.label}",
+                                                        ""
+                                                    )
+                                                ) + selectedOptions
+                                            }
+                                        } catch (e: JSONException) {
+                                            Log.e(
+                                                "FormActivity",
+                                                "JSON Parsing error: ${e.message}"
+                                            )
+                                            mutableListOf(
+                                                Pair(
+                                                    "Pilih ${component.label}",
+                                                    ""
+                                                )
+                                            ) // Return a list with default placeholder
+                                        }
+                                    }
                                 } else {
-                                    try {
-                                        val screenJson = JSONObject(formValue)
-                                        val screen: Screen = ScreenParser.parseJSON(screenJson)
-                                        val selectedOptions = screen.comp.firstOrNull { it.id == component.id }
-                                            ?.compValues?.compValue?.mapNotNull { Pair(it.print, it.value) }
-                                            ?: emptyList()
-
-                                        Log.d("FormActivity", "SELECTED OPTIONS : $selectedOptions")
-                                        mutableListOf(Pair("Pilih ${component.label}", "")) + selectedOptions
-                                    } catch (e: JSONException) {
-                                        Log.e("FormActivity", "JSON Parsing error: ${e.message}")
-                                        mutableListOf(Pair("Pilih ${component.label}", "")) // Return a list with default placeholder
+                                    if (component.id == "PR006") {
+                                        compOption.map { Pair(it.print, it.value) }
+                                    } else {
+                                        mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
                                     }
                                 }
-                            } else {
-                                mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
-                            }
+                            if (component.id == "PR006") {
+                                val recyclerView = RecyclerView(this@FormActivity).apply {
+                                    layoutManager = GridLayoutManager(this@FormActivity, 2)
+                                    adapter = ProdukAdapter(options) { selectedItem ->
+                                        val selectedValue = selectedItem.first
+                                        val selectedCompValue = selectedItem.second
 
-                            val spinner = Spinner(this@FormActivity).apply {
-                                background = getDrawable(R.drawable.combo_box)
-                                val adapter = ArrayAdapter(
-                                    this@FormActivity,
-                                    android.R.layout.simple_spinner_item,
-                                    options.map { it.first } // Display only the 'print' value
-                                )
-                                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                                this.adapter = adapter
+                                        inputValues[component.id] = selectedCompValue ?: ""
+                                        Log.d("FormActivity", "Component ID: ${component.id}, Selected Value: $selectedValue")
+                                    }
+                                }
 
-                                // Set margin untuk spinner
                                 layoutParams = LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 ).apply {
-                                    setMargins(0, 0, 0, 20) // Margin bawah 20dp untuk jarak antar elemen
+                                    setMargins(0, 0, 0, 20)
                                 }
+
+                                addView(recyclerView)
                             }
 
-                            spinner.onItemSelectedListener =
-                                object : AdapterView.OnItemSelectedListener {
-                                    override fun onItemSelected(
-                                        parent: AdapterView<*>,
-                                        view: View,
-                                        position: Int,
-                                        id: Long
-                                    ) {
-                                        if (position == 0) {
-                                            inputValues[component.id] = ""
-                                            Log.d(
-                                                "FormActivity",
-                                                "Component ID: ${component.id}, No Value Selected"
-                                            )
-                                            return
-                                        }
+                            else {
+                                val spinner = Spinner(this@FormActivity).apply {
+                                    background = getDrawable(R.drawable.combo_box)
+                                    val adapter = ArrayAdapter(
+                                        this@FormActivity,
+                                        android.R.layout.simple_spinner_item,
+                                        options.map { it.first } // Display only the 'print' value
+                                    )
+                                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                    this.adapter = adapter
 
-                                        val selectedPair = options[position]
-                                        val selectedValue = selectedPair.first
-                                        val selectedCompValue = selectedPair.second
-
-                                        if (screen.id == "CCIF001") {
-                                            inputRekening[component.id] = selectedValue ?: "" // Menyimpan selectedValue
-                                        }
-
-                                        Log.d(
-                                            "FormActivity",
-                                            "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
-                                        )
-
-                                        Log.d(
-                                            "FormActivity",
-                                            "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
-                                        )
-
-                                        when (component.id) {
-                                            "PIL03" -> {
-                                                pickOTP = selectedValue
-                                                pickOTP = selectedValue
-                                                Log.d("Form", "PICK OTP: $selectedValue")
-
-                                                // Cek jika nilai tidak valid
-                                                if (selectedValue != "WA" && selectedValue != "SMS") {
-                                                    // Tampilkan AlertDialog
-                                                    AlertDialog.Builder(this@FormActivity)
-                                                        .setTitle("Invalid Option")
-                                                        .setMessage("Harus memilih WA atau SMS.")
-                                                        .setPositiveButton("OK", null)
-                                                        .show()
-
-                                                    // Set pickOTP kembali ke nilai kosong atau default
-                                                    pickOTP = ""
-
-                                                    Toast.makeText(this@FormActivity, "Validasi gagal: Pilih WA atau SMS", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                            "CB001" -> {
-                                                if (selectedCompValue != null) {
-                                                    inputValues[component.id] = selectedCompValue.replace("[OI]", "")
-                                                }
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Branch Code set to: ${inputValues[component.id]}"
-                                                )
-                                            }
-
-                                            "CR002" -> if (selectedValue == "BSA Lakupandai") {
-                                                inputValues[component.id] = "36"
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Special case for CR002: Value set to 36"
-                                                )
-                                            }
-
-                                            "CIF13" -> {
-                                                if (selectedCompValue != null) {
-                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CK", "")
-                                                }
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Kab Kota set to: ${inputValues[component.id]}"
-                                                )
-                                            }
-
-                                            "CIF23" -> inputValues[component.id] = (position - 1).toString()
-
-                                            "CIF14" -> {
-                                                if (selectedCompValue != null) {
-                                                    inputValues[component.id] = selectedCompValue.replace("[OI]CIFP", "")
-                                                }
-                                                Log.d(
-                                                    "FormActivity",
-                                                    "Provinsi set to: ${inputValues[component.id]}"
-                                                )
-                                            }
-                                            else -> inputValues[component.id] = (position ?: selectedValue).toString()
-                                        }
-
-                                    }
-
-                                    override fun onNothingSelected(parent: AdapterView<*>) {
-                                        Log.d(
-                                            "FormActivity",
-                                            "Nothing selected for Component ID: ${component.id}"
-                                        )
+                                    // Set margin untuk spinner
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        LinearLayout.LayoutParams.WRAP_CONTENT
+                                    ).apply {
+                                        setMargins(
+                                            0,
+                                            0,
+                                            0,
+                                            20
+                                        ) // Margin bawah 20dp untuk jarak antar elemen
                                     }
                                 }
 
-                            addView(spinner)
-                        }
+                                spinner.onItemSelectedListener =
+                                    object : AdapterView.OnItemSelectedListener {
+                                        override fun onItemSelected(
+                                            parent: AdapterView<*>,
+                                            view: View,
+                                            position: Int,
+                                            id: Long
+                                        ) {
+                                            if (position == 0) {
+                                                inputValues[component.id] = ""
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Component ID: ${component.id}, No Value Selected"
+                                                )
+                                                return
+                                            }
+
+                                            val selectedPair = options[position]
+                                            val selectedValue = selectedPair.first
+                                            val selectedCompValue = selectedPair.second
+
+                                            if (screen.id == "CCIF001") {
+                                                inputRekening[component.id] =
+                                                    selectedValue ?: "" // Menyimpan selectedValue
+                                            }
+
+                                            Log.d(
+                                                "FormActivity",
+                                                "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
+                                            )
+
+                                            Log.d(
+                                                "FormActivity",
+                                                "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
+                                            )
+
+                                            when (component.id) {
+                                                "PIL03" -> {
+                                                    pickOTP = selectedValue
+                                                    pickOTP = selectedValue
+                                                    Log.d("Form", "PICK OTP: $selectedValue")
+
+                                                    // Cek jika nilai tidak valid
+                                                    if (selectedValue != "WA" && selectedValue != "SMS") {
+                                                        // Tampilkan AlertDialog
+                                                        AlertDialog.Builder(this@FormActivity)
+                                                            .setTitle("Invalid Option")
+                                                            .setMessage("Harus memilih WA atau SMS.")
+                                                            .setPositiveButton("OK", null)
+                                                            .show()
+
+                                                        // Set pickOTP kembali ke nilai kosong atau default
+                                                        pickOTP = ""
+
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "Validasi gagal: Pilih WA atau SMS",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                }
+
+                                                "CB001" -> {
+                                                    if (selectedCompValue != null) {
+                                                        inputValues[component.id] =
+                                                            selectedCompValue.replace("[OI]", "")
+                                                    }
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Branch Code set to: ${inputValues[component.id]}"
+                                                    )
+                                                }
+
+                                                "CR002" -> if (selectedValue == "BSA Lakupandai") {
+                                                    inputValues[component.id] = "36"
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Special case for CR002: Value set to 36"
+                                                    )
+                                                }
+
+                                                "CIF13" -> {
+                                                    if (selectedCompValue != null) {
+                                                        inputValues[component.id] =
+                                                            selectedCompValue.replace("[OI]CK", "")
+                                                    }
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Kab Kota set to: ${inputValues[component.id]}"
+                                                    )
+                                                }
+
+                                                "CIF23" -> inputValues[component.id] =
+                                                    (position - 1).toString()
+
+                                                "CIF14" -> {
+                                                    if (selectedCompValue != null) {
+                                                        inputValues[component.id] =
+                                                            selectedCompValue.replace(
+                                                                "[OI]CIFP",
+                                                                ""
+                                                            )
+                                                    }
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Provinsi set to: ${inputValues[component.id]}"
+                                                    )
+                                                }
+
+                                                else -> inputValues[component.id] =
+                                                    (position ?: selectedValue).toString()
+                                            }
+
+                                        }
+
+                                        override fun onNothingSelected(parent: AdapterView<*>) {
+                                            Log.d(
+                                                "FormActivity",
+                                                "Nothing selected for Component ID: ${component.id}"
+                                            )
+                                        }
+                                    }
+
+                                addView(spinner)
+                            }
+                                                    }
                     }.let { view ->
                         container.addView(view, LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1429,46 +1536,47 @@ class FormActivity : AppCompatActivity() {
                             setMargins(20, 20, 20, 20) // Margin untuk seluruh view
                         })
                     }
+
                 }
 
                 5 -> {
-                    LinearLayout(this@FormActivity).apply {
-                        orientation = LinearLayout.VERTICAL
-                        addView(TextView(this@FormActivity).apply {
-                            text = component.label
+                    val inflater = LayoutInflater.from(this@FormActivity)
+                    val newLayout = inflater.inflate(R.layout.checkbox_layout, null) as LinearLayout
+
+                    val titleView = newLayout.findViewById<TextView>(R.id.checkbox_title) // Correct ID
+                    val checkboxContainer = newLayout.findViewById<LinearLayout>(R.id.checkbox_container)
+
+                    titleView.text = component.label
+
+                    val selectedValues = mutableSetOf<Int>()
+
+                    component.values.forEachIndexed { index, value ->
+                        val checkBox = CheckBox(this@FormActivity).apply {
+                            text = value.first
                             textSize = 16f
-                            setTypeface(null, Typeface.BOLD)
-                        })
-
-                        val selectedValues = mutableSetOf<Int>() // Set to track selected values
-
-                        component.values.forEachIndexed { index, value ->
-                            val checkBox = CheckBox(this@FormActivity).apply {
-                                text = value.first
-                            }
-
-                            checkBox.setOnCheckedChangeListener { _, isChecked ->
-                                if (screen.id == "CCIF001") {
-                                    inputRekening[component.id] = inputValues[component.id] ?: ""
-                                }
-
-                                if (isChecked) {
-                                    selectedValues.add(index)
-                                } else {
-                                    selectedValues.remove(index)
-                                }
-
-                                inputValues[component.id] = selectedValues.joinToString(",") { it.toString() }
-
-                                Log.d(
-                                    "FormActivity",
-                                    "Component ID: ${component.id}, Selected Values: ${inputValues[component.id]}"
-                                )
-                            }
-
-                            addView(checkBox)
+                            setPadding(16, 8, 16, 8)
                         }
+
+                        checkBox.setOnCheckedChangeListener { _, isChecked ->
+                            if (isChecked) {
+                                selectedValues.add(index)
+                            } else {
+                                selectedValues.remove(index)
+                            }
+
+                            inputValues[component.id] = selectedValues.joinToString(",") { it.toString() }
+
+                            Log.d(
+                                "FormActivity",
+                                "Component ID: ${component.id}, Selected Values: ${inputValues[component.id]}"
+                            )
+                        }
+
+                        checkboxContainer.addView(checkBox)
                     }
+                    val parentLayout = findViewById<LinearLayout>(R.id.menu_container)
+                    parentLayout?.addView(newLayout)
+
                 }
                 6 -> {
                     LinearLayout(this@FormActivity).apply {
@@ -1532,6 +1640,7 @@ class FormActivity : AppCompatActivity() {
                 }
 
                 7 -> {
+                    Log.d("FormActivity", "Form ID BUTTON: $formId")
                     val button = Button(this).apply {
                         text = component.label
                         setTextColor(getColor(R.color.white))
@@ -1584,7 +1693,7 @@ class FormActivity : AppCompatActivity() {
                                         handleButtonClick(component, screen)
                                     }
                                 }
-                            }else if (formId == "AU00001") {
+                            }else if (formId == "AU00001" && component.id != "OTP10") {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
@@ -1601,6 +1710,8 @@ class FormActivity : AppCompatActivity() {
                                 changePassword()
                             } else if (formId == "LS00002") {
                                 changePin()
+                            } else if (formId == "LPW0000") {
+                                forgotPassword()
                             }else {
                                 handleButtonClick(component, screen)
                             }
@@ -1926,6 +2037,128 @@ class FormActivity : AppCompatActivity() {
                     container.addView(pinView)
 
                 }
+                22 -> {
+                    val inflater = LayoutInflater.from(this@FormActivity)
+                    val newLayout = inflater.inflate(R.layout.activity_akad, null) as LinearLayout
+
+                    val akadTitle = newLayout.findViewById<TextView>(R.id.akad_title)
+                    val akadDescription = newLayout.findViewById<TextView>(R.id.akad_description)
+                    val btnPilih = newLayout.findViewById<Button>(R.id.btn_pilih)
+                    val toggleButton = newLayout.findViewById<ImageView>(R.id.toggle_button)
+
+                    if (akadTitle != null && akadDescription != null && btnPilih != null && toggleButton != null) {
+                        when (component.id) {
+                            "AKD01" -> {
+                                akadTitle.text = "Mudharabah Muthlaqah"
+                                akadDescription.text = "Akad Mudharabah Muqayyadah merupakan jenis akad dimana penggunaannya bagi nasabah skala komersil yg membatasi Bank dalam mengelola simpanannya."
+                            }
+                            "AKD02" -> {
+                                akadTitle.text = "Wadiah yad Ad dhamanah"
+                                akadDescription.text = "Akad Wadi'ah yad Al Amanah merupakan jenis akad dimana nasabah BSA tidak membolehkan Bank mengelola dananya (safe deposit box)."
+                            }
+                            else -> {
+                                akadTitle.text = "Unknown"
+                                akadDescription.text = "Description not available"
+                            }
+                        }
+
+                        // Adjust margins and paddings
+                        val layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        layoutParams.setMargins(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 16.dpToPx())
+                        newLayout.layoutParams = layoutParams
+
+                        val titleParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        titleParams.setMargins(0, 0, 0, 8.dpToPx())
+                        akadTitle.layoutParams = titleParams
+
+                        val descriptionParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        descriptionParams.setMargins(0, 0, 0, 16.dpToPx())
+                        akadDescription.layoutParams = descriptionParams
+
+                        val buttonParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        buttonParams.setMargins(0, 8.dpToPx(), 0, 0)
+                        btnPilih.layoutParams = buttonParams
+
+                        toggleButton.setOnClickListener {
+                            if (akadDescription.visibility == View.GONE) {
+                                akadDescription.visibility = View.VISIBLE
+                                btnPilih.visibility = View.VISIBLE
+                                toggleButton.setImageResource(R.mipmap.arrow)
+                            } else {
+                                akadDescription.visibility = View.GONE
+                                btnPilih.visibility = View.GONE
+                                toggleButton.setImageResource(R.mipmap.arrow)
+                            }
+                        }
+
+                        btnPilih.setOnClickListener {
+                            val selectedAkad = akadTitle.text.toString()
+
+                            val akadDescriptionValue = when (selectedAkad) {
+                                "Mudharabah Muthlaqah" -> "Mudharabah adalah"
+                                "Wadiah yad Ad dhamanah" -> "Wadiah adalah"
+                                else -> "Description not available"
+                            }
+
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val editor = sharedPreferences.edit()
+                            editor.putString("akad", selectedAkad)
+                            editor.putString("penjelasan", akadDescriptionValue) // Save akadDescriptionValue
+                            editor.apply()
+
+                            val compValueList: MutableList<ComponentValue> = component.compValues?.compValue?.toMutableList() ?: mutableListOf()
+
+                            if (component.id == "AKD03") {
+                                val savedAkad = sharedPreferences.getString("akad", "") ?: ""
+                                val existingCompValue = compValueList.firstOrNull { it.print == "AKD03" }
+                                if (existingCompValue != null) {
+                                    existingCompValue.value = savedAkad
+                                } else {
+                                    compValueList.add(ComponentValue(print = "AKD03", value = savedAkad))
+                                }
+                                component.compValues = CompValues(compValueList)
+                                Log.d("FormActivity", "Updated AKD03 with selected Akad: $savedAkad")
+                            }
+
+                            if (component.id == "AKD04") {
+                                val penjelasanAkad = sharedPreferences.getString("penjelasan", "") ?: ""
+                                val existingCompValue = compValueList.firstOrNull { it.print == "AKD04" }
+                                if (existingCompValue != null) {
+                                    existingCompValue.value = penjelasanAkad
+                                } else {
+                                    compValueList.add(ComponentValue(print = "AKD04", value = penjelasanAkad))
+                                }
+                                component.compValues = CompValues(compValueList)
+                                Log.d("FormActivity", "Updated AKD04 with description: $penjelasanAkad")
+                            }
+
+                            val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+                                putExtra(Constants.KEY_FORM_ID, "CACIF01")
+                                putExtra("SELECTED_AKAD", selectedAkad)
+                            }
+                            startActivity(intent)
+                            Log.d("Selected Value", "SELECTED VALUE : $selectedAkad")
+                        }
+
+                        val parentLayout = findViewById<LinearLayout>(R.id.menu_container)
+                        parentLayout?.addView(newLayout)
+                    } else {
+                        Log.e("FormActivity", "One or more views are null in activity_akad layout")
+                    }
+                }
+
                 else -> {
                     null
                 }
@@ -2196,6 +2429,27 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
                 }
             }
+            "Pilihan Akad" -> {
+                val sharedPreferences =
+                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val selectedAkad = sharedPreferences.getString("akad", "") ?: ""
+                if (currentValue == "null" && selectedAkad != "0") {
+                    Log.d("FormActivity", "Nilai akad AKD03: $selectedAkad")
+                    component.compValues?.compValue?.firstOrNull()?.value = selectedAkad
+                } else {
+                    Log.d("FormActivity", "Pilihan akad terisi dengan: $selectedAkad")
+                }
+            }
+            "Penjelasan Akad" -> {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val akadDescriptionValue = sharedPreferences.getString("penjelasan", "")
+                if (currentValue == "null" && akadDescriptionValue != "0") {
+                    Log.d("FormActivity", "Nilai akad AKD04: $akadDescriptionValue")
+                    component.compValues?.compValue?.firstOrNull()?.value = akadDescriptionValue
+                } else {
+                    Log.d("FormActivity", "Penjelasan akad terisi dengan: $akadDescriptionValue")
+                }
+            }
             "Nama Rekening Agen" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -2332,6 +2586,21 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun areCheckBoxesChecked(): Boolean {
+        val checkBoxContainer = findViewById<LinearLayout>(R.id.checkbox_container)
+        var isChecked = false
+
+        for (i in 0 until checkBoxContainer.childCount) {
+            val child = checkBoxContainer.getChildAt(i)
+            if (child is CheckBox && child.isChecked) {
+                isChecked = true
+                break
+            }
+        }
+
+        return isChecked
+    }
+
     private fun handleButtonClick(component: Component, screen: Screen?) {
         val allErrors = mutableListOf<String>()
 
@@ -2404,7 +2673,19 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "MN00000")
             })
             finish()
-        } else if (component.id == "OUT00") {
+        } else if (component.id == "STJ01") {
+
+            if (areCheckBoxesChecked()) {
+                startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    putExtra(Constants.KEY_MENU_ID, "CCIF000")
+                })
+                finish()
+            } else {
+                Toast.makeText(this, "Harap centang setidaknya satu opsi sebelum melanjutkan.", Toast.LENGTH_SHORT).show()
+            }
+
+        }else if (component.id == "OUT00") {
 
             startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -2437,99 +2718,112 @@ class FormActivity : AppCompatActivity() {
                     isOtpValidated = true
                     otpDialog?.dismiss()
                     cancelOtpTimer()
-                    val messageBody = createMessageBody(screen)
-                    if (messageBody != null) {
-                        Log.d("FormActivity", "Message Body: $messageBody")
-                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                            responseBody?.let { body ->
-                                lifecycleScope.launch {
-                                    val screenJson = JSONObject(body)
-                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
-                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                    if (screen.id == "CCIF003" && newScreen.id == "000000D") {
-                                        val message = newScreen?.comp?.find { it.id == "0000A" }
-                                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
-                                        newScreen.id = "RCCIF02"
-                                        var newScreenId = newScreen.id
-                                        var formValue =
-                                            StorageImpl(applicationContext).fetchForm(newScreenId)
-                                        if (formValue.isNullOrEmpty()) {
-                                            formValue = withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                    newScreenId
-                                                )
-                                            }
-                                            Log.i("FormActivity", "Fetched formValue: $formValue")
-                                        }
-                                        val url = "http://108.137.154.8:8080/ARRest/fileupload"
-                                        if(fileFotoOrang != null){
-                                            // Mengunggah foto orang
-                                            fileFotoOrang?.let { file ->
-                                                uploadImageFile(file, url)
-                                                Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
-                                            }
-                                        }else{
-                                            Log.d("Foto", "Foto Orang Kosong")
-                                        }
-                                        if(fileFotoKTP != null){
-                                            // Mengunggah KTP
-                                            fileFotoKTP?.let { file ->
-                                                uploadImageFile(file, url)
-                                                Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
-                                            }
-                                        }else{
-                                            Log.d("Foto", "Foto KTP Kosong")
-                                        }
-                                        if(signatureFile != null){
-                                            // Mengunggah tanda tangan
-                                            signatureFile?.let { file ->
-                                                uploadImageFile(file, url)
-                                                Log.d("Foto", "Signature Ada : $signatureFile")
-                                            }
-                                        }else{
-                                            Log.d("Foto", "Tanda Tangan Kosong")
-                                        }
-                                        setupScreen(formValue)
-
-                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", message)
-                                            putExtra("RETURN_TO_ROOT", false)
-                                        }
-                                        startActivity(intent)
-                                    } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
-                                        newScreen.id = "CCIF001"
-                                        var newScreenId = newScreen.id
-                                        var formValue =
-                                            StorageImpl(applicationContext).fetchForm(newScreenId)
-                                        if (formValue.isNullOrEmpty()) {
-                                            formValue = withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                    newScreenId
-                                                )
-                                            }
-                                            Log.i("FormActivity", "Fetched formValue: $formValue")
-                                        }
-                                        setupScreen(formValue)
-
-                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                        // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
-                                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                            putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
-                                        }
-                                        startActivity(intent)
-                                    } else {
-                                        handleScreenType(newScreen)
-                                    }
-                                }
-                            } ?: run {
-                                Log.e("FormActivity", "Failed to fetch response body")
-                            }
+                    Log.e("OTP", "SCREEN SEKARANG: $screen.id")
+                    if(screen.id == "WS0001"){
+                        Log.e("OTP", "Create Terminal: $otpValue")
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                        val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                        Log.e ("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
+                        if(storedImeiTerminal == "null"){
+//                            createNewImei()
+                        }else{
+                            createTerminalAndLogin(screen)
                         }
-                    } else {
-                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                    }else{
+                        val messageBody = createMessageBody(screen)
+                        if (messageBody != null) {
+                            Log.d("FormActivity", "Message Body: $messageBody")
+                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                responseBody?.let { body ->
+                                    lifecycleScope.launch {
+                                        val screenJson = JSONObject(body)
+                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                        Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                        Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                        if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                            val message = newScreen?.comp?.find { it.id == "0000A" }
+                                                ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
+                                            newScreen.id = "RCCIF02"
+                                            var newScreenId = newScreen.id
+                                            var formValue =
+                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                            if (formValue.isNullOrEmpty()) {
+                                                formValue = withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                            }
+                                            val url = "http://108.137.154.8:8080/ARRest/fileupload"
+                                            if(fileFotoOrang != null){
+                                                // Mengunggah foto orang
+                                                fileFotoOrang?.let { file ->
+                                                    uploadImageFile(file, url)
+                                                    Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
+                                                }
+                                            }else{
+                                                Log.d("Foto", "Foto Orang Kosong")
+                                            }
+                                            if(fileFotoKTP != null){
+                                                // Mengunggah KTP
+                                                fileFotoKTP?.let { file ->
+                                                    uploadImageFile(file, url)
+                                                    Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                                }
+                                            }else{
+                                                Log.d("Foto", "Foto KTP Kosong")
+                                            }
+                                            if(signatureFile != null){
+                                                // Mengunggah tanda tangan
+                                                signatureFile?.let { file ->
+                                                    uploadImageFile(file, url)
+                                                    Log.d("Foto", "Signature Ada : $signatureFile")
+                                                }
+                                            }else{
+                                                Log.d("Foto", "Tanda Tangan Kosong")
+                                            }
+                                            setupScreen(formValue)
+
+                                            val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", message)
+                                                putExtra("RETURN_TO_ROOT", false)
+                                            }
+                                            startActivity(intent)
+                                        } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                            newScreen.id = "CCIF001"
+                                            var newScreenId = newScreen.id
+                                            var formValue =
+                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                            if (formValue.isNullOrEmpty()) {
+                                                formValue = withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                            }
+                                            setupScreen(formValue)
+
+                                        } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                            // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                            val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                            }
+                                            startActivity(intent)
+                                        } else {
+                                            handleScreenType(newScreen)
+                                        }
+                                    }
+                                } ?: run {
+                                    Log.e("FormActivity", "Failed to fetch response body")
+                                }
+                            }
+                        } else {
+                            Log.e("FormActivity", "Failed to create message body, request not sent")
+                        }
                     }
                 } else if (msg03Value == null) {
                     Toast.makeText(
@@ -2750,7 +3044,8 @@ class FormActivity : AppCompatActivity() {
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
-            val username = "lakupandai"
+//            val imei = sharedPreferences.getString("imei", "")?: ""
+            val username = "admin"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
@@ -2761,8 +3056,10 @@ class FormActivity : AppCompatActivity() {
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
 
-            // Concatenate msg_ui with timestamp to generate msg_id
-            val msgUi = "353471045058692"
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val msgUi = imei
+//            val msgUi = "353471045058692"
             val msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
 
@@ -2830,10 +3127,10 @@ class FormActivity : AppCompatActivity() {
 
             }
             val unf01Value = componentValues["AG009"] ?: ""
-            val rnr02Value = componentValues["RNR02"] ?: ""
-            val unf03Value = componentValues["UNF03"] ?: ""
+            val rnr02Value = componentValues["RNR05"] ?: ""
+            val unf03Value = componentValues["UNF05"] ?: ""
             val unf04Value = componentValues["SET10"] ?: ""
-            val unf05Value = componentValues["NAR01"] ?: ""
+            val unf05Value = componentValues["NAR05"] ?: ""
             val rnr06Value = componentValues["TRF30"] ?: ""
             val rnr07Value = componentValues["TRT07 "] ?: ""
             val rnr08Value = componentValues["TRF31"] ?: ""
@@ -2843,7 +3140,9 @@ class FormActivity : AppCompatActivity() {
 
             when (screen.id) {
                 "RCS0001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf05Value, dengan nomor rekening: $unf03Value. Sisa saldo anda adalah $rnr02Value."
+                    val currentDate = getCurrentDate()
+                    val currentTime = getCurrentTime()
+                    componentValues["MSG05"] = "Saldo no.rek $unf03Value a.n $unf05Value Rp.$rnr02Value pada $currentDate waktu: $currentTime."
                 }
                 "TF00003" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$rnr08Value , dengan nomor rekening: $rnr07Value . Berhasil melakukan transaksi transfer kepada $rnr09Value penerima dengan nominal $rnr10Value  ."
@@ -2950,6 +3249,8 @@ class FormActivity : AppCompatActivity() {
                         val terminalArray = merchantData?.optJSONArray("terminal")
                         val terminalData = terminalArray?.getJSONObject(0)
 
+                        Log.d(TAG, "User status: $userStatus")
+                        Log.d(TAG, "Terminal array: $terminalArray")
 
 //                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //                    Log.d("FormActivity", "msg_ui: $msg_ui")
@@ -3009,37 +3310,82 @@ class FormActivity : AppCompatActivity() {
                             editor.putInt("merchant_status", merchantData.optInt("status"))
                             editor.putString("kode_agen", merchantData.optString("mid"))
                             editor.putInt("pin", merchantData.optInt("pin"))
+                            editor.putString("mid", merchantData.optString("mid"))
 
-                            if (terminalData != null) {
-                                editor.putString("tid", terminalData.optString("tid"))
-                            }
-
-                            editor.putInt("login_attempts", 0)
                             editor.apply()
 
-                            fun retrieveAuthToken(): String {
-                                // Return the stored auth token
-                                return "auth_token" // Replace this with the actual logic to retrieve the token
-                            }
+                            val midTerminal = sharedPreferences.getString("mid", null)
+                            Log.e ("MID TERMINAL", "MID TERMINAL : $midTerminal")
+                            Log.e ("USERNAME", "USERNAME : $username")
 
-                            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                if (!task.isSuccessful) {
-                                    Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                    return@addOnCompleteListener
+                            val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) // ambil IMEI dari perangkat
+
+                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                            Log.e ("Imei Terminal", "Imei Terminal : $storedImeiTerminal")
+                            if (terminalArray == null || terminalArray.length() == 0 || storedImeiTerminal == "null") {
+                                Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
+                                val messageBody = createOTP()
+                                Log.d("LOGIN OTP", "Create OTP : $messageBody")
+                                if (messageBody != null) {
+                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                        responseBody?.let { body ->
+                                            lifecycleScope.launch {
+                                                val screenJson = JSONObject(body)
+                                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                handleScreenType(newScreen)
+                                            }
+                                        } ?: run {
+                                            Log.e("FormActivity", "Failed to fetch response body")
+                                        }
+                                    }
+                                } else {
+                                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                                }
+                            } else {
+                                Log.d(TAG, "Terminal already exists.")
+                                val terminalData = terminalArray?.getJSONObject(0)
+                                if (terminalData != null) {
+                                    editor.putString("tid", terminalData.optString("tid"))
+                                    editor.putString("imei", terminalData.optString("imei"))
+                                    editor.apply()
                                 }
 
-                                // Get new FCM token
-                                val fcmToken = task.result
-                                Log.d("FCM", "FCM Token: $fcmToken")
+                                editor.putInt("login_attempts", 0)
+                                editor.apply()
 
-                                // Kirim token FCM ke server, memanggil fungsi dari MyFirebaseMessagingService
-                                val authToken = retrieveAuthToken() // Panggil fungsi untuk mendapatkan auth token
-                                MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken)
-                            }
+//                                comment dulu biar bisa login
+//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+//                                if (imei != null && imei != storedImeiTerminal) {
+//                                    withContext(Dispatchers.Main) {
+//                                        Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+//                                    }
+//                                    return@launch
+//                                }
+fun retrieveAuthToken(): String {
+    // Return the stored auth token
+    return "auth_token" // Replace this with the actual logic to retrieve the token
+}
 
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                navigateToScreen()
+                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                    if (!task.isSuccessful) {
+                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                        return@addOnCompleteListener
+                                    }
+
+                                    // Get new FCM token
+                                    val fcmToken = task.result
+                                    Log.d("FCM", "FCM Token: $fcmToken")
+
+                                    // Kirim token FCM ke server, memanggil fungsi dari MyFirebaseMessagingService
+                                    val authToken = retrieveAuthToken() // Panggil fungsi untuk mendapatkan auth token
+                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken)
+                                }
+
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                }
                             }
                         } else {
                             withContext(Dispatchers.Main) {
@@ -3276,6 +3622,74 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun forgotPassword() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var newPassword: String? = null
+                var username: String? = null
+
+                // Mengumpulkan data dari inputValues
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "LP001" -> {
+                            newPassword = value
+                            formBodyBuilder.add("new_password", value)
+                        }
+                        "UN001" -> {
+                            username = value
+                            formBodyBuilder.add("username", value)
+                        }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+                // Lanjutkan proses jika berhasil, simpan ke SharedPreferences
+                if (newPassword != null && username != null) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+
+                    editor.putString("username", username)
+                    editor.putString("new_password", newPassword)
+
+                    editor.apply() // Simpan data
+                }
+
+                // Log form body for debugging
+                Log.d(TAG, "Form body content: username=$username, newPassword=$newPassword")
+
+                // Cek apakah perlu mengirim OTP terlebih dahulu
+                val webCaller = WebCallerImpl()
+
+                // Panggilan untuk membuat OTP sebelum reset password
+                val messageBody = createOTP()
+                if (messageBody != null) {
+                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                        responseBody?.let { body ->
+                            lifecycleScope.launch {
+                                val screenJson = JSONObject(body)
+                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+
+                                // Jika OTP berhasil dibuat, arahkan ke halaman OTP
+                                handleScreenType(newScreen)
+                            }
+                        } ?: run {
+                            Log.e("FormActivity", "Failed to fetch response body")
+                        }
+                    }
+                } else {
+                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
 
     private fun setKeyboard(editText: EditText, component: Component) {
@@ -3370,6 +3784,16 @@ class FormActivity : AppCompatActivity() {
             putExtra(Constants.KEY_MENU_ID, "MN00000")
         })
     }
+
+    private fun navigateToLogin() {
+        val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_MENU_ID, "AU00001")
+        }
+        startActivity(intent)
+        finish()
+    }
+
 
     fun formatMutasi(mutasiText: String): String {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
@@ -3625,6 +4049,173 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+
+    private val webCallerImpl = WebCallerImpl()
+
+    private fun createOTP(): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
+            val username = "admin"
+            val newPassword = sharedPreferences.getString("new_password", null)
+
+            Log.d("FormActivity", "Saved New Password: $newPassword")
+
+            if (newPassword.isNullOrEmpty()) {
+                Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
+                null
+            } else {
+                // Call forgotPassword() function from WebCallerImpl
+                GlobalScope.launch(Dispatchers.IO) {
+                    val response = webCallerImpl.forgotPassword(username, newPassword)
+                    withContext(Dispatchers.Main) {
+                        if (response != null) {
+                            // Convert response body to a string and parse the JSON
+                            val responseBodyString = response.string()
+                            Log.d("FormActivity", "Forgot password response: $responseBodyString")
+
+                            try {
+                                val jsonResponse = JSONObject(responseBodyString)
+                                val status = jsonResponse.optString("status")
+
+                                if (status == "success") {
+                                    // Replace merchantPhone with phone from the response
+                                    val phone = jsonResponse.optString("phone")
+                                    merchantPhone = phone
+                                    Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+
+                                    // Save the updated phone to SharedPreferences
+                                    sharedPreferences.edit().putString("merchant_phone", phone).apply()
+                                } else {
+                                    // Handle error and display message
+                                    val message = jsonResponse.optString("message")
+                                    Toast.makeText(this@FormActivity, "Error: $message", Toast.LENGTH_LONG).show()
+                                    Log.e("FormActivity", "Error from server: $message")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("FormActivity", "Failed to parse JSON response", e)
+                            }
+                        } else {
+                            Log.e("FormActivity", "Forgot password request failed")
+                        }
+                    }
+                }
+
+                val imei = sharedPreferences.getString("imei", "") ?: ""
+                Log.e("FormActivity", "Saved Imei: $imei")
+                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                val msgUi = imei
+                val msgId = msgUi + timestamp
+                val msgSi = "SV0001"
+                val msgDt = "$username|$merchantPhone"
+
+                val msgObject = JSONObject().apply {
+                    put("msg_id", msgId)
+                    put("msg_ui", msgUi)
+                    put("msg_si", msgSi)
+                    put("msg_dt", msgDt)
+                }
+
+                val msg = JSONObject().apply {
+                    put("msg", msgObject)
+                }
+
+                // Logging the JSON message details
+                Log.d("MenuActivity", "Message ID: $msgId")
+                Log.d("MenuActivity", "Message UI: $msgUi")
+                Log.d("MenuActivity", "Message SI: $msgSi")
+                Log.d("MenuActivity", "Message DT: $msgDt")
+                Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
+
+                msg
+            }
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    private fun createTerminalAndLogin(screen: Screen?) {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val midTerminal = sharedPreferences.getString("mid", null)
+        val token = sharedPreferences.getString("token", "")
+        val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+
+        Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
+
+            if (imei != null && midTerminal != null) {
+                val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
+                val createTerminalRequest = Request.Builder()
+                    .url(createTerminalUrl)
+                    .post(FormBody.Builder().build())
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val terminalResponse = client.newCall(createTerminalRequest).execute()
+                        val terminalResponseData = terminalResponse.body?.string()
+
+                        if (terminalResponse.isSuccessful && terminalResponseData != null) {
+                            val terminalJsonResponse = JSONObject(terminalResponseData)
+                            val terminalStatus = terminalJsonResponse.optBoolean("success", false)
+
+                            if (terminalStatus) {
+                                Log.d(TAG, "Terminal berhasil dibuat")
+
+                                saveTerminalData(terminalJsonResponse)
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val editor = sharedPreferences.edit()
+                                editor.putInt("login_attempts", 0)
+                                editor.apply()
+
+//                                comment dulu biar bisa login
+//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+//                                if (imei != null && imei != storedImeiTerminal) {
+//                                    withContext(Dispatchers.Main) {
+//                                        Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
+//                                    }
+//                                    return@launch
+//                                }
+
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                }
+                            } else {
+                                Log.d(TAG, "Gagal Membuat Terminal Baru")
+                            }
+                        } else {
+                            Log.d(TAG, "Gagal membuat terminal: ${terminalResponse.message}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error occurred while creating terminal", e)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+        } else {
+            Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
+        }
+    }
+
+
+    private fun saveTerminalData(terminalJsonResponse: JSONObject) {
+        val terminalData = terminalJsonResponse.optJSONObject("data")
+        val tid = terminalData?.optString("tid") ?: ""
+        val imeiTerminal = terminalData?.optString("imei") ?: ""
+
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+
+        editor.putString("tid", tid)
+        editor.putString("imei", imeiTerminal)
+        editor.apply()
+
+        Log.d(TAG, "Saved terminal TID and IMEI to SharedPreferences")
+    }
+
 
     // Fungsi untuk mengunggah file ke server
     private fun uploadImageFile(file: File, url: String) {

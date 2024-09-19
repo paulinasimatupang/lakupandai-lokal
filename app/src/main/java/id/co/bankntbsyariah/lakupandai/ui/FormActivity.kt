@@ -4055,6 +4055,15 @@ class FormActivity : AppCompatActivity() {
             val merchant_phone = sharedPreferences.getString("merchant_phone", "") ?: ""
             val username = "admin"
             val msg = JSONObject()
+            val newPassword = sharedPreferences.getString("new_password", null)
+
+            Log.d("FormActivity", "Saved New Password: $newPassword")
+
+            if (newPassword.isNullOrEmpty()) {
+                Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
+                return null
+            }
+
 
             val imei = sharedPreferences.getString("imei", "")?: ""
             Log.e("FormActivity", "Saved Imei: $imei")

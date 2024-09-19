@@ -4050,6 +4050,8 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private val webCallerImpl = WebCallerImpl()
+
     private fun createOTP(): JSONObject? {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -4063,9 +4065,14 @@ class FormActivity : AppCompatActivity() {
                 Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
                 null
             } else {
-                // Call forgotPassword() function
+                // Call forgotPassword() function from WebCallerImpl
                 GlobalScope.launch {
-                    forgotPassword()
+                    val response = webCallerImpl.forgotPassword(username, newPassword)
+                    if (response != null) {
+                        Log.d("FormActivity", "Forgot password response: ${response.string()}")
+                    } else {
+                        Log.e("FormActivity", "Forgot password request failed")
+                    }
                 }
 
                 val imei = sharedPreferences.getString("imei", "") ?: ""

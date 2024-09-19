@@ -3593,7 +3593,7 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun forgotPassword() {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val formBodyBuilder = FormBody.Builder()
                 var oldPassword: String? = null
@@ -3621,11 +3621,14 @@ class FormActivity : AppCompatActivity() {
 
                 val formBody = formBodyBuilder.build()
 
+                // Log form body for debugging
+                Log.d(TAG, "Form body content: username=$username, oldPassword=$oldPassword, newPassword=$newPassword")
+
                 // Cek apakah perlu mengirim OTP terlebih dahulu
                 val webCaller = WebCallerImpl()
 
                 // Panggilan untuk membuat OTP sebelum reset password
-                val messageBody = createOTP() // Menggunakan metode yang sama dengan login
+                val messageBody = createOTP()
                 if (messageBody != null) {
                     Log.d("FormActivity", "Message Body OTP: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -3636,34 +3639,6 @@ class FormActivity : AppCompatActivity() {
 
                                 // Jika OTP berhasil dibuat, arahkan ke halaman OTP
                                 handleScreenType(newScreen)
-
-                                // Setelah verifikasi OTP, lanjutkan reset password
-                                val fetchedValue = withContext(Dispatchers.IO) {
-                                    webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
-                                        ?.string()
-                                }
-
-                                // Proses respons reset password
-                                if (!fetchedValue.isNullOrEmpty()) {
-                                    try {
-                                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
-                                        val jsonResponse = JSONObject(fetchedValue)
-                                        val status = jsonResponse.optBoolean("status", false)
-                                        val message = jsonResponse.optString("message", "")
-                                        if (status) {
-                                            Log.d(TAG, "Password changed successfully.")
-                                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
-                                            navigateToLogin()  // Ganti dengan fungsi navigasi ke login
-                                        } else {
-                                            Log.e(TAG, "Failed to change password.")
-                                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } catch (jsonException: JSONException) {
-                                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
-                                    }
-                                } else {
-                                    Log.e("FormActivity", "Fetched value is null or empty")
-                                }
                             }
                         } ?: run {
                             Log.e("FormActivity", "Failed to fetch response body")
@@ -3672,11 +3647,31 @@ class FormActivity : AppCompatActivity() {
                 } else {
                     Log.e("FormActivity", "Failed to create message body, request not sent")
                 }
+
+                // Lanjutkan proses jika berhasil, simpan ke SharedPreferences
+                if (newPassword != null && username != null) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+
+                    editor.putString("username", username)
+                    editor.putString("new_password", newPassword)
+                    editor.putString("old_password", oldPassword)
+
+                    editor.apply() // Simpan data
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Password berhasil diubah", Toast.LENGTH_SHORT).show()
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
+
 
     private fun setKeyboard(editText: EditText, component: Component) {
         val conType = component.opt.substring(2, 3).toIntOrNull() ?: 3
@@ -3779,7 +3774,6 @@ class FormActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
-
 
 
     fun formatMutasi(mutasiText: String): String {

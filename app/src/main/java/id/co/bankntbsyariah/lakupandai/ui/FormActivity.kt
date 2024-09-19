@@ -2710,16 +2710,30 @@ class FormActivity : AppCompatActivity() {
                     otpDialog?.dismiss()
                     cancelOtpTimer()
                     Log.e("OTP", "SCREEN SEKARANG: $screen.id")
-                    if(screen.id == "WS0001"){
+                    if (screen.id == "WS0001") {
                         Log.e("OTP", "Create Terminal: $otpValue")
+
                         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                         val storedImeiTerminal = sharedPreferences.getString("imei", null)
-                        Log.e ("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
-                        if(storedImeiTerminal == "null"){
-//                            createNewImei()
-                        }else{
-                            createTerminalAndLogin(screen)
+                        Log.e("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
+
+                        // Ambil newPassword dari sharedPreferences
+                        val newPassword = sharedPreferences.getString("new_password", null)
+                        Log.d("FormActivity", "Saved New Password: $newPassword")
+
+                        // Periksa newPassword terlebih dahulu
+                        if (newPassword.isNullOrEmpty()) {
+                            Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
+                            // Tidak ada tindakan lebih lanjut jika newPassword kosong
+                        } else {
+                            // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
+                            if (storedImeiTerminal == "null") {
+                                // createNewImei()
+                            } else {
+                                createTerminalAndLogin(screen)
+                            }
                         }
+                        
                     }else{
                         val messageBody = createMessageBody(screen)
                         if (messageBody != null) {

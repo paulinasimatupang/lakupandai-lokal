@@ -3596,17 +3596,12 @@ class FormActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val formBodyBuilder = FormBody.Builder()
-                var oldPassword: String? = null
                 var newPassword: String? = null
                 var username: String? = null
 
                 // Mengumpulkan data dari inputValues
                 for ((key, value) in inputValues) {
                     when (key) {
-                        "LP000" -> {
-                            oldPassword = value
-                            formBodyBuilder.add("old_password", value)
-                        }
                         "LP001" -> {
                             newPassword = value
                             formBodyBuilder.add("new_password", value)
@@ -3627,13 +3622,12 @@ class FormActivity : AppCompatActivity() {
 
                     editor.putString("username", username)
                     editor.putString("new_password", newPassword)
-                    editor.putString("old_password", oldPassword)
 
                     editor.apply() // Simpan data
                 }
 
                 // Log form body for debugging
-                Log.d(TAG, "Form body content: username=$username, oldPassword=$oldPassword, newPassword=$newPassword")
+                Log.d(TAG, "Form body content: username=$username, newPassword=$newPassword")
 
                 // Cek apakah perlu mengirim OTP terlebih dahulu
                 val webCaller = WebCallerImpl()

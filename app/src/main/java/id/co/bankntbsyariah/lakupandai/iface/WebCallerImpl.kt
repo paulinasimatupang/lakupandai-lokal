@@ -140,10 +140,9 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun forgotPassword(username: String, oldPassword: String, newPassword: String): ResponseBody? {
+    override fun forgotPassword(username: String, newPassword: String): ResponseBody? {
         val formBody = FormBody.Builder()
             .add("username", username)
-            .add("old_password", oldPassword)
             .add("new_password", newPassword)
             .build()
 

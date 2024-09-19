@@ -3620,6 +3620,17 @@ class FormActivity : AppCompatActivity() {
                 }
 
                 val formBody = formBodyBuilder.build()
+                // Lanjutkan proses jika berhasil, simpan ke SharedPreferences
+                if (newPassword != null && username != null) {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+
+                    editor.putString("username", username)
+                    editor.putString("new_password", newPassword)
+                    editor.putString("old_password", oldPassword)
+
+                    editor.apply() // Simpan data
+                }
 
                 // Log form body for debugging
                 Log.d(TAG, "Form body content: username=$username, oldPassword=$oldPassword, newPassword=$newPassword")
@@ -3646,22 +3657,6 @@ class FormActivity : AppCompatActivity() {
                     }
                 } else {
                     Log.e("FormActivity", "Failed to create message body, request not sent")
-                }
-
-                // Lanjutkan proses jika berhasil, simpan ke SharedPreferences
-                if (newPassword != null && username != null) {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                    val editor = sharedPreferences.edit()
-
-                    editor.putString("username", username)
-                    editor.putString("new_password", newPassword)
-                    editor.putString("old_password", oldPassword)
-
-                    editor.apply() // Simpan data
-
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Password berhasil diubah", Toast.LENGTH_SHORT).show()
-                    }
                 }
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")

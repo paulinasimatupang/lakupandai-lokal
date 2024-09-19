@@ -2124,14 +2124,15 @@ class FormActivity : AppCompatActivity() {
                             }
 
                             if (component.id == "AKD04") {
+                                val penjelasanAkad = sharedPreferences.getString("penjelasan", "") ?: ""
                                 val existingCompValue = compValueList.firstOrNull { it.print == "AKD04" }
                                 if (existingCompValue != null) {
-                                    existingCompValue.value = akadDescriptionValue
+                                    existingCompValue.value = penjelasanAkad
                                 } else {
-                                    compValueList.add(ComponentValue(print = "AKD04", value = akadDescriptionValue))
+                                    compValueList.add(ComponentValue(print = "AKD04", value = penjelasanAkad))
                                 }
                                 component.compValues = CompValues(compValueList)
-                                Log.d("FormActivity", "Updated AKD04 with description: $akadDescriptionValue")
+                                Log.d("FormActivity", "Updated AKD04 with description: $penjelasanAkad")
                             }
 
                             val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
@@ -2432,12 +2433,12 @@ class FormActivity : AppCompatActivity() {
             }
             "Penjelasan Akad" -> {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                val akadDesc = sharedPreferences.getString("akadDescription", "")
-                if (currentValue == "null" && akadDesc != "0") {
-                    Log.d("FormActivity", "Nilai akad AKD04: $akadDesc")
-                    component.compValues?.compValue?.firstOrNull()?.value = akadDesc
+                val akadDescriptionValue = sharedPreferences.getString("penjelasan", "")
+                if (currentValue == "null" && akadDescriptionValue != "0") {
+                    Log.d("FormActivity", "Nilai akad AKD04: $akadDescriptionValue")
+                    component.compValues?.compValue?.firstOrNull()?.value = akadDescriptionValue
                 } else {
-                    Log.d("FormActivity", "Penjelasan akad terisi dengan: $akadDesc")
+                    Log.d("FormActivity", "Penjelasan akad terisi dengan: $akadDescriptionValue")
                 }
             }
             "Nama Rekening Agen" -> {

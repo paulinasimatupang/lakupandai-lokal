@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Bundle
-import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Base64
@@ -29,7 +28,6 @@ import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import id.co.bankntbsyariah.lakupandai.ui.SignatureActivity
 import com.github.gcacace.signaturepad.views.SignaturePad
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Component
@@ -74,20 +72,24 @@ import android.text.style.UnderlineSpan
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
-import okhttp3.*
-import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
 import org.json.JSONArray
 import java.text.ParseException
-import android.os.Handler
-import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
 import android.graphics.Color
 import android.text.method.PasswordTransformationMethod
 import android.view.KeyEvent
-import com.bumptech.glide.Glide
+import com.google.firebase.messaging.FirebaseMessaging
+import id.co.bankntbsyariah.lakupandai.MyFirebaseMessagingService
+import id.co.bankntbsyariah.lakupandai.api.ApiService
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.ResponseBody // Pastikan impor ini benar
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class FormActivity : AppCompatActivity() {
 
@@ -111,6 +113,8 @@ class FormActivity : AppCompatActivity() {
     private var signatureFile: File? = null
     private var fileFotoKTP: File? = null
     private var fileFotoOrang: File? = null
+
+    data class Token(val token: String)
 
     private var otpTimer: CountDownTimer? = null
     private var lastMessageBody: JSONObject? = null
@@ -3013,6 +3017,26 @@ class FormActivity : AppCompatActivity() {
                             editor.putInt("login_attempts", 0)
                             editor.apply()
 
+                            fun retrieveAuthToken(): String {
+                                // Return the stored auth token
+                                return "auth_token" // Replace this with the actual logic to retrieve the token
+                            }
+
+                            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                if (!task.isSuccessful) {
+                                    Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                    return@addOnCompleteListener
+                                }
+
+                                // Get new FCM token
+                                val fcmToken = task.result
+                                Log.d("FCM", "FCM Token: $fcmToken")
+
+                                // Kirim token FCM ke server, memanggil fungsi dari MyFirebaseMessagingService
+                                val authToken = retrieveAuthToken() // Panggil fungsi untuk mendapatkan auth token
+                                MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken)
+                            }
+
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
                                 navigateToScreen()
@@ -3498,35 +3522,6 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    // Fungsi untuk mengunggah file ke server
-    private fun uploadImageFile(file: File, url: String) {
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("file", file.name, file.asRequestBody("image/png".toMediaTypeOrNull()))
-            .build()
-
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
-            .build()
-
-        val client = OkHttpClient()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("UploadFile", "Gagal mengupload file: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    Log.d("UploadFile", "File berhasil diupload ke $url")
-                } else {
-                    Log.e("UploadFile", "Gagal mengupload file: ${response.code}")
-                }
-            }
-        })
-    }
-
     private fun startOtpTimer() {
         otpTimer = object : CountDownTimer(60000, 1000) { // 2 minutes countdown
             override fun onTick(millisUntilFinished: Long) {
@@ -3629,5 +3624,34 @@ class FormActivity : AppCompatActivity() {
                 resendOtp()
             }
         }
+    }
+
+    // Fungsi untuk mengunggah file ke server
+    private fun uploadImageFile(file: File, url: String) {
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", file.name, file.asRequestBody("image/png".toMediaTypeOrNull()))
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        val client = OkHttpClient()
+
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                Log.e("UploadFile", "Gagal mengupload file: ${e.message}")
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                if (response.isSuccessful) {
+                    Log.d("UploadFile", "File berhasil diupload ke $url")
+                } else {
+                    Log.e("UploadFile", "Gagal mengupload file: ${response.code}")
+                }
+            }
+        })
     }
 }

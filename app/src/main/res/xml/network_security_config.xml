@@ -4,5 +4,6 @@
         <domain includeSubdomains="true">108.137.154.8</domain>
         <domain includeSubdomains="true">api.selada.id</domain>
         <domain includeSubdomains="true">reportntbs.selada.id</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
     </domain-config>
 </network-security-config>

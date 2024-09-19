@@ -2,9 +2,15 @@
 
 package id.co.bankntbsyariah.lakupandai.ui
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -45,6 +51,9 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.text.NumberFormat
 import java.util.Locale
 import android.widget.ImageView
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 class MenuActivity : AppCompatActivity() {
 
@@ -55,9 +64,14 @@ class MenuActivity : AppCompatActivity() {
     private lateinit var sliderAdapter: ImageSliderAdapter
     private var isSaldoVisible = false
 
+    private val NOTIFICATION_PERMISSION_CODE = 1001
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        checkNotificationPermission()
 
         // Get the menu ID from the Intent or use the default
         menuId = intent.getStringExtra(Constants.KEY_MENU_ID) ?: Constants.DEFAULT_ROOT_ID
@@ -674,4 +688,80 @@ class MenuActivity : AppCompatActivity() {
             Log.e("MenuActivity", "Failed to create message body, request not sent")
         }
     }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Jika izin belum diberikan, minta izin
+                Log.d("MenuActivity", "Izin notifikasi belum diberikan. Meminta izin...")
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_CODE
+                )
+            } else {
+                Log.d("MenuActivity", "Izin notifikasi sudah diberikan.")
+            }
+        } else {
+            // Tidak memerlukan izin untuk versi Android di bawah TIRAMISU
+            Log.d("MenuActivity", "Tidak memerlukan izin untuk Android versi di bawah 13.")
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("MenuActivity", "Izin notifikasi telah diberikan.")
+                Toast.makeText(this, "Izin notifikasi diberikan", Toast.LENGTH_SHORT).show()
+
+                // Panggil fungsi untuk mengirim notifikasi jika diperlukan
+                sendNotification("Notifikasi Diberikan", "Izin telah diberikan, dan ini notifikasi contoh.")
+            } else {
+                Log.e("MenuActivity", "Izin notifikasi ditolak.")
+                Toast.makeText(this, "Izin notifikasi ditolak", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @SuppressLint("ServiceCast")
+    private fun sendNotification(title: String, message: String) {
+        val intent = Intent(this, MenuActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, "notification_channel")
+            .setSmallIcon(R.mipmap.logo_aja_ntbs)
+            .setAutoCancel(true)
+            .setVibrate(longArrayOf(1000, 1000, 1000, 1000))
+            .setContentIntent(pendingIntent)
+            .setContentTitle(title)
+            .setContentText(message)
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "notification_channel",
+                "id.co.bankntbsyariah.lakupandai",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
+    }
 }
+

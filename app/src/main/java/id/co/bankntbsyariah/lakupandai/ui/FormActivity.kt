@@ -65,7 +65,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import android.Manifest
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Environment
 import android.os.CountDownTimer
@@ -94,7 +93,16 @@ import com.bumptech.glide.Glide
 import id.co.bankntbsyariah.lakupandai.common.CompValues
 import id.co.bankntbsyariah.lakupandai.common.ComponentValue
 import id.co.bankntbsyariah.lakupandai.ui.adapter.ProdukAdapter
+import com.google.firebase.messaging.FirebaseMessaging
+import id.co.bankntbsyariah.lakupandai.MyFirebaseMessagingService
+import id.co.bankntbsyariah.lakupandai.api.ApiService
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.ResponseBody // Pastikan impor ini benar
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class FormActivity : AppCompatActivity() {
 
@@ -118,6 +126,8 @@ class FormActivity : AppCompatActivity() {
     private var signatureFile: File? = null
     private var fileFotoKTP: File? = null
     private var fileFotoOrang: File? = null
+
+    data class Token(val token: String)
 
     private var otpTimer: CountDownTimer? = null
     private var lastMessageBody: JSONObject? = null
@@ -194,7 +204,6 @@ class FormActivity : AppCompatActivity() {
             }
         })
     }
-
 
     private suspend fun loadForm(): String? {
         var formValue = StorageImpl(applicationContext).fetchForm(formId)
@@ -456,7 +465,6 @@ class FormActivity : AppCompatActivity() {
                     namaDepan = fullName?.split(" ")?.firstOrNull()?.take(1) ?: ""
                 }
             }
-
             if (screen.title.contains("Transfer") && component.id == "ST003") {
                 val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
                 val dateTransferTextView = findViewById<TextView>(R.id.dateTransfer)
@@ -477,6 +485,7 @@ class FormActivity : AppCompatActivity() {
                     Log.e("FormActivity", "TextView with ID success not found")
                 }
             }
+
             if (component.id == "TRF27" && component.label.contains("Penerima")) {
                 extraText = "Penerima"
             } else if ((component.id == "AG001" || component.id == "TRF26") && component.label.contains(
@@ -3252,6 +3261,7 @@ class FormActivity : AppCompatActivity() {
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
                         val terminalArray = merchantData?.optJSONArray("terminal")
+                        val terminalData = terminalArray?.getJSONObject(0)
 
                         Log.d(TAG, "User status: $userStatus")
                         Log.d(TAG, "Terminal array: $terminalArray")
@@ -3366,6 +3376,25 @@ class FormActivity : AppCompatActivity() {
 //                                    }
 //                                    return@launch
 //                                }
+fun retrieveAuthToken(): String {
+    // Return the stored auth token
+    return "auth_token" // Replace this with the actual logic to retrieve the token
+}
+
+                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                    if (!task.isSuccessful) {
+                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                        return@addOnCompleteListener
+                                    }
+
+                                    // Get new FCM token
+                                    val fcmToken = task.result
+                                    Log.d("FCM", "FCM Token: $fcmToken")
+
+                                    // Kirim token FCM ke server, memanggil fungsi dari MyFirebaseMessagingService
+                                    val authToken = retrieveAuthToken() // Panggil fungsi untuk mendapatkan auth token
+                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken)
+                                }
 
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
@@ -3394,7 +3423,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
     private suspend fun handleFailedPinAttempt() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
@@ -3932,35 +3960,6 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    // Fungsi untuk mengunggah file ke server
-    private fun uploadImageFile(file: File, url: String) {
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("file", file.name, file.asRequestBody("image/png".toMediaTypeOrNull()))
-            .build()
-
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
-            .build()
-
-        val client = OkHttpClient()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("UploadFile", "Gagal mengupload file: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    Log.d("UploadFile", "File berhasil diupload ke $url")
-                } else {
-                    Log.e("UploadFile", "Gagal mengupload file: ${response.code}")
-                }
-            }
-        })
-    }
-
     private fun startOtpTimer() {
         otpTimer = object : CountDownTimer(60000, 1000) { // 2 minutes countdown
             override fun onTick(millisUntilFinished: Long) {
@@ -4231,4 +4230,33 @@ class FormActivity : AppCompatActivity() {
         Log.d(TAG, "Saved terminal TID and IMEI to SharedPreferences")
     }
 
+
+    // Fungsi untuk mengunggah file ke server
+    private fun uploadImageFile(file: File, url: String) {
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", file.name, file.asRequestBody("image/png".toMediaTypeOrNull()))
+            .build()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        val client = OkHttpClient()
+
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                Log.e("UploadFile", "Gagal mengupload file: ${e.message}")
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                if (response.isSuccessful) {
+                    Log.d("UploadFile", "File berhasil diupload ke $url")
+                } else {
+                    Log.e("UploadFile", "Gagal mengupload file: ${response.code}")
+                }
+            }
+        })
+    }
 }

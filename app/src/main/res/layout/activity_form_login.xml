@@ -32,8 +32,8 @@
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="405dp"
+        android:layout_height="233dp"
         android:layout_marginTop="50dp"
         app:layout_constraintBottom_toTopOf="@id/footer_container"
         app:layout_constraintEnd_toEndOf="parent"
@@ -107,26 +107,31 @@
             android:id="@+id/forgot_password"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Lupa Password?"
-            android:textColor="#0A6E44"
-            android:textSize="16sp"
-            android:clickable="true"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="8dp"
+            android:layout_alignParentEnd="true"
             android:layout_gravity="end"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="20dp"
-            android:textStyle="bold"
-            android:layout_alignParentEnd="true" />
+            android:clickable="true"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="8dp"
+            android:text="Lupa Password?"
+            android:textColor="#0A6E44"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
-        <LinearLayout
-            android:id="@+id/button_type_7_container"
-            android:layout_width="400dp"
+        <Button
+            android:id="@+id/fingerprintLoginButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:background="@android:color/transparent"
-            android:orientation="vertical"
-            android:padding="30dp" />
+            android:text="Login Fingerprint"
+            android:onClick="loginFingerprint" />
+        <Button
+            android:id="@+id/fingerprintRegisterButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Register Fingerprint"
+            android:onClick="registerFingerprint" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

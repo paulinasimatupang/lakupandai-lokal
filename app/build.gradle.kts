@@ -68,6 +68,8 @@ android {
 }
 
 dependencies {
+    implementation ("androidx.biometric:biometric:1.2.0-alpha04")
+
     implementation ("com.github.gcacace:signature-pad:1.3.1")
     implementation ("com.github.bumptech.glide:glide:4.12.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

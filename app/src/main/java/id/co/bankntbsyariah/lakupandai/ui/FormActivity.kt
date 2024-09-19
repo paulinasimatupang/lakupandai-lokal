@@ -3621,37 +3621,56 @@ class FormActivity : AppCompatActivity() {
 
                 val formBody = formBodyBuilder.build()
 
-                // Buat instance WebCallerImpl
+                // Cek apakah perlu mengirim OTP terlebih dahulu
                 val webCaller = WebCallerImpl()
 
-                // Lakukan panggilan HTTP dengan data yang dikumpulkan
-                val fetchedValue = withContext(Dispatchers.IO) {
-                    webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
-                        ?.string()
-                }
+                // Panggilan untuk membuat OTP sebelum reset password
+                val messageBody = createOTP() // Menggunakan metode yang sama dengan login
+                if (messageBody != null) {
+                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                        responseBody?.let { body ->
+                            lifecycleScope.launch {
+                                val screenJson = JSONObject(body)
+                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
 
-                // Proses respons
-                if (!fetchedValue.isNullOrEmpty()) {
-                    try {
-                        // Debug log untuk respons mentah
-                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+                                // Jika OTP berhasil dibuat, arahkan ke halaman OTP
+                                handleScreenType(newScreen)
 
-                        val jsonResponse = JSONObject(fetchedValue)
-                        val status = jsonResponse.optBoolean("status", false)
-                        val message = jsonResponse.optString("message", "")
-                        if (status) {
-                            Log.d(TAG, "Password changed successfully.")
-                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
-                            navigateToLogin()  // Ganti dengan fungsi navigasi ke login
-                        } else {
-                            Log.e(TAG, "Failed to change password.")
-                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                                // Setelah verifikasi OTP, lanjutkan reset password
+                                val fetchedValue = withContext(Dispatchers.IO) {
+                                    webCaller.forgotPassword(username ?: "", oldPassword ?: "", newPassword ?: "")
+                                        ?.string()
+                                }
+
+                                // Proses respons reset password
+                                if (!fetchedValue.isNullOrEmpty()) {
+                                    try {
+                                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+                                        val jsonResponse = JSONObject(fetchedValue)
+                                        val status = jsonResponse.optBoolean("status", false)
+                                        val message = jsonResponse.optString("message", "")
+                                        if (status) {
+                                            Log.d(TAG, "Password changed successfully.")
+                                            Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
+                                            navigateToLogin()  // Ganti dengan fungsi navigasi ke login
+                                        } else {
+                                            Log.e(TAG, "Failed to change password.")
+                                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (jsonException: JSONException) {
+                                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                                    }
+                                } else {
+                                    Log.e("FormActivity", "Fetched value is null or empty")
+                                }
+                            }
+                        } ?: run {
+                            Log.e("FormActivity", "Failed to fetch response body")
                         }
-                    } catch (jsonException: JSONException) {
-                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
                     }
                 } else {
-                    Log.e("FormActivity", "Fetched value is null or empty")
+                    Log.e("FormActivity", "Failed to create message body, request not sent")
                 }
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")

@@ -41,6 +41,7 @@ import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -4052,45 +4053,49 @@ class FormActivity : AppCompatActivity() {
     private fun createOTP(): JSONObject? {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val merchant_phone = sharedPreferences.getString("merchant_phone", "") ?: ""
+            val merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
             val username = "admin"
-            val msg = JSONObject()
             val newPassword = sharedPreferences.getString("new_password", null)
 
             Log.d("FormActivity", "Saved New Password: $newPassword")
 
             if (newPassword.isNullOrEmpty()) {
                 Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
-                return null
+                null
+            } else {
+                // Call forgotPassword() function
+                GlobalScope.launch {
+                    forgotPassword()
+                }
+
+                val imei = sharedPreferences.getString("imei", "") ?: ""
+                Log.e("FormActivity", "Saved Imei: $imei")
+                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                val msgUi = imei
+                val msgId = msgUi + timestamp
+                val msgSi = "SV0001"
+                val msgDt = "$username|$merchantPhone"
+
+                val msgObject = JSONObject().apply {
+                    put("msg_id", msgId)
+                    put("msg_ui", msgUi)
+                    put("msg_si", msgSi)
+                    put("msg_dt", msgDt)
+                }
+
+                val msg = JSONObject().apply {
+                    put("msg", msgObject)
+                }
+
+                // Logging the JSON message details
+                Log.d("MenuActivity", "Message ID: $msgId")
+                Log.d("MenuActivity", "Message UI: $msgUi")
+                Log.d("MenuActivity", "Message SI: $msgSi")
+                Log.d("MenuActivity", "Message DT: $msgDt")
+                Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
+
+                msg
             }
-
-
-            val imei = sharedPreferences.getString("imei", "")?: ""
-            Log.e("FormActivity", "Saved Imei: $imei")
-            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-            val msgUi = imei
-//            val msgUi = "353471045058692"
-            val msgId = msgUi + timestamp
-//            val msgUi = "353471045058692"
-            val msgSi = "SV0001"
-            val msgDt = "$username|$merchant_phone"
-
-            val msgObject = JSONObject().apply {
-                put("msg_id", msgId)
-                put("msg_ui", msgUi)
-                put("msg_si", msgSi)
-                put("msg_dt", msgDt)
-            }
-
-            msg.put("msg", msgObject)
-
-            // Logging the JSON message details
-            Log.d("MenuActivity", "Message ID: $msgId")
-            Log.d("MenuActivity", "Message UI: $msgUi")
-            Log.d("MenuActivity", "Message SI: $msgSi")
-            Log.d("MenuActivity", "Message DT: $msgDt")
-            Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
-            msg
         } catch (e: Exception) {
             Log.e("MenuActivity", "Failed to create message body", e)
             null

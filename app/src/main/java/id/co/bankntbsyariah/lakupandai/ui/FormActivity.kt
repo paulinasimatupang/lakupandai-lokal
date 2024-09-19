@@ -4056,7 +4056,7 @@ class FormActivity : AppCompatActivity() {
     private fun createOTP(): JSONObject? {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
+            var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
             val username = "admin"
             val newPassword = sharedPreferences.getString("new_password", null)
 
@@ -4067,12 +4067,38 @@ class FormActivity : AppCompatActivity() {
                 null
             } else {
                 // Call forgotPassword() function from WebCallerImpl
-                GlobalScope.launch {
+                GlobalScope.launch(Dispatchers.IO) {
                     val response = webCallerImpl.forgotPassword(username, newPassword)
-                    if (response != null) {
-                        Log.d("FormActivity", "Forgot password response: ${response.string()}")
-                    } else {
-                        Log.e("FormActivity", "Forgot password request failed")
+                    withContext(Dispatchers.Main) {
+                        if (response != null) {
+                            // Convert response body to a string and parse the JSON
+                            val responseBodyString = response.string()
+                            Log.d("FormActivity", "Forgot password response: $responseBodyString")
+
+                            try {
+                                val jsonResponse = JSONObject(responseBodyString)
+                                val status = jsonResponse.optString("status")
+
+                                if (status == "success") {
+                                    // Replace merchantPhone with phone from the response
+                                    val phone = jsonResponse.optString("phone")
+                                    merchantPhone = phone
+                                    Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+
+                                    // Save the updated phone to SharedPreferences
+                                    sharedPreferences.edit().putString("merchant_phone", phone).apply()
+                                } else {
+                                    // Handle error and display message
+                                    val message = jsonResponse.optString("message")
+                                    Toast.makeText(this@FormActivity, "Error: $message", Toast.LENGTH_LONG).show()
+                                    Log.e("FormActivity", "Error from server: $message")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("FormActivity", "Failed to parse JSON response", e)
+                            }
+                        } else {
+                            Log.e("FormActivity", "Forgot password request failed")
+                        }
                     }
                 }
 

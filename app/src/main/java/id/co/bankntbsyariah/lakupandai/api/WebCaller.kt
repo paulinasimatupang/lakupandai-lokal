@@ -14,4 +14,5 @@ interface WebCaller {
     fun forgotPassword(new_password: String, username: String): ResponseBody?
     fun changePin(id: String, old_pin: String, new_pin: String, token: String): ResponseBody?
     fun blockAgen(id: String, token: String): ResponseBody?
+    fun historyPengaduan(mid: String, token: String): ResponseBody?
 }

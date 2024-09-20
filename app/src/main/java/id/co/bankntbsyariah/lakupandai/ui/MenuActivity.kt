@@ -90,6 +90,7 @@ class MenuActivity : AppCompatActivity() {
         setContentView(
             when (menuId) {
                 "PP00001" -> R.layout.profile_layout
+                "KOM0000" , "PKOM001"-> R.layout.komplain_menu
                 "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
@@ -406,7 +407,7 @@ class MenuActivity : AppCompatActivity() {
         val spacing = (resources.displayMetrics.density * 8).toInt()
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
         menuList.clear()
-        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001", menuId == "PR00000")
+        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001", menuId == "PR00000",  menuId== "KOM0000", menuId=="PKOM001")
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->
@@ -498,7 +499,7 @@ class MenuActivity : AppCompatActivity() {
 
                 Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
 
-                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false)
+                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false, isKomplain=false, isKomplain2 = false)
                 recyclerView.adapter = menuAdapter
 
                 menuAdapter.notifyDataSetChanged()

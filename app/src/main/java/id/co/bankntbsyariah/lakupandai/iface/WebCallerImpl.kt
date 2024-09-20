@@ -192,4 +192,26 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             null
         }
     }
+
+    override fun historyPengaduan(mid: String, token: String): ResponseBody? {
+        val request = Request.Builder()
+            .url("http://reportntbs.selada.id/api/pengaduan/history?mid=$mid")
+            .addHeader("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        return try {
+            client.newCall(request).execute().let { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to fetch history list: ${response.message}")
+                    null
+                } else {
+                    response.body
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while fetching history list", e)
+            null
+        }
+    }
 }

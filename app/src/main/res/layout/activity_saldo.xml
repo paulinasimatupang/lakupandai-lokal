@@ -90,7 +90,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="3dp"
                     android:layout_marginRight="3dp"
-                    android:text="Cek saldo berhaasil dilakukan, silahkan mengirimkan sms ke nasabah"
+                    android:text="Cek saldo berhasil dilakukan, silahkan mengirimkan sms ke nasabah"
                     android:textColor="#000000"
                     android:textSize="18sp"
                     android:gravity="center" />

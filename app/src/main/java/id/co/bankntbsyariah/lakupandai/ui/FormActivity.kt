@@ -102,7 +102,6 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import android.hardware.fingerprint.FingerprintManager
 import android.os.CancellationSignal
 import androidx.biometric.BiometricPrompt
@@ -965,11 +964,7 @@ class FormActivity : AppCompatActivity() {
                                                 val status = history.optString("status", "")
                                                 val requestMessage = history.getString("request_message")
 
-                                                val no_rek = history.getString("no_rek")
-                                                val nama_rek = history.getString("nama_rek")
                                                 val nominal = history.getString("nominal")
-                                                val keterangan = history.getString("keterangan")
-
 
                                                 val nominalDouble = nominal?.toDoubleOrNull()
                                                 val nominal_rupiah = nominalDouble?.let {
@@ -978,7 +973,7 @@ class FormActivity : AppCompatActivity() {
                                                     )
                                                 }
 
-                                                val formatTrans = "$no_rek - $nama_rek \n $nominal_rupiah \n $keterangan"
+                                                val formatTrans = "$nominal_rupiah"
 
                                                 val requestMessageJson = JSONObject(requestMessage.trim())
                                                 val msgObject = requestMessageJson.getJSONObject("msg")
@@ -1145,8 +1140,137 @@ class FormActivity : AppCompatActivity() {
                             }
                         }
                     }
+                    else if (component.id == "HY002") {
+                        val context = this@FormActivity
+                        val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
+                        container.addView(searchLayout)
 
+                        val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
+                        val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
+                        val searchContainer = searchLayout.findViewById<LinearLayout>(R.id.container)
 
+                        val sortOptions = resources.getStringArray(R.array.sort_options1)
+                        val sortAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, sortOptions)
+                        sortAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        sortSpinner.adapter = sortAdapter
+
+                        lifecycleScope.launch {
+                            val webCaller = WebCallerImpl()
+                            val fetchedValue = withContext(Dispatchers.IO) {
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val token = sharedPreferences.getString("token", "") ?: ""
+                                val mid = sharedPreferences.getString("kode_agen", "") ?: ""
+                                val response = webCaller.historyPengaduan(mid, token)
+                                response?.string()
+                            }
+
+                            if (!fetchedValue.isNullOrEmpty()) {
+                                try {
+                                    val jsonResponse = JSONObject(fetchedValue)
+                                    val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
+                                    val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
+
+                                    searchContainer.removeAllViews()
+
+                                    val groupedData = dataList.groupBy {
+                                        it.optString("request_time", "").split(" ").getOrNull(0) ?: "Unknown Date"
+                                    }
+
+                                    groupedData.forEach { (date, historyList) ->
+                                        searchContainer.addView(TextView(context).apply {
+                                            text = date
+                                            textSize = 15f
+                                            setTypeface(null, Typeface.BOLD)
+                                            setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                                            setTextColor(Color.parseColor("#808080"))
+                                        })
+
+                                        historyList.forEach { history ->
+                                            val request_time = history.optString("request_time", "")
+                                            val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                                            val targetFormat = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault())
+                                            val formattedTime = try {
+                                                val date = originalFormat.parse(request_time)
+                                                targetFormat.format(date)
+                                            } catch (e: ParseException) {
+                                                request_time
+                                            }
+
+                                            val statusPengaduan = when (history.optString("status", "")) {
+                                                "0" -> "Pending"
+                                                "1" -> "Sedang Diproses"
+                                                "2" -> "Selesai"
+                                                else -> "Gagal"
+                                            }
+
+                                            val statusColor = when (history.optString("status", "")) {
+                                                "0" -> ContextCompat.getColor(context, R.color.dark_grey)
+                                                "1" -> ContextCompat.getColor(context, R.color.yellow)
+                                                "2" -> ContextCompat.getColor(context, R.color.green)
+                                                else -> ContextCompat.getColor(context, R.color.red)
+                                            }
+
+                                            val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply {
+                                                findViewById<TextView>(R.id.text_action).text = history.optString("kategori")
+                                                findViewById<TextView>(R.id.text_format_trans).text = history.optString("judul", "N/A")
+                                                findViewById<TextView>(R.id.text_status).apply {
+                                                    text = statusPengaduan
+                                                    setTextColor(statusColor)
+                                                }
+                                                findViewById<TextView>(R.id.text_reply_time).text = formattedTime
+                                            }
+
+                                            val params = LinearLayout.LayoutParams(
+                                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                                LinearLayout.LayoutParams.WRAP_CONTENT
+                                            ).apply {
+                                                setMargins(0, 0, 0, 16.dpToPx())
+                                            }
+
+                                            itemView.layoutParams = params
+
+                                            searchContainer.addView(itemView)
+                                        }
+                                    }
+
+                                    searchBar.addTextChangedListener(object : TextWatcher {
+                                        override fun afterTextChanged(s: Editable?) {
+                                            val searchText = s.toString().lowercase()
+                                            val filteredDataList = dataList.filter {
+                                                it.optString("kategori", "").lowercase().contains(searchText)
+                                            }
+                                            refreshData(filteredDataList, searchContainer, context)
+                                        }
+                                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                    })
+
+                                    sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                                            val sortOption = parent?.getItemAtPosition(position) as String
+                                            val sortedDataList = when (sortOption) {
+                                                "Sort by Date" -> dataList.sortedBy { it.optString("request_time") }
+                                                "Sort by Status" -> dataList.sortedBy { it.optString("status") }
+                                                else -> dataList
+                                            }
+                                            refreshData(sortedDataList, searchContainer, context)
+                                        }
+                                        override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                    }
+
+                                } catch (e: JSONException) {
+                                    Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
                     else {
                         LinearLayout(this@FormActivity).apply {
                             orientation = LinearLayout.VERTICAL

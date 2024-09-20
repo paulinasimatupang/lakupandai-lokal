@@ -174,17 +174,17 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-        executor = ContextCompat.getMainExecutor(this)
-
-        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
-            authenticateFingerprint { encryptedFingerprint ->
-                encryptedFingerprint?.let { it1 -> loginWithFingerprint(it1) }
-            }
-        }
-
-        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
-            registerFingerprint()
-        }
+//        executor = ContextCompat.getMainExecutor(this)
+//
+//        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
+//            authenticateFingerprint { encryptedFingerprint ->
+//                encryptedFingerprint?.let { it1 -> loginWithFingerprint(it1) }
+//            }
+//        }
+//
+//        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
+//            registerFingerprint()
+//        }
 
         lifecycleScope.launch {
             val formValue = loadForm()
@@ -199,147 +199,148 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun authenticateFingerprint(callback: (String?) -> Unit) {
-        val biometricPrompt = BiometricPrompt(this, executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    Log.e("Auth", "Error: $errString")
-                    Toast.makeText(this@FormActivity, "Authentication error: $errString", Toast.LENGTH_SHORT).show()
-                }
-
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-
-                    // No encryption needed; handle authentication success
-                    Log.d("Auth", "Authentication succeeded, no encryption needed.")
-                    callback("dummy_fingerprint_data")  // Use some identifiable data to send for registration
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    Toast.makeText(this@FormActivity, "Authentication failed", Toast.LENGTH_SHORT).show()
-                }
-            })
-
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Fingerprint Authentication")
-            .setSubtitle("Use fingerprint to authenticate")
-            .setNegativeButtonText("Cancel")
-            .build()
-
-        biometricPrompt.authenticate(promptInfo)
-    }
-
-    private fun loginWithFingerprint(fingerprintData: String) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val requestBody = FormBody.Builder()
-                .add("finger_print", fingerprintData)
-                .build()
-
-            val request = Request.Builder()
-                .url("http://reportntbs.selada.id/api/auth/loginWithFingerprint")
-                .post(requestBody)
-                .build()
-
-            try {
-                val response = client.newCall(request).execute()
-                val responseData = response.body?.string()
-
-                if (response.isSuccessful && responseData != null) {
-                    val jsonResponse = JSONObject(responseData)
-                    val token = jsonResponse.optString("token")
-                    val user = jsonResponse.optJSONObject("data")
-                    withContext(Dispatchers.Main) {
-                        saveUserSession(user, token)
-                        Toast.makeText(this@FormActivity, "Login successful!", Toast.LENGTH_SHORT).show()
-
-                        val intent = Intent(this@FormActivity, MenuActivity::class.java).apply {
-                            putExtra("screen_id", "idMN00000")
-                        }
-                        startActivity(intent)
-                        finish()
-                    }
-                } else {
-                    handleFailedLoginAttempt(responseData)
-                }
-            } catch (e: Exception) {
-                Log.e("FingerprintLogin", "Error: ${e.message}")
-            }
-        }
-    }
-
-    private fun registerFingerprint() {
-        val userId = getUserIdFromSession()
-
-        if (userId != null) {
-            authenticateFingerprint { fingerprintData ->
-                fingerprintData?.let { registerFingerprintWithServer(userId, it) }
-            }
-        } else {
-            Toast.makeText(this, "You must be logged in to register a fingerprint", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun registerFingerprintWithServer(userId: String, fingerprintData: String) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val requestBody = FormBody.Builder()
-                .add("id", userId)
-                .add("finger_print", fingerprintData)
-                .build()
-
-            val request = Request.Builder()
-                .url("http://reportntbs.selada.id/api/auth/registerFingerprint")
-                .post(requestBody)
-                .build()
-
-            try {
-                val response = client.newCall(request).execute()
-                val responseData = response.body?.string()
-
-                if (response.isSuccessful && responseData != null) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Fingerprint registered successfully!", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    handleFailedRegistration(responseData)
-                }
-            } catch (e: Exception) {
-                Log.e("FingerprintRegister", "Error: ${e.message}")
-            }
-        }
-    }
-
-    private fun handleFailedLoginAttempt(responseData: String?) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            val jsonResponse = JSONObject(responseData ?: "{}")
-            val errorMessage = jsonResponse.optString("message", "Login failed.")
-            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun handleFailedRegistration(responseData: String?) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            val jsonResponse = JSONObject(responseData ?: "{}")
-            val errorMessage = jsonResponse.optString("message", "Registration failed.")
-            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun getUserIdFromSession(): String? {
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("id", null)
-    }
-
-    private fun saveUserSession(user: JSONObject?, token: String) {
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-
-        editor.putString("id", user?.optString("id"))
-        editor.putString("token", token)
-        editor.apply()
-    }
-
+//    private fun authenticateFingerprint(callback: (String?) -> Unit) {
+//        val biometricPrompt = BiometricPrompt(this, executor,
+//            object : BiometricPrompt.AuthenticationCallback() {
+//                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+//                    super.onAuthenticationError(errorCode, errString)
+//                    Log.e("Auth", "Error: $errString")
+//                    Toast.makeText(this@FormActivity, "Authentication error: $errString", Toast.LENGTH_SHORT).show()
+//                }
+//
+//                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+//                    super.onAuthenticationSucceeded(result)
+//
+//                    // No encryption needed; handle authentication success
+//                    Log.d("Auth", "Authentication succeeded, no encryption needed.")
+//                    callback("dummy_fingerprint_data")  // Use some identifiable data to send for registration
+//                }
+//
+//                override fun onAuthenticationFailed() {
+//                    super.onAuthenticationFailed()
+//                    Toast.makeText(this@FormActivity, "Authentication failed", Toast.LENGTH_SHORT).show()
+//                }
+//            })
+//
+//        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+//            .setTitle("Fingerprint Authentication")
+//            .setSubtitle("Use fingerprint to authenticate")
+//            .setNegativeButtonText("Cancel")
+//            .build()
+//
+//        biometricPrompt.authenticate(promptInfo)
+//    }
+//
+//    private fun loginWithFingerprint(fingerprintData: String) {
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            val requestBody = FormBody.Builder()
+//                .add("finger_print", fingerprintData)
+//                .build()
+//
+//            val request = Request.Builder()
+//                .url("http://reportntbs.selada.id/api/auth/loginWithFingerprint")
+//                .post(requestBody)
+//                .build()
+//
+//            try {
+//                val response = client.newCall(request).execute()
+//                val responseData = response.body?.string()
+//
+//                if (response.isSuccessful && responseData != null) {
+//                    val jsonResponse = JSONObject(responseData)
+//                    val token = jsonResponse.optString("token")
+//                    val user = jsonResponse.optJSONObject("data")
+//                    Log.d("FingerprintData", "Sending fingerprint data: $fingerprintData")
+//                    withContext(Dispatchers.Main) {
+//                        saveUserSession(user, token)
+//                        Toast.makeText(this@FormActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+//
+//                        val intent = Intent(this@FormActivity, MenuActivity::class.java).apply {
+//                            putExtra("screen_id", "idMN00000")
+//                        }
+//                        startActivity(intent)
+//                        finish()
+//                    }
+//                } else {
+//                    handleFailedLoginAttempt(responseData)
+//                }
+//            } catch (e: Exception) {
+//                Log.e("FingerprintLogin", "Error: ${e.message}")
+//            }
+//        }
+//    }
+//
+//    private fun registerFingerprint() {
+//        val userId = getUserIdFromSession()
+//
+//        if (userId != null) {
+//            authenticateFingerprint { fingerprintData ->
+//                fingerprintData?.let { registerFingerprintWithServer(userId, it) }
+//            }
+//        } else {
+//            Toast.makeText(this, "You must be logged in to register a fingerprint", Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//    private fun registerFingerprintWithServer(userId: String, fingerprintData: String) {
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            val requestBody = FormBody.Builder()
+//                .add("id", userId)
+//                .add("finger_print", fingerprintData)
+//                .build()
+//
+//            val request = Request.Builder()
+//                .url("http://reportntbs.selada.id/api/auth/registerFingerprint")
+//                .post(requestBody)
+//                .build()
+//
+//            try {
+//                val response = client.newCall(request).execute()
+//                val responseData = response.body?.string()
+//
+//                if (response.isSuccessful && responseData != null) {
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(this@FormActivity, "Fingerprint registered successfully!", Toast.LENGTH_SHORT).show()
+//                    }
+//                } else {
+//                    handleFailedRegistration(responseData)
+//                }
+//            } catch (e: Exception) {
+//                Log.e("FingerprintRegister", "Error: ${e.message}")
+//            }
+//        }
+//    }
+//
+//    private fun handleFailedLoginAttempt(responseData: String?) {
+//        lifecycleScope.launch(Dispatchers.Main) {
+//            val jsonResponse = JSONObject(responseData ?: "{}")
+//            val errorMessage = jsonResponse.optString("message", "Login failed.")
+//            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//    private fun handleFailedRegistration(responseData: String?) {
+//        lifecycleScope.launch(Dispatchers.Main) {
+//            val jsonResponse = JSONObject(responseData ?: "{}")
+//            val errorMessage = jsonResponse.optString("message", "Registration failed.")
+//            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//    private fun getUserIdFromSession(): String? {
+//        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+//        return sharedPreferences.getString("id", null)
+//    }
+//
+//    private fun saveUserSession(user: JSONObject?, token: String) {
+//        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+//        val editor = sharedPreferences.edit()
+//
+//        editor.putString("id", user?.optString("id"))
+//        editor.putString("token", token)
+//        editor.apply()
+//    }
+//
 
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->

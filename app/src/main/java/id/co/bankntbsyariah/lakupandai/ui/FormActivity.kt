@@ -4499,76 +4499,81 @@ class FormActivity : AppCompatActivity() {
             val newPassword = sharedPreferences.getString("new_password", null)
 
             Log.d("FormActivity", "Saved New Password: $newPassword")
+            Log.d("FormActivity", "Merchant OTP: $merchantPhone")
 
-            if (newPassword.isNullOrEmpty()) {
-                Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
-                null
-            } else {
-                // Call forgotPassword() function from WebCallerImpl
-                GlobalScope.launch(Dispatchers.IO) {
-                    val response = webCallerImpl.forgotPassword(username, newPassword)
-                    withContext(Dispatchers.Main) {
-                        if (response != null) {
-                            // Convert response body to a string and parse the JSON
-                            val responseBodyString = response.string()
-                            Log.d("FormActivity", "Forgot password response: $responseBodyString")
+            // Synchronously wait for OTP if newPassword is not empty
+            if (!newPassword.isNullOrEmpty()) {
+                lifecycleScope.launch {
+                    val response = withContext(Dispatchers.IO) {
+                        webCallerImpl.forgotPassword(username, newPassword)
+                    }
 
-                            try {
-                                val jsonResponse = JSONObject(responseBodyString)
-                                val status = jsonResponse.optString("status")
+                    if (response != null) {
+                        // Convert response body to a string and parse the JSON
+                        val responseBodyString = response.string()
+                        Log.d("FormActivity", "Forgot password response: $responseBodyString")
 
-                                if (status == "success") {
-                                    // Replace merchantPhone with phone from the response
-                                    val phone = jsonResponse.optString("phone")
-                                    merchantPhone = phone
-                                    Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+                        try {
+                            val jsonResponse = JSONObject(responseBodyString)
+                            val status = jsonResponse.optString("status")
 
-                                    // Save the updated phone to SharedPreferences
-                                    sharedPreferences.edit().putString("merchant_phone", phone).apply()
-                                } else {
-                                    // Handle error and display message
-                                    val message = jsonResponse.optString("message")
-                                    Toast.makeText(this@FormActivity, "Error: $message", Toast.LENGTH_LONG).show()
-                                    Log.e("FormActivity", "Error from server: $message")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("FormActivity", "Failed to parse JSON response", e)
+                            if (status == "success") {
+                                // Replace merchantPhone with phone from the response
+                                val phone = jsonResponse.optString("phone")
+                                merchantPhone = phone
+                                Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+
+                                // Save the updated phone to SharedPreferences
+                                sharedPreferences.edit().putString("merchant_phone", phone).apply()
+                            } else {
+                                // Handle error and display message
+                                val message = jsonResponse.optString("message")
+                                Toast.makeText(
+                                    this@FormActivity,
+                                    "Error: $message",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                Log.e("FormActivity", "Error from server: $message")
                             }
-                        } else {
-                            Log.e("FormActivity", "Forgot password request failed")
+                        } catch (e: Exception) {
+                            Log.e("FormActivity", "Failed to parse JSON response", e)
                         }
+                    } else {
+                        Log.e("FormActivity", "Forgot password request failed")
                     }
                 }
-
-//                val imei = sharedPreferences.getString("imei", "") ?: ""
-                val imei = "89b2c0aa8e0ac7c2"
-                Log.e("FormActivity", "Saved Imei: $imei")
-                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-                val msgUi = imei
-                val msgId = msgUi + timestamp
-                val msgSi = "SV0001"
-                val msgDt = "$username|$merchantPhone"
-
-                val msgObject = JSONObject().apply {
-                    put("msg_id", msgId)
-                    put("msg_ui", msgUi)
-                    put("msg_si", msgSi)
-                    put("msg_dt", msgDt)
-                }
-
-                val msg = JSONObject().apply {
-                    put("msg", msgObject)
-                }
-
-                // Logging the JSON message details
-                Log.d("MenuActivity", "Message ID: $msgId")
-                Log.d("MenuActivity", "Message UI: $msgUi")
-                Log.d("MenuActivity", "Message SI: $msgSi")
-                Log.d("MenuActivity", "Message DT: $msgDt")
-                Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
-
-                msg
+            } else {
+                Log.e("FormActivity", "New password is null or empty, skipping OTP creation.")
             }
+
+            // IMEI, timestamp, and message details
+            val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
+            Log.e("FormActivity", "Saved IMEI: $imei")
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgUi = imei
+            val msgId = msgUi + timestamp
+            val msgSi = "SV0001"
+            val msgDt = "$username|$merchantPhone"
+
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi)
+                put("msg_dt", msgDt)
+            }
+
+            val msg = JSONObject().apply {
+                put("msg", msgObject)
+            }
+
+            // Logging the JSON message details
+            Log.d("MenuActivity", "Message ID: $msgId")
+            Log.d("MenuActivity", "Message UI: $msgUi")
+            Log.d("MenuActivity", "Message SI: $msgSi")
+            Log.d("MenuActivity", "Message DT: $msgDt")
+            Log.d("MenuActivity", "Message JSON OTP: ${msg.toString()}")
+
+            msg
         } catch (e: Exception) {
             Log.e("MenuActivity", "Failed to create message body", e)
             null

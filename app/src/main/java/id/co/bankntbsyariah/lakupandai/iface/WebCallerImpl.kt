@@ -166,6 +166,32 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
+    override fun getPhoneByUsername(username: String): ResponseBody? {
+        val formBody = FormBody.Builder()
+            .add("username", username)
+            .build()
+
+        val request = Request.Builder()
+            .url("http://reportntbs.selada.id/api/get/phone") // Pastikan URL ini benar
+            .post(formBody)
+            .build()
+
+        return try {
+            client.newCall(request).execute().let { response ->
+                if (response.isSuccessful) {
+                    response.body // Kembalikan response body jika berhasil
+                } else {
+                    Log.e(TAG, "Failed to get phone by username: ${response.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while requesting phone by username", e)
+            null
+        }
+    }
+
+
     override fun blockAgen(id: String, token: String): ResponseBody? {
         // Create form body with the parameters
         val formBody = FormBody.Builder()

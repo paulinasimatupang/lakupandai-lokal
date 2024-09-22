@@ -403,6 +403,11 @@ class MenuActivity : AppCompatActivity() {
 
     @SuppressLint("NotifyDataSetChanged")
     private fun setupMenuRecyclerView(screen: Screen) {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("screen_awal", screen.id)
+        editor.apply()
+
         val menuContainer = findViewById<RecyclerView>(R.id.menu_container)
         val spacing = (resources.displayMetrics.density * 8).toInt()
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
@@ -433,6 +438,10 @@ class MenuActivity : AppCompatActivity() {
             Log.e("MenuActivity", "Invalid menu item click. Position: $position, MenuList size: ${menuList.size}")
             return
         }
+
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        val screenAwal = sharedPreferences.getString("screen_awal", null)
+
         val targetScreenId = menuList[position].value
         Log.d("Menu", "Value = $targetScreenId")
         if (targetScreenId.isNullOrEmpty()) {
@@ -440,8 +449,15 @@ class MenuActivity : AppCompatActivity() {
         }
         if(targetScreenId == "LOG0001"){
             showLogoutPopup()
-        }else if(targetScreenId == "MN00002"){
+        }else if(targetScreenId == "MN00002") {
             showMenuInBottomSheet("MN00002")
+        }else if(screenAwal == "PKOM001"){
+            val editor = sharedPreferences.edit()
+            editor.putString("kategori", menuList[position].title)
+            editor.apply()
+            Log.d("Menu", "Title Target = ${menuList[position].title}")
+            finish()
+            navigateToScreen(targetScreenId)
         }else{
             finish()
             navigateToScreen(targetScreenId)

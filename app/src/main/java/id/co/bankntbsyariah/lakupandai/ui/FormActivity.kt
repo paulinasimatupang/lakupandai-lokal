@@ -3044,9 +3044,9 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Saved New Password: $newPassword")
 
                         // Periksa newPassword terlebih dahulu
-                        if (newPassword.isNullOrEmpty()) {
-                            Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
-                            // Tidak ada tindakan lebih lanjut jika newPassword kosong
+                        if (!newPassword.isNullOrEmpty()) {
+                            Log.e("FormActivity", "New password is not null or empty, unable to create OTP.")
+                            // Panggil forgotpassword
                         } else {
                             // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
                             lifecycleScope.launch {
@@ -4505,7 +4505,7 @@ class FormActivity : AppCompatActivity() {
             if (!newPassword.isNullOrEmpty()) {
                 lifecycleScope.launch {
                     val response = withContext(Dispatchers.IO) {
-                        webCallerImpl.forgotPassword(username, newPassword)
+                        webCallerImpl.getPhoneByUsername(username)
                     }
 
                     if (response != null) {

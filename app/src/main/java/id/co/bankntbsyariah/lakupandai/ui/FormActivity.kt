@@ -2023,7 +2023,7 @@ class FormActivity : AppCompatActivity() {
                                 changePassword()
                             } else if (formId == "LS00002") {
                                 changePin()
-                            } else if (formId == "LPW0000") {
+                            } else if (formId == "LPW0000" && component.id != "OTP10") {
                                 forgotPassword()
                             }else {
                                 handleButtonClick(component, screen)
@@ -3106,29 +3106,20 @@ class FormActivity : AppCompatActivity() {
 
                         // Periksa newPassword terlebih dahulu
                         if (!newPassword.isNullOrEmpty()) {
-                            Log.e("FormActivity", "New password is not null or empty, unable to create OTP.")
+                            Log.e("FormActivity", "New password is not null or empty, attempting to reset password.")
                             // Panggil forgotPassword
                             lifecycleScope.launch {
                                 val username = sharedPreferences.getString("username", null) // Asumsikan username disimpan di sharedPreferences
                                 if (!username.isNullOrEmpty()) {
                                     try {
-                                        val response = WebCallerImpl().forgotPassword(username, newPassword)
+                                        // Call forgotPassword asynchronously
+                                        val response = withContext(Dispatchers.IO) {
+                                            WebCallerImpl().forgotPassword(username, newPassword)
+                                        }
                                         if (response != null) {
                                             Log.d("FormActivity", "Forgot Password success: ${response.string()}")
 
-                                            // Redirect ke halaman login jika password berhasil di-reset
-                                            if (screen.id == "AU00001") {
-                                                // Jika pindah ke screen login dengan screen.id AU00001
-                                                Log.d("FormActivity", "Navigating to Login screen")
-
-                                                // Membuat intent untuk berpindah ke LoginActivity (jika login menggunakan activity)
-                                                val intent = Intent(this@FormActivity, LoginActivity::class.java) // Ganti LoginActivity sesuai dengan activity login Anda
-                                                startActivity(intent)
-                                                finish() // Menutup FormActivity setelah berpindah
-                                            } else {
-                                                Log.e("FormActivity", "Unexpected screen id: ${screen.id}")
-                                            }
-
+                                            navigateToLogin()
                                         } else {
                                             Log.e("FormActivity", "Failed to reset password")
                                         }
@@ -3913,28 +3904,30 @@ class FormActivity : AppCompatActivity() {
                             Log.e("status", "STATUS LOGIN : $status")
                             if (terminalArray == null || terminalArray.length() == 0 || status == true) {
                                 Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
-                                val messageBody = createOTP()
-                                Log.d("LOGIN OTP", "Create OTP : $messageBody")
-                                if (messageBody != null) {
-                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
-                                    lifecycleScope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                responseBody?.let { body ->
-                                                    lifecycleScope.launch {
-                                                        val screenJson = JSONObject(body)
-                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                        handleScreenType(newScreen)
+                                createOTP { messageBody ->
+                                    Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                                    if (messageBody != null) {
+                                        Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                        lifecycleScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                    responseBody?.let { body ->
+                                                        lifecycleScope.launch {
+                                                            val screenJson = JSONObject(body)
+                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                            handleScreenType(newScreen)
+                                                        }
+                                                    } ?: run {
+                                                        Log.e("FormActivity", "Failed to fetch response body")
                                                     }
-                                                } ?: run {
-                                                    Log.e("FormActivity", "Failed to fetch response body")
                                                 }
                                             }
                                         }
+                                    } else {
+                                        Log.e("FormActivity", "Failed to create message body, request not sent")
                                     }
-                                } else {
-                                    Log.e("FormActivity", "Failed to create message body, request not sent")
                                 }
+
                             } else {
                                 Log.d(TAG, "Terminal already exists.")
                                 val terminalData = terminalArray.getJSONObject(0)
@@ -4282,24 +4275,25 @@ class FormActivity : AppCompatActivity() {
                 val webCaller = WebCallerImpl()
 
                 // Panggilan untuk membuat OTP sebelum reset password
-                val messageBody = createOTP()
-                if (messageBody != null) {
-                    Log.d("FormActivity", "Message Body OTP: $messageBody")
-                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                        responseBody?.let { body ->
-                            lifecycleScope.launch {
-                                val screenJson = JSONObject(body)
-                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                createOTP { messageBody ->
+                    if (messageBody != null) {
+                        Log.d("FormActivity", "Message Body OTP: $messageBody")
+                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            responseBody?.let { body ->
+                                lifecycleScope.launch {
+                                    val screenJson = JSONObject(body)
+                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
 
-                                // Jika OTP berhasil dibuat, arahkan ke halaman OTP
-                                handleScreenType(newScreen)
+                                    // Jika OTP berhasil dibuat, arahkan ke halaman OTP
+                                    handleScreenType(newScreen)
+                                }
+                            } ?: run {
+                                Log.e("FormActivity", "Failed to fetch response body")
                             }
-                        } ?: run {
-                            Log.e("FormActivity", "Failed to fetch response body")
                         }
+                    } else {
+                        Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
-                } else {
-                    Log.e("FormActivity", "Failed to create message body, request not sent")
                 }
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
@@ -4671,92 +4665,100 @@ class FormActivity : AppCompatActivity() {
 
     private val webCallerImpl = WebCallerImpl()
 
-    private fun createOTP(): JSONObject? {
-        return try {
-            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-            var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
-            val username = "admin"
-            val newPassword = sharedPreferences.getString("new_password", null)
+    private fun createOTP(callback: (JSONObject?) -> Unit) {
+        lifecycleScope.launch {
+            try {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
+                val usernameLogin = sharedPreferences.getString("username", "") ?: ""
+                val newPassword = sharedPreferences.getString("new_password", null)
 
-            Log.d("FormActivity", "Saved New Password: $newPassword")
-            Log.d("FormActivity", "Merchant OTP: $merchantPhone")
+                Log.d("FormActivity", "Saved New Password: $newPassword")
+                Log.d("FormActivity", "Merchant OTP: $merchantPhone")
 
-            // Synchronously wait for OTP if newPassword is not empty
-            if (!newPassword.isNullOrEmpty()) {
-                lifecycleScope.launch {
+                if (!newPassword.isNullOrEmpty()) {
+                    // Make the network call to get the phone by username
                     val response = withContext(Dispatchers.IO) {
-                        webCallerImpl.getPhoneByUsername(username)
+                        webCallerImpl.getPhoneByUsername(usernameLogin)
                     }
 
-                    if (response != null) {
-                        // Convert response body to a string and parse the JSON
-                        val responseBodyString = response.string()
-                        Log.d("FormActivity", "Forgot password response: $responseBodyString")
+                    Log.d("FormActivity", "Forgot password RESPONSE: $response")
 
+                    if (response != null) {
                         try {
-                            val jsonResponse = JSONObject(responseBodyString)
+                            val jsonResponse = JSONObject(response)
                             val status = jsonResponse.optString("status")
 
                             if (status == "success") {
                                 // Replace merchantPhone with phone from the response
-                                val phone = jsonResponse.optString("phone")
-                                merchantPhone = phone
+                                merchantPhone = jsonResponse.optString("phone")
                                 Log.d("FormActivity", "Phone replaced with: $merchantPhone")
 
                                 // Save the updated phone to SharedPreferences
-                                sharedPreferences.edit().putString("merchant_phone", phone).apply()
+                                sharedPreferences.edit().putString("merchant_phone", merchantPhone).apply()
+
+                                // IMEI, timestamp, and message details
+                                val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
+                                Log.e("FormActivity", "Saved IMEI: $imei")
+                                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                                val msgUi = imei
+                                val msgId = msgUi + timestamp
+                                val msgSi = "SV0001"
+                                val msgDt = "$usernameLogin|$merchantPhone"
+
+                                val msgObject = JSONObject().apply {
+                                    put("msg_id", msgId)
+                                    put("msg_ui", msgUi)
+                                    put("msg_si", msgSi)
+                                    put("msg_dt", msgDt)
+                                }
+
+                                val msg = JSONObject().apply {
+                                    put("msg", msgObject)
+                                }
+
+                                callback(msg) // Return the message object via callback
                             } else {
-                                // Handle error and display message
                                 val message = jsonResponse.optString("message")
-                                Toast.makeText(
-                                    this@FormActivity,
-                                    "Error: $message",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                Toast.makeText(this@FormActivity, message, Toast.LENGTH_LONG).show()
                                 Log.e("FormActivity", "Error from server: $message")
+                                callback(null) // Return null on error
                             }
                         } catch (e: Exception) {
                             Log.e("FormActivity", "Failed to parse JSON response", e)
+                            callback(null) // Return null on exception
                         }
                     } else {
                         Log.e("FormActivity", "Forgot password request failed")
+                        callback(null) // Return null if response is null
                     }
+                } else {
+                    Log.e("FormActivity", "New password is null or empty.")
+                    // Handle the case where newPassword is null or empty
+                    val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
+                    Log.e("FormActivity", "Saved IMEI: $imei")
+                    val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                    val msgUi = imei
+                    val msgId = msgUi + timestamp
+                    val msgSi = "SV0001"
+                    val msgDt = "$usernameLogin|$merchantPhone"
+
+                    val msgObject = JSONObject().apply {
+                        put("msg_id", msgId)
+                        put("msg_ui", msgUi)
+                        put("msg_si", msgSi)
+                        put("msg_dt", msgDt)
+                    }
+
+                    val msg = JSONObject().apply {
+                        put("msg", msgObject)
+                    }
+                    callback(msg) // Return the message object
                 }
-            } else {
-                Log.e("FormActivity", "New password is null or empty, skipping OTP creation.")
+            } catch (e: Exception) {
+                Log.e("MenuActivity", "Failed to create message body", e)
+                callback(null) // Return null on any other exception
             }
-
-            // IMEI, timestamp, and message details
-            val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
-            Log.e("FormActivity", "Saved IMEI: $imei")
-            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-            val msgUi = imei
-            val msgId = msgUi + timestamp
-            val msgSi = "SV0001"
-            val msgDt = "$username|$merchantPhone"
-
-            val msgObject = JSONObject().apply {
-                put("msg_id", msgId)
-                put("msg_ui", msgUi)
-                put("msg_si", msgSi)
-                put("msg_dt", msgDt)
-            }
-
-            val msg = JSONObject().apply {
-                put("msg", msgObject)
-            }
-
-            // Logging the JSON message details
-            Log.d("MenuActivity", "Message ID: $msgId")
-            Log.d("MenuActivity", "Message UI: $msgUi")
-            Log.d("MenuActivity", "Message SI: $msgSi")
-            Log.d("MenuActivity", "Message DT: $msgDt")
-            Log.d("MenuActivity", "Message JSON OTP: ${msg.toString()}")
-
-            msg
-        } catch (e: Exception) {
-            Log.e("MenuActivity", "Failed to create message body", e)
-            null
         }
     }
 

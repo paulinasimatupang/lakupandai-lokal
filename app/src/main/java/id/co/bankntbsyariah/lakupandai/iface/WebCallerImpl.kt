@@ -141,56 +141,72 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
     }
 
     override fun forgotPassword(username: String, newPassword: String): ResponseBody? {
+        // Build the request body
         val formBody = FormBody.Builder()
             .add("username", username)
             .add("new_password", newPassword)
             .build()
 
+        // Create the request
         val request = Request.Builder()
             .url("http://reportntbs.selada.id/api/reset/password") // Ensure this is the correct URL
             .post(formBody)
             .build()
 
+        Log.d(TAG, "Username FORGOT: $username")
+        Log.d(TAG, "New Password FORGOT: $newPassword")
+
         return try {
+            // Execute the request
             client.newCall(request).execute().let { response ->
+                // Log the response details
+                Log.d(TAG, "Response Code FORGOT: ${response.code}")
+                Log.d(TAG, "Response Message FORGOT: ${response.message}")
+
                 if (response.isSuccessful) {
-                    response.body // Return the response body if successful
+                    // Log success and return the response body
+                    Log.d(TAG, "Password reset successful for user: $username")
+                    response.body
                 } else {
-                    Log.e(TAG, "Failed to forgot password: ${response.message}")
+                    // Log error if the response is not successful
+                    Log.e(TAG, "Failed to forgot password: ${response.code} - ${response.message}")
                     null
                 }
             }
         } catch (e: Exception) {
+            // Log exception details
             Log.e(TAG, "Exception occurred while requesting forgot password", e)
             null
         }
     }
 
-    override fun getPhoneByUsername(username: String): ResponseBody? {
+
+    override fun getPhoneByUsername(username: String): String? {
         val formBody = FormBody.Builder()
             .add("username", username)
             .build()
 
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/get/phone") // Pastikan URL ini benar
+            .url("http://reportntbs.selada.id/api/get/phone") // Ensure the URL is correct
             .post(formBody)
             .build()
 
         return try {
+            Log.d(TAG, "Sending request to get phone by username: $username")
+
             client.newCall(request).execute().let { response ->
-                if (response.isSuccessful) {
-                    response.body // Kembalikan response body jika berhasil
-                } else {
-                    Log.e(TAG, "Failed to get phone by username: ${response.message}")
-                    null
-                }
+                val responseBody = response.body
+                val responseString = responseBody?.string() // Convert body to string for easier handling
+
+                Log.d(TAG, "Response for username $username: $responseString")
+
+                responseString // Return the string instead of ResponseBody
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception occurred while requesting phone by username", e)
+            Log.e(TAG, "Exception occurred while requesting phone by username: $username", e)
             null
         }
     }
-
 
     override fun blockAgen(id: String, token: String): ResponseBody? {
         // Create form body with the parameters

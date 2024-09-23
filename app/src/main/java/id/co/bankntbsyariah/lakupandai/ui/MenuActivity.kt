@@ -378,10 +378,17 @@ class MenuActivity : AppCompatActivity() {
         val buttonTidak = dialogView.findViewById<Button>(R.id.popup_button_tidak)
 
         buttonYa.setOnClickListener {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+            val editor = sharedPreferences.edit()
+
+            editor.clear()
+            editor.apply()
+
             startActivity(Intent(this, FormActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 putExtra(Constants.KEY_FORM_ID, "AU00001")
             })
+
             logoutDialog.dismiss()
         }
 
@@ -578,7 +585,7 @@ class MenuActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-            val username = "admin"
+            val username = "lakupandai"
             val msg = JSONObject()
 
             val imei = sharedPreferences.getString("imei", "")?: ""

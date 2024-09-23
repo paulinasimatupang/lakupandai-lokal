@@ -136,6 +136,7 @@ class FormActivity : AppCompatActivity() {
     private var signatureFile: File? = null
     private var fileFotoKTP: File? = null
     private var fileFotoOrang: File? = null
+    private val msgIdMap = mutableMapOf<String, String>()
 
     data class Token(val token: String)
 
@@ -1970,13 +1971,13 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             val sharedPreferences =
                                 getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-                            val pinLogin = sharedPreferences.getInt("pin", 0).toString()
+                            val pinLogin = sharedPreferences.getString("pin", "") ?: ""
                             Log.e("PIN", "PIN LOGIN: $pinLogin")
                             if (component.id == "OK001") {
                                 val pinValue = inputValues["PIN"]
                                 Log.e("PIN", "PIN INPUT: $pinValue")
 
-                                if (pinLogin != null && pinLogin == pinValue) {
+                                if (pinLogin != "null" && pinLogin == pinValue) {
                                     otpScreen?.let { screen ->
                                         handleScreenType(screen)
                                     }
@@ -3438,7 +3439,7 @@ class FormActivity : AppCompatActivity() {
     private fun createMessageBodyForSaldoCheck(norek: String): JSONObject? {
         return try {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val username = "admin"
+            val username = "lakupandai"
             val imei = sharedPreferences.getString("imei", "") ?: ""
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
             val msgId = imei + timestamp
@@ -3555,7 +3556,7 @@ class FormActivity : AppCompatActivity() {
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
             val savedAkad = sharedPreferences.getString("akad", "") ?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
-            val username = "admin"
+            val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
@@ -3571,8 +3572,11 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Imei: $imei")
             val msgUi = imei
 //            val msgUi = "353471045058692"
-            val msgId = msgUi + timestamp
+//            var msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
+
+            val msgId = msgSi?.let { manageMsgId(it, imei, timestamp) }
+            println("Generated Message ID: $msgId")
 
             Log.d("FormActivity", "msgSi: $msgSi")
             Log.d("FormActivity", "PICK OTP: $pickOTP")
@@ -3712,6 +3716,48 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun manageMsgId(serviceId: String, imei: String, timestamp: String): String {
+        val msgUi = imei
+        val msgId: String
+
+        // Logika untuk mendapatkan atau menghasilkan msg_id
+        when (serviceId) {
+            "BPR001" -> {
+                msgId = msgUi + timestamp // Buat msg_id baru untuk BPR001
+                msgIdMap["BPR001"] = msgId // Simpan
+            }
+            "BPR002" -> {
+                // Gunakan msg_id yang disimpan dari BPR001
+                msgId = msgIdMap["BPR001"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
+                msgIdMap.remove("BPR001") // Hapus setelah digunakan
+            }
+            "PLN000" -> {
+                msgId = msgUi + timestamp // Buat msg_id baru untuk PLN000
+                msgIdMap["PLN000"] = msgId // Simpan
+            }
+            "PLN001" -> {
+                // Gunakan msg_id yang disimpan dari PLN000
+                msgId = msgIdMap["PLN000"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
+                msgIdMap.remove("PLN000") // Hapus setelah digunakan
+            }
+            "PLNBR01" -> {
+                msgId = msgUi + timestamp // Buat msg_id baru untuk PLNBR01
+                msgIdMap["PLNBR01"] = msgId // Simpan
+            }
+            "PLNBR02", "PLNBR03" -> {
+                // Gunakan msg_id yang disimpan dari PLNBR01
+                msgId = msgIdMap["PLNBR01"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
+                msgIdMap.remove("PLNBR01") // Hapus setelah digunakan
+            }
+            else -> {
+                msgId = msgUi + timestamp // Default: buat msg_id baru jika tidak ada aturan
+            }
+        }
+
+        return msgId
+    }
+
+
     private fun createBodyPengaduan(screen: Screen): JSONObject? {
         return try {
             val body = JSONObject()
@@ -3719,7 +3765,7 @@ class FormActivity : AppCompatActivity() {
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "") ?: ""
             val savedKategori = sharedPreferences.getString("kategori", "") ?: ""
             Log.d("FormActivity", "saved kategori: $savedKategori")
-            val username = "admin"
+            val username = "lakupandai"
 
             val componentValues = mutableMapOf<String, String>()
             screen.comp.filter { it.type != 7 && it.type != 15 }.forEach { component ->
@@ -3887,7 +3933,7 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("merchant_avatar", merchantData.optString("avatar"))
                             editor.putInt("merchant_status", merchantData.optInt("status"))
                             editor.putString("kode_agen", merchantData.optString("mid"))
-                            editor.putInt("pin", merchantData.optInt("pin"))
+                            editor.putString("pin", merchantData.optString("pin"))
                             editor.putString("mid", merchantData.optString("mid"))
 
                             editor.apply()

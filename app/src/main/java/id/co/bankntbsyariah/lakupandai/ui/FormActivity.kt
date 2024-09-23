@@ -3557,6 +3557,7 @@ class FormActivity : AppCompatActivity() {
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
+            val savedAkad = sharedPreferences.getString("akad", "") ?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
             val username = "admin"
             Log.e("FormActivity", "Saved Username: $username")
@@ -3565,6 +3566,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Nama Agen: $savedNamaAgen")
             val branchid = getKodeCabangFromPreferences()
             Log.e("FormActivity", "Saved Kode Cabang: $branchid")
+            Log.e("FormActivity", "Saved Akad: $savedAkad")
 
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
@@ -3607,6 +3609,10 @@ class FormActivity : AppCompatActivity() {
                     component.type == 1 && component.label == "No Rekening Agen" -> {
                         componentValues[component.id] = savedNorekening
                         Log.d("FormActivity", "Updated componentValues with savedNorekening for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label == "Pilihan Akad" -> {
+                        componentValues[component.id] = savedAkad
+                        Log.d("FormActivity", "Updated componentValues with akad for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "Nama Rekening Agen" -> {
                         componentValues[component.id] = savedNamaAgen

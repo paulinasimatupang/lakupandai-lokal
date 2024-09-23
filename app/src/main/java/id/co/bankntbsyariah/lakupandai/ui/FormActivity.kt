@@ -3046,7 +3046,38 @@ class FormActivity : AppCompatActivity() {
                         // Periksa newPassword terlebih dahulu
                         if (!newPassword.isNullOrEmpty()) {
                             Log.e("FormActivity", "New password is not null or empty, unable to create OTP.")
-                            // Panggil forgotpassword
+                            // Panggil forgotPassword
+                            lifecycleScope.launch {
+                                val username = sharedPreferences.getString("username", null) // Asumsikan username disimpan di sharedPreferences
+                                if (!username.isNullOrEmpty()) {
+                                    try {
+                                        val response = WebCallerImpl().forgotPassword(username, newPassword)
+                                        if (response != null) {
+                                            Log.d("FormActivity", "Forgot Password success: ${response.string()}")
+
+                                            // Redirect ke halaman login jika password berhasil di-reset
+                                            if (screen.id == "AU00001") {
+                                                // Jika pindah ke screen login dengan screen.id AU00001
+                                                Log.d("FormActivity", "Navigating to Login screen")
+
+                                                // Membuat intent untuk berpindah ke LoginActivity (jika login menggunakan activity)
+                                                val intent = Intent(this@FormActivity, LoginActivity::class.java) // Ganti LoginActivity sesuai dengan activity login Anda
+                                                startActivity(intent)
+                                                finish() // Menutup FormActivity setelah berpindah
+                                            } else {
+                                                Log.e("FormActivity", "Unexpected screen id: ${screen.id}")
+                                            }
+
+                                        } else {
+                                            Log.e("FormActivity", "Failed to reset password")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("FormActivity", "Error during forgot password request", e)
+                                    }
+                                } else {
+                                    Log.e("FormActivity", "Username is null or empty, unable to reset password.")
+                                }
+                            }
                         } else {
                             // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
                             lifecycleScope.launch {

@@ -3020,7 +3020,68 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "AU00001")
             })
             finish()
-        } else {
+        }
+        else if (screen?.id == "TF00001" || screen?.id == "FT0001" ||screen?.id == "ST001") {
+            var norekComponent: Component? = null
+            var nominalComponent: Component? = null
+            var norek: String? = null
+
+            when (screen.id) {
+                "TF00001" -> {
+                    norekComponent = screen.comp.find { it.label.contains("rekening pengirim", ignoreCase = true) }
+                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
+                    norek = inputValues[norekComponent?.id]
+                }
+                "FT0001" -> {
+                    norekComponent = screen.comp.find { it.label.contains("rekening nasabah", ignoreCase = true) }
+                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
+                    norek = inputValues[norekComponent?.id]
+                }
+                "ST001" -> {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                    norek = sharedPreferences.getString("norekening", "")
+                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
+                }
+            }
+
+            val nominalStr = inputValues[nominalComponent?.id]
+            val nominal = nominalStr?.toDoubleOrNull()
+
+            Log.d("FormActivity", "norek $norek")
+            Log.d("FormActivity", "nominal $nominal")
+
+            if (norek != null && nominal != null) {
+                checkSaldo(nominal, norek, onSuccess = {
+                    Log.d("FormActivity", "Saldo cukup, melanjutkan proses...")
+                    createMessageBody(screen)
+                    val messageBody = createMessageBody(screen)
+                    if (messageBody != null) {
+                        Log.d("FormActivity", "Message Body: $messageBody")
+                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            responseBody?.let { body ->
+                                lifecycleScope.launch {
+                                    val screenJson = JSONObject(body)
+                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                    handleScreenType(newScreen)
+                                }
+                            }
+                        }
+                    }
+                }, onError = { errorMsg ->
+                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                        putExtra("MESSAGE_BODY", errorMsg)
+                        putExtra("RETURN_TO_ROOT", false)
+                    }
+                    startActivity(intentPopup)
+                })
+            } else {
+                Toast.makeText(this, "Mohon masukkan norek dan nominal yang valid", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else {
             val otpComponent = screen?.comp?.find { it.id == "OTP01" }
             if (otpComponent != null) {
                 val otpValue = inputValues["OTP"]
@@ -3092,7 +3153,7 @@ class FormActivity : AppCompatActivity() {
                             }
                         }
                         
-                    }else{
+                    } else{
                         val messageBody = createMessageBody(screen)
                         if (messageBody != null) {
                             Log.d("FormActivity", "Message Body: $messageBody")
@@ -3375,6 +3436,88 @@ class FormActivity : AppCompatActivity() {
                     Log.e("FormActivity", "Failed to create message body, request not sent")
                 }
             }
+        }
+    }
+
+    private fun createMessageBodyForSaldoCheck(norek: String): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val username = "admin"
+            val imei = sharedPreferences.getString("imei", "") ?: ""
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = imei + timestamp
+            val msgSi = "N00001"
+            val msgDt = "$username|$norek|null|null"
+
+            JSONObject().apply {
+                put("msg", JSONObject().apply {
+                    put("msg_id", msgId)
+                    put("msg_ui", imei)
+                    put("msg_si", msgSi)
+                    put("msg_dt", msgDt)
+                })
+            }
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    private fun checkSaldo(nominal: Double, norek: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val messageBody = createMessageBodyForSaldoCheck(norek)
+        if (messageBody != null) {
+            Log.d("FormActivity", "Requesting saldo with message: $messageBody")
+
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let {
+                    Log.d("FormActivity", "Received response: $it")
+                    try {
+                        val jsonResponse = JSONObject(it)
+                        Log.d("FormActivity", "Parsed JSON response: $jsonResponse")
+                        val msgObject = jsonResponse.optJSONObject("screen")
+
+                        // Check if the screen object exists
+                        if (msgObject != null) {
+                            val comps = msgObject.optJSONObject("comps")
+                            val compArray = comps?.optJSONArray("comp")
+                            var saldo: Double? = null
+
+                            compArray?.let {
+                                for (i in 0 until it.length()) {
+                                    val comp = it.getJSONObject(i)
+                                    val label = comp.optString("comp_lbl")
+                                    val value = comp.optJSONObject("comp_values")
+                                        ?.optJSONArray("comp_value")?.optJSONObject(0)
+                                        ?.optString("value")
+
+                                    if (label == "Saldo Akhir") {
+                                        saldo = value?.replace("-", "")?.replace(",", "")?.toDoubleOrNull()
+                                    }
+                                }
+                            }
+
+                            saldo?.let {
+                                if (it >= nominal) {
+                                    onSuccess()
+                                } else {
+                                    onError("Saldo tidak cukup")
+                                }
+                            } ?: run {
+                                onError("No rekening tidak ditemukan")
+                            }
+                        } else {
+                            onError("Gagal mengambil saldo")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MenuActivity", "Failed to parse response", e)
+                        onError("Gagal memproses respon saldo")
+                    }
+                } ?: run {
+                    onError("Respon saldo kosong")
+                }
+            }
+        } else {
+            onError("Gagal membuat request body")
         }
     }
 

@@ -93,10 +93,46 @@ class MenuActivity : AppCompatActivity() {
                 "KOM0000" , "PKOM001"-> R.layout.komplain_menu
                 "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
+                "PR00000" -> R.layout.menu_header
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
             }
         )
+
+        lifecycleScope.launch {
+            try {
+                var menuValue: String? = StorageImpl(applicationContext).fetchMenu(menuId)
+                Log.d("MenuActivity", "Fetched menu value from storage: $menuValue")
+
+                if (menuValue.isNullOrEmpty()) {
+                    menuValue = withContext(Dispatchers.IO) {
+                        ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
+                    }
+                    Log.d("MenuActivity", "Fetched menu value from server: $menuValue")
+                }
+
+                if (menuValue.isNullOrEmpty()) {
+                    showError("Menu value is null or empty for menuId: $menuId")
+                } else {
+                    val screenJson = JSONObject(menuValue)
+                    val screen: Screen = ScreenParser.parseJSON(screenJson)
+                    var screenTitle = screen.title
+                    if (screenTitle.contains("Form", ignoreCase = true)) {
+                        val processedTitle = screenTitle.replace("FORM", "", ignoreCase = true).trim()
+                        val textView: TextView = findViewById(R.id.text_center)
+                        textView?.text = processedTitle
+                    }
+                }
+            } catch (e: JSONException) {
+                Log.e("MenuActivity", "Error parsing menu JSON: ${e.message}", e)
+                showError("Error parsing menu data.")
+            } catch (e: Exception) {
+                Log.e("MenuActivity", "Error fetching menu: ${e.message}", e)
+                showError("Error fetching menu.")
+            } finally {
+                findViewById<RecyclerView>(R.id.menu_container)?.visibility = View.VISIBLE
+            }
+        }
 
         val userGreetingTextView: TextView? = findViewById(R.id.user_greeting)
         if (userGreetingTextView != null) {
@@ -300,6 +336,15 @@ class MenuActivity : AppCompatActivity() {
             startActivity(intent)
         }
     }
+
+    private fun handleScreenTitle(screenTitle: String) {
+        val layoutId = when {
+            screenTitle.contains("Form", ignoreCase = true) -> R.layout.menu_header
+            screenTitle.contains("Review", ignoreCase = true) -> R.layout.header
+            else -> R.layout.activity_menu
+        }
+    }
+
 
     private fun showError(message: String) {
         Log.e("MenuActivity", message)

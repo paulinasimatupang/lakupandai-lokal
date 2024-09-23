@@ -3116,6 +3116,12 @@ class FormActivity : AppCompatActivity() {
                                             lifecycleScope.launch {
                                                 if (response != null) {
                                                     Log.d("FormActivity", "Forgot Password success: ${response.string()}")
+                                                    sharedPreferences.edit().apply {
+                                                        remove("new_password")  // Remove the new_password
+                                                        remove("username")
+                                                        apply()                 // Save changes
+                                                    }
+                                                    Log.d("FormActivity", "New password cleared from SharedPreferences")
                                                     navigateToLogin()
                                                 } else {
                                                     Log.e("FormActivity", "Failed to reset password")
@@ -3949,48 +3955,47 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-//
-//                                if (imei != null && imei != storedImeiTerminal) {
-//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-//                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-//                                        putExtra("RETURN_TO_ROOT", false)
-//                                    }
-//                                    startActivity(intentPopup)
-//                                }else{
-//                                    withContext(Dispatchers.Main) {
-//                                        Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-//                                        navigateToScreen()
-//                                    }
-//                                }
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
-                                }
-
-                                fun retrieveAuthToken(): String {
-                                    // Return the stored auth token
-                                    return "auth_token" // Replace this with the actual logic to retrieve the token
-                                }
-
-                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                    if (!task.isSuccessful) {
-                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                        return@addOnCompleteListener
+                                if (imei != null && imei != storedImeiTerminal) {
+                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
+                                    startActivity(intentPopup)
+                                }else{
+                                    fun retrieveAuthToken(): String {
+                                        // Return the stored auth token
+                                        return "auth_token" // Replace this with the actual logic to retrieve the token
                                     }
 
-                                    // Get new FCM token
-                                    val fcmToken = task.result
-                                    Log.d("FCM", "FCM Token: $fcmToken")
+                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                        if (!task.isSuccessful) {
+                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                            return@addOnCompleteListener
+                                        }
 
-                                    // Kirim token FCM ke server, memanggil fungsi dari MyFirebaseMessagingService
-                                    val authToken = retrieveAuthToken() // Panggil fungsi untuk mendapatkan auth token
-                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken)
+                                        val fcmToken = task.result
+                                        Log.d("FCM", "FCM Token: $fcmToken")
+
+                                        // Send FCM token and user_id to server
+                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                    }
+
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                        navigateToScreen()
+                                    }
                                 }
+
+//                                withContext(Dispatchers.Main) {
+//                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+//                                    navigateToScreen()
+//                                }
 
 //                                withContext(Dispatchers.Main) {
 //                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()

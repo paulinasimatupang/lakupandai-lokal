@@ -3735,19 +3735,19 @@ class FormActivity : AppCompatActivity() {
                 msgId = msgUi + timestamp // Buat msg_id baru untuk PLN000
                 msgIdMap["PLN000"] = msgId // Simpan
             }
-            "PLN001" -> {
+            "PLN001", "PLN002" -> {
                 // Gunakan msg_id yang disimpan dari PLN000
                 msgId = msgIdMap["PLN000"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
                 msgIdMap.remove("PLN000") // Hapus setelah digunakan
             }
-            "PLNBR01" -> {
+            "PDAM00" -> {
                 msgId = msgUi + timestamp // Buat msg_id baru untuk PLNBR01
-                msgIdMap["PLNBR01"] = msgId // Simpan
+                msgIdMap["PDAM00"] = msgId // Simpan
             }
-            "PLNBR02", "PLNBR03" -> {
+            "PDAM01", "PDAM02" -> {
                 // Gunakan msg_id yang disimpan dari PLNBR01
-                msgId = msgIdMap["PLNBR01"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
-                msgIdMap.remove("PLNBR01") // Hapus setelah digunakan
+                msgId = msgIdMap["PDAM00"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
+                msgIdMap.remove("PDAM00") // Hapus setelah digunakan
             }
             else -> {
                 msgId = msgUi + timestamp // Default: buat msg_id baru jika tidak ada aturan

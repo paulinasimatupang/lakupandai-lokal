@@ -4399,13 +4399,12 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun navigateToLogin() {
-        val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+        startActivity(Intent(this@FormActivity, LoginActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             putExtra(Constants.KEY_MENU_ID, "AU00001")
-        }
-        startActivity(intent)
-        finish()
+        })
     }
+
 
 
     fun formatMutasi(mutasiText: String): String {

@@ -177,7 +177,7 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-        initLoginRegisterUI()
+//        initLoginRegisterUI()
 
         lifecycleScope.launch {
             val formValue = loadForm()
@@ -192,19 +192,19 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun initLoginRegisterUI() {
-        setContentView(R.layout.activity_form_login) 
-        executor = ContextCompat.getMainExecutor(this)
-
-        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
-            authenticateFingerprint { encryptedFingerprint ->
-                encryptedFingerprint?.let { loginWithFingerprint(it) }
-            }
-        }
-        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
-            registerFingerprint()
-        }
-    }
+//    private fun initLoginRegisterUI() {
+//        setContentView(R.layout.activity_form_login)
+//        executor = ContextCompat.getMainExecutor(this)
+//
+//        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
+//            authenticateFingerprint { encryptedFingerprint ->
+//                encryptedFingerprint?.let { loginWithFingerprint(it) }
+//            }
+//        }
+//        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
+//            registerFingerprint()
+//        }
+//    }
 
     private fun authenticateFingerprint(callback: (String?) -> Unit) {
         val biometricPrompt = BiometricPrompt(this, executor,
@@ -3107,21 +3107,20 @@ class FormActivity : AppCompatActivity() {
                         // Periksa newPassword terlebih dahulu
                         if (!newPassword.isNullOrEmpty()) {
                             Log.e("FormActivity", "New password is not null or empty, attempting to reset password.")
-                            // Panggil forgotPassword
                             lifecycleScope.launch {
-                                val username = sharedPreferences.getString("username", null) // Asumsikan username disimpan di sharedPreferences
+                                val username = sharedPreferences.getString("username", null)
                                 if (!username.isNullOrEmpty()) {
                                     try {
                                         // Call forgotPassword asynchronously
-                                        val response = withContext(Dispatchers.IO) {
-                                            WebCallerImpl().forgotPassword(username, newPassword)
-                                        }
-                                        if (response != null) {
-                                            Log.d("FormActivity", "Forgot Password success: ${response.string()}")
-
-                                            navigateToLogin()
-                                        } else {
-                                            Log.e("FormActivity", "Failed to reset password")
+                                        WebCallerImpl().forgotPassword(username, newPassword) { response ->
+                                            lifecycleScope.launch {
+                                                if (response != null) {
+                                                    Log.d("FormActivity", "Forgot Password success: ${response.string()}")
+                                                    navigateToLogin()
+                                                } else {
+                                                    Log.e("FormActivity", "Failed to reset password")
+                                                }
+                                            }
                                         }
                                     } catch (e: Exception) {
                                         Log.e("FormActivity", "Error during forgot password request", e)
@@ -4399,13 +4398,11 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun navigateToLogin() {
-        startActivity(Intent(this@FormActivity, LoginActivity::class.java).apply {
+        startActivity(Intent(this, FormActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            putExtra(Constants.KEY_MENU_ID, "AU00001")
+            putExtra(Constants.KEY_FORM_ID, "AU00001") // Ensure you use the correct key for your intent
         })
     }
-
-
 
     fun formatMutasi(mutasiText: String): String {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }

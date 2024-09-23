@@ -102,7 +102,17 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import android.hardware.fingerprint.FingerprintManager
+import android.media.MediaDrm
+import android.os.CancellationSignal
+import android.text.InputFilter
+import androidx.biometric.BiometricPrompt
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import java.util.concurrent.Executor
+import java.security.MessageDigest
+import java.util.UUID
 
 class FormActivity : AppCompatActivity() {
 
@@ -135,6 +145,8 @@ class FormActivity : AppCompatActivity() {
     private val otpCooldownTime = 3 * 60 * 1000L // 30 minutes in milliseconds
     private var otpScreen: Screen? = null
 
+    private lateinit var executor: Executor
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -165,6 +177,8 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
+//        initLoginRegisterUI()
+
         lifecycleScope.launch {
             val formValue = loadForm()
             setupScreen(formValue)
@@ -177,6 +191,172 @@ class FormActivity : AppCompatActivity() {
             startActivity(intent)
         }
     }
+
+//    private fun initLoginRegisterUI() {
+//        setContentView(R.layout.activity_form_login)
+//        executor = ContextCompat.getMainExecutor(this)
+//
+//        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
+//            authenticateFingerprint { encryptedFingerprint ->
+//                encryptedFingerprint?.let { loginWithFingerprint(it) }
+//            }
+//        }
+//        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
+//            registerFingerprint()
+//        }
+//    }
+
+    private fun authenticateFingerprint(callback: (String?) -> Unit) {
+        val biometricPrompt = BiometricPrompt(this, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    Toast.makeText(this@FormActivity, "Authentication error: $errString", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+
+                    // Retrieve userId from session or other identifiable user data
+                    val userId = getUserIdFromSession()
+
+                    // Simulate fingerprint by hashing userId
+                    val hashedFingerprint = userId?.let { hashUserId(it) }
+                    callback(hashedFingerprint)
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Toast.makeText(this@FormActivity, "Authentication failed", Toast.LENGTH_SHORT).show()
+                }
+            })
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Fingerprint Authentication")
+            .setSubtitle("Use fingerprint to authenticate")
+            .setNegativeButtonText("Cancel")
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    private fun hashUserId(userId: String): String {
+        // Use SHA-256 to hash the user ID
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(userId.toByteArray())
+        // Convert to Base64 string for easy transmission
+        return Base64.encodeToString(hashBytes, Base64.NO_WRAP)
+    }
+
+    private fun loginWithFingerprint(fingerprintData: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val requestBody = FormBody.Builder()
+                .add("finger_print", fingerprintData)
+                .build()
+
+            val request = Request.Builder()
+                .url("http://reportntbs.selada.id/api/auth/loginWithFingerprint")
+                .post(requestBody)
+                .build()
+
+            try {
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+
+                if (response.isSuccessful && responseData != null) {
+                    val jsonResponse = JSONObject(responseData)
+                    val token = jsonResponse.optString("token")
+                    val user = jsonResponse.optJSONObject("data")
+                    withContext(Dispatchers.Main) {
+                        saveUserSession(user, token)
+                        Toast.makeText(this@FormActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+
+                        val intent = Intent(this@FormActivity, MenuActivity::class.java).apply {
+                            putExtra("screen_id", "idMN00000")
+                        }
+                        startActivity(intent)
+                        finish()
+                    }
+                } else {
+                    handleFailedLoginAttempt(responseData)
+                }
+            } catch (e: Exception) {
+                Log.e("FingerprintLogin", "Error: ${e.message}")
+            }
+        }
+    }
+
+    private fun registerFingerprint() {
+        val userId = getUserIdFromSession()
+
+        if (userId != null) {
+            authenticateFingerprint { fingerprintData ->
+                fingerprintData?.let { registerFingerprintWithServer(userId, it) }
+            }
+        } else {
+            Toast.makeText(this, "You must be logged in to register a fingerprint", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun registerFingerprintWithServer(userId: String, fingerprintData: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val requestBody = FormBody.Builder()
+                .add("id", userId)
+                .add("finger_print", fingerprintData)
+                .build()
+
+            val request = Request.Builder()
+                .url("http://reportntbs.selada.id/api/auth/registerFingerprint")
+                .post(requestBody)
+                .build()
+
+            try {
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+
+                if (response.isSuccessful && responseData != null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Fingerprint registered successfully!", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    handleFailedRegistration(responseData)
+                }
+            } catch (e: Exception) {
+                Log.e("FingerprintRegister", "Error: ${e.message}")
+            }
+        }
+    }
+
+    private fun getUserIdFromSession(): String? {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        return sharedPreferences.getString("id", null)
+    }
+
+    private fun handleFailedLoginAttempt(responseData: String?) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            val jsonResponse = JSONObject(responseData ?: "{}")
+            val errorMessage = jsonResponse.optString("message", "Login failed.")
+            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun handleFailedRegistration(responseData: String?) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            val jsonResponse = JSONObject(responseData ?: "{}")
+            val errorMessage = jsonResponse.optString("message", "Registration failed.")
+            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun saveUserSession(user: JSONObject?, token: String) {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+
+        editor.putString("id", user?.optString("id"))
+        editor.putString("token", token)
+        editor.apply()
+    }
+
 
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -618,7 +798,7 @@ class FormActivity : AppCompatActivity() {
 
                         lifecycleScope.launch {
                             val fetchedValue = withContext(Dispatchers.IO) {
-                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                 val kodeAgen = sharedPreferences.getString("kode_agen", "") ?: ""
                                 val token = sharedPreferences.getString("token", "") ?: ""
 
@@ -741,7 +921,7 @@ class FormActivity : AppCompatActivity() {
                             lifecycleScope.launch {
                                 val webCaller = WebCallerImpl()
                                 val fetchedValue = withContext(Dispatchers.IO) {
-                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                     val token = sharedPreferences.getString("token", "") ?: ""
                                     val terminalId = sharedPreferences.getString("tid", "") ?: ""
                                     val response = webCaller.fetchHistory(terminalId, token)
@@ -787,11 +967,7 @@ class FormActivity : AppCompatActivity() {
                                                 val status = history.optString("status", "")
                                                 val requestMessage = history.getString("request_message")
 
-                                                val no_rek = history.getString("no_rek")
-                                                val nama_rek = history.getString("nama_rek")
                                                 val nominal = history.getString("nominal")
-                                                val keterangan = history.getString("keterangan")
-
 
                                                 val nominalDouble = nominal?.toDoubleOrNull()
                                                 val nominal_rupiah = nominalDouble?.let {
@@ -800,7 +976,7 @@ class FormActivity : AppCompatActivity() {
                                                     )
                                                 }
 
-                                                val formatTrans = "$no_rek - $nama_rek \n $nominal_rupiah \n $keterangan"
+                                                val formatTrans = "$nominal_rupiah"
 
                                                 val requestMessageJson = JSONObject(requestMessage.trim())
                                                 val msgObject = requestMessageJson.getJSONObject("msg")
@@ -829,7 +1005,7 @@ class FormActivity : AppCompatActivity() {
                                                 val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply{
                                                     setOnClickListener {
                                                         lifecycleScope.launch {
-                                                            val preferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                                            val preferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                                             val token = preferences.getString("token", "") ?: ""
                                                             val terminalId = preferences.getString("tid", "") ?: ""
                                                             val messageId = msgId
@@ -967,8 +1143,137 @@ class FormActivity : AppCompatActivity() {
                             }
                         }
                     }
+                    else if (component.id == "HY002") {
+                        val context = this@FormActivity
+                        val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
+                        container.addView(searchLayout)
 
+                        val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
+                        val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
+                        val searchContainer = searchLayout.findViewById<LinearLayout>(R.id.container)
 
+                        val sortOptions = resources.getStringArray(R.array.sort_options1)
+                        val sortAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, sortOptions)
+                        sortAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        sortSpinner.adapter = sortAdapter
+
+                        lifecycleScope.launch {
+                            val webCaller = WebCallerImpl()
+                            val fetchedValue = withContext(Dispatchers.IO) {
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                val token = sharedPreferences.getString("token", "") ?: ""
+                                val mid = sharedPreferences.getString("kode_agen", "") ?: ""
+                                val response = webCaller.historyPengaduan(mid, token)
+                                response?.string()
+                            }
+
+                            if (!fetchedValue.isNullOrEmpty()) {
+                                try {
+                                    val jsonResponse = JSONObject(fetchedValue)
+                                    val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
+                                    val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
+
+                                    searchContainer.removeAllViews()
+
+                                    val groupedData = dataList.groupBy {
+                                        it.optString("request_time", "").split(" ").getOrNull(0) ?: "Unknown Date"
+                                    }
+
+                                    groupedData.forEach { (date, historyList) ->
+                                        searchContainer.addView(TextView(context).apply {
+                                            text = date
+                                            textSize = 15f
+                                            setTypeface(null, Typeface.BOLD)
+                                            setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                                            setTextColor(Color.parseColor("#808080"))
+                                        })
+
+                                        historyList.forEach { history ->
+                                            val request_time = history.optString("request_time", "")
+                                            val originalFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                                            val targetFormat = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault())
+                                            val formattedTime = try {
+                                                val date = originalFormat.parse(request_time)
+                                                targetFormat.format(date)
+                                            } catch (e: ParseException) {
+                                                request_time
+                                            }
+
+                                            val statusPengaduan = when (history.optString("status", "")) {
+                                                "0" -> "Pending"
+                                                "1" -> "Sedang Diproses"
+                                                "2" -> "Selesai"
+                                                else -> "Gagal"
+                                            }
+
+                                            val statusColor = when (history.optString("status", "")) {
+                                                "0" -> ContextCompat.getColor(context, R.color.dark_grey)
+                                                "1" -> ContextCompat.getColor(context, R.color.yellow)
+                                                "2" -> ContextCompat.getColor(context, R.color.green)
+                                                else -> ContextCompat.getColor(context, R.color.red)
+                                            }
+
+                                            val itemView = LayoutInflater.from(context).inflate(R.layout.item_history, null).apply {
+                                                findViewById<TextView>(R.id.text_action).text = history.optString("kategori")
+                                                findViewById<TextView>(R.id.text_format_trans).text = history.optString("judul", "N/A")
+                                                findViewById<TextView>(R.id.text_status).apply {
+                                                    text = statusPengaduan
+                                                    setTextColor(statusColor)
+                                                }
+                                                findViewById<TextView>(R.id.text_reply_time).text = formattedTime
+                                            }
+
+                                            val params = LinearLayout.LayoutParams(
+                                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                                LinearLayout.LayoutParams.WRAP_CONTENT
+                                            ).apply {
+                                                setMargins(0, 0, 0, 16.dpToPx())
+                                            }
+
+                                            itemView.layoutParams = params
+
+                                            searchContainer.addView(itemView)
+                                        }
+                                    }
+
+                                    searchBar.addTextChangedListener(object : TextWatcher {
+                                        override fun afterTextChanged(s: Editable?) {
+                                            val searchText = s.toString().lowercase()
+                                            val filteredDataList = dataList.filter {
+                                                it.optString("kategori", "").lowercase().contains(searchText)
+                                            }
+                                            refreshData(filteredDataList, searchContainer, context)
+                                        }
+                                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                    })
+
+                                    sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                                            val sortOption = parent?.getItemAtPosition(position) as String
+                                            val sortedDataList = when (sortOption) {
+                                                "Sort by Date" -> dataList.sortedBy { it.optString("request_time") }
+                                                "Sort by Status" -> dataList.sortedBy { it.optString("status") }
+                                                else -> dataList
+                                            }
+                                            refreshData(sortedDataList, searchContainer, context)
+                                        }
+                                        override fun onNothingSelected(parent: AdapterView<*>?) {}
+                                    }
+
+                                } catch (e: JSONException) {
+                                    Log.e("FormActivity", "JSON parsing error: ${e.message}")
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Error parsing JSON response", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
                     else {
                         LinearLayout(this@FormActivity).apply {
                             orientation = LinearLayout.VERTICAL
@@ -1206,7 +1511,7 @@ class FormActivity : AppCompatActivity() {
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
                             inputType =
-                                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.pass_bg)
                             id = View.generateViewId()
                             setTextSize(16f) // Ukuran teks untuk input
@@ -1225,11 +1530,11 @@ class FormActivity : AppCompatActivity() {
                             setOnTouchListener { v, event ->
                                 if (event.action == MotionEvent.ACTION_UP) {
                                     if (event.rawX >= (right - compoundDrawables[2].bounds.width() - paddingRight)) {
-                                        if (inputType == android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) {
-                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                                        if (inputType == InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD) {
+                                            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                                             setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_open, 0)
                                         } else {
-                                            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                                             setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_eye_closed, 0)
                                         }
                                         setSelection(text.length)  // Move cursor to end
@@ -1463,7 +1768,15 @@ class FormActivity : AppCompatActivity() {
                                                         ).show()
                                                     }
                                                 }
-
+                                                "KOM05" -> {
+                                                    val pickJudul = selectedValue
+                                                    if (pickJudul != null) {
+                                                        Log.d("Form", "PICK OTP: $pickJudul")
+                                                        inputValues[component.id] = pickJudul
+                                                    } else {
+                                                        Log.d("Form", "PICK OTP is null")
+                                                    }
+                                                }
                                                 "CB001" -> {
                                                     if (selectedCompValue != null) {
                                                         inputValues[component.id] =
@@ -1656,7 +1969,7 @@ class FormActivity : AppCompatActivity() {
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             val sharedPreferences =
-                                getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                             val pinLogin = sharedPreferences.getInt("pin", 0).toString()
                             Log.e("PIN", "PIN LOGIN: $pinLogin")
                             if (component.id == "OK001") {
@@ -1710,7 +2023,7 @@ class FormActivity : AppCompatActivity() {
                                 changePassword()
                             } else if (formId == "LS00002") {
                                 changePin()
-                            } else if (formId == "LPW0000") {
+                            } else if (formId == "LPW0000" && component.id != "OTP10") {
                                 forgotPassword()
                             }else {
                                 handleButtonClick(component, screen)
@@ -1845,7 +2158,7 @@ class FormActivity : AppCompatActivity() {
                             background = getDrawable(R.drawable.date_input)
                             id = View.generateViewId()
                             tag = component.id
-                            inputType = android.text.InputType.TYPE_NULL // Menonaktifkan input keyboard
+                            inputType = InputType.TYPE_NULL // Menonaktifkan input keyboard
                             setTextSize(16f) // Ukuran teks untuk input
                             setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
 
@@ -1982,7 +2295,7 @@ class FormActivity : AppCompatActivity() {
 
                     pinDigits.forEach { digit ->
                         digit.transformationMethod = PasswordTransformationMethod.getInstance()
-                        digit.filters = arrayOf(android.text.InputFilter.LengthFilter(1))
+                        digit.filters = arrayOf(InputFilter.LengthFilter(1))
                     }
 
                     fun handlePinInput(index: Int, pinDigits: List<EditText>) {
@@ -2112,7 +2425,7 @@ class FormActivity : AppCompatActivity() {
                                 else -> "Description not available"
                             }
 
-                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                             val editor = sharedPreferences.edit()
                             editor.putString("akad", selectedAkad)
                             editor.putString("penjelasan", akadDescriptionValue) // Save akadDescriptionValue
@@ -2420,7 +2733,7 @@ class FormActivity : AppCompatActivity() {
         when (component.label) {
             "No Rekening Agen" -> {
                 val sharedPreferences =
-                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 val savedNorekening = sharedPreferences.getString("norekening", "").toString()
                 if (currentValue == "null" && savedNorekening != "0") {
                     Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $savedNorekening")
@@ -2431,7 +2744,7 @@ class FormActivity : AppCompatActivity() {
             }
             "Pilihan Akad" -> {
                 val sharedPreferences =
-                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 val selectedAkad = sharedPreferences.getString("akad", "") ?: ""
                 if (currentValue == "null" && selectedAkad != "0") {
                     Log.d("FormActivity", "Nilai akad AKD03: $selectedAkad")
@@ -2441,7 +2754,7 @@ class FormActivity : AppCompatActivity() {
                 }
             }
             "Penjelasan Akad" -> {
-                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 val akadDescriptionValue = sharedPreferences.getString("penjelasan", "")
                 if (currentValue == "null" && akadDescriptionValue != "0") {
                     Log.d("FormActivity", "Nilai akad AKD04: $akadDescriptionValue")
@@ -2452,7 +2765,7 @@ class FormActivity : AppCompatActivity() {
             }
             "Nama Rekening Agen" -> {
                 val sharedPreferences =
-                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
                 if (currentValue == "null" && Userfullname != "0") {
                     Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $Userfullname")
@@ -2471,7 +2784,7 @@ class FormActivity : AppCompatActivity() {
             }
             "Kode Agen" -> {
                 val sharedPreferences =
-                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
                 if (currentValue == "null" && savedKodeAgen != "0") {
                     Log.d("FormActivity", "Kode Agen diisi dengan nilai: $savedKodeAgen")
@@ -2707,7 +3020,68 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "AU00001")
             })
             finish()
-        } else {
+        }
+        else if (screen?.id == "TF00001" || screen?.id == "FT0001" ||screen?.id == "ST001") {
+            var norekComponent: Component? = null
+            var nominalComponent: Component? = null
+            var norek: String? = null
+
+            when (screen.id) {
+                "TF00001" -> {
+                    norekComponent = screen.comp.find { it.label.contains("rekening pengirim", ignoreCase = true) }
+                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
+                    norek = inputValues[norekComponent?.id]
+                }
+                "FT0001" -> {
+                    norekComponent = screen.comp.find { it.label.contains("rekening nasabah", ignoreCase = true) }
+                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
+                    norek = inputValues[norekComponent?.id]
+                }
+                "ST001" -> {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                    norek = sharedPreferences.getString("norekening", "")
+                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
+                }
+            }
+
+            val nominalStr = inputValues[nominalComponent?.id]
+            val nominal = nominalStr?.toDoubleOrNull()
+
+            Log.d("FormActivity", "norek $norek")
+            Log.d("FormActivity", "nominal $nominal")
+
+            if (norek != null && nominal != null) {
+                checkSaldo(nominal, norek, onSuccess = {
+                    Log.d("FormActivity", "Saldo cukup, melanjutkan proses...")
+                    createMessageBody(screen)
+                    val messageBody = createMessageBody(screen)
+                    if (messageBody != null) {
+                        Log.d("FormActivity", "Message Body: $messageBody")
+                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            responseBody?.let { body ->
+                                lifecycleScope.launch {
+                                    val screenJson = JSONObject(body)
+                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                    handleScreenType(newScreen)
+                                }
+                            }
+                        }
+                    }
+                }, onError = { errorMsg ->
+                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                        putExtra("MESSAGE_BODY", errorMsg)
+                        putExtra("RETURN_TO_ROOT", false)
+                    }
+                    startActivity(intentPopup)
+                })
+            } else {
+                Toast.makeText(this, "Mohon masukkan norek dan nominal yang valid", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else {
             val otpComponent = screen?.comp?.find { it.id == "OTP01" }
             if (otpComponent != null) {
                 val otpValue = inputValues["OTP"]
@@ -2719,17 +3093,63 @@ class FormActivity : AppCompatActivity() {
                     otpDialog?.dismiss()
                     cancelOtpTimer()
                     Log.e("OTP", "SCREEN SEKARANG: $screen.id")
-                    if(screen.id == "WS0001"){
+                    if (screen.id == "WS0001") {
                         Log.e("OTP", "Create Terminal: $otpValue")
-                        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+
+                        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                         val storedImeiTerminal = sharedPreferences.getString("imei", null)
-                        Log.e ("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
-                        if(storedImeiTerminal == "null"){
-//                            createNewImei()
-                        }else{
-                            createTerminalAndLogin(screen)
+                        Log.e("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
+
+                        // Ambil newPassword dari sharedPreferences
+                        val newPassword = sharedPreferences.getString("new_password", null)
+                        Log.d("FormActivity", "Saved New Password: $newPassword")
+
+                        // Periksa newPassword terlebih dahulu
+                        if (!newPassword.isNullOrEmpty()) {
+                            Log.e("FormActivity", "New password is not null or empty, attempting to reset password.")
+                            lifecycleScope.launch {
+                                val username = sharedPreferences.getString("username", null)
+                                if (!username.isNullOrEmpty()) {
+                                    try {
+                                        // Call forgotPassword asynchronously
+                                        WebCallerImpl().forgotPassword(username, newPassword) { response ->
+                                            lifecycleScope.launch {
+                                                if (response != null) {
+                                                    Log.d("FormActivity", "Forgot Password success: ${response.string()}")
+                                                    sharedPreferences.edit().apply {
+                                                        remove("new_password")  // Remove the new_password
+                                                        remove("username")
+                                                        apply()                 // Save changes
+                                                    }
+                                                    Log.d("FormActivity", "New password cleared from SharedPreferences")
+                                                    navigateToLogin()
+                                                } else {
+                                                    Log.e("FormActivity", "Failed to reset password")
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("FormActivity", "Error during forgot password request", e)
+                                    }
+                                } else {
+                                    Log.e("FormActivity", "Username is null or empty, unable to reset password.")
+                                }
+                            }
+                        } else {
+                            // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
+                            lifecycleScope.launch {
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val status = sharedPreferences.getBoolean("statusImei", false)  // Mengambil status sebagai boolean
+                                Log.d("STATUS IMEI", "Status: $status")
+                                if (status) {
+                                    updateImei()
+                                } else {
+                                    createTerminalAndLogin(screen)
+                                }
+                            }
                         }
-                    }else{
+                        
+                    } else{
                         val messageBody = createMessageBody(screen)
                         if (messageBody != null) {
                             Log.d("FormActivity", "Message Body: $messageBody")
@@ -2848,7 +3268,14 @@ class FormActivity : AppCompatActivity() {
             } else {
                 val messageBody = screen?.let { createMessageBody(it) }
                 val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
-                if (messageBody != null) {
+                val sendPengaduan = screen?.comp?.find { it.id == "G0002" }
+                Log.d("Form", "Send Pengaduan : $sendPengaduan")
+                if(sendPengaduan != null){
+                    val bodyPengaduan = screen?.let { createBodyPengaduan(it) }
+                    Log.d("FormActivity", "Create Message Pengaduan $bodyPengaduan")
+
+                    bodyPengaduan?.let { sendPengaduanToApi(it) }
+                }else if (messageBody != null) {
                     Log.d("FormActivity", "Message Body: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                         responseBody?.let { body ->
@@ -3008,6 +3435,88 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun createMessageBodyForSaldoCheck(norek: String): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val username = "admin"
+            val imei = sharedPreferences.getString("imei", "") ?: ""
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = imei + timestamp
+            val msgSi = "N00001"
+            val msgDt = "$username|$norek|null|null"
+
+            JSONObject().apply {
+                put("msg", JSONObject().apply {
+                    put("msg_id", msgId)
+                    put("msg_ui", imei)
+                    put("msg_si", msgSi)
+                    put("msg_dt", msgDt)
+                })
+            }
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    private fun checkSaldo(nominal: Double, norek: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val messageBody = createMessageBodyForSaldoCheck(norek)
+        if (messageBody != null) {
+            Log.d("FormActivity", "Requesting saldo with message: $messageBody")
+
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let {
+                    Log.d("FormActivity", "Received response: $it")
+                    try {
+                        val jsonResponse = JSONObject(it)
+                        Log.d("FormActivity", "Parsed JSON response: $jsonResponse")
+                        val msgObject = jsonResponse.optJSONObject("screen")
+
+                        // Check if the screen object exists
+                        if (msgObject != null) {
+                            val comps = msgObject.optJSONObject("comps")
+                            val compArray = comps?.optJSONArray("comp")
+                            var saldo: Double? = null
+
+                            compArray?.let {
+                                for (i in 0 until it.length()) {
+                                    val comp = it.getJSONObject(i)
+                                    val label = comp.optString("comp_lbl")
+                                    val value = comp.optJSONObject("comp_values")
+                                        ?.optJSONArray("comp_value")?.optJSONObject(0)
+                                        ?.optString("value")
+
+                                    if (label == "Saldo Akhir") {
+                                        saldo = value?.replace("-", "")?.replace(",", "")?.toDoubleOrNull()
+                                    }
+                                }
+                            }
+
+                            saldo?.let {
+                                if (it >= nominal) {
+                                    onSuccess()
+                                } else {
+                                    onError("Saldo tidak cukup")
+                                }
+                            } ?: run {
+                                onError("No rekening tidak ditemukan")
+                            }
+                        } else {
+                            onError("Gagal mengambil saldo")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MenuActivity", "Failed to parse response", e)
+                        onError("Gagal memproses respon saldo")
+                    }
+                } ?: run {
+                    onError("Respon saldo kosong")
+                }
+            }
+        } else {
+            onError("Gagal membuat request body")
+        }
+    }
+
     private fun showDatePickerDialog(editText: EditText, onDateSelected: (String) -> Unit) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
@@ -3026,12 +3535,12 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun getKodeCabangFromPreferences(): String? {
-        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
         return sharedPreferences.getString("KODE_CABANG", null)
     }
 
     private fun saveKodeCabangToPreferences(kodeCabang: String) {
-        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         editor.putString("KODE_CABANG", kodeCabang)
         editor.apply() // atau editor.commit()
@@ -3040,10 +3549,11 @@ class FormActivity : AppCompatActivity() {
     private fun createMessageBody(screen: Screen): JSONObject? {
         return try {
             val msg = JSONObject()
-            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
+            val savedAkad = sharedPreferences.getString("akad", "") ?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
             val username = "admin"
             Log.e("FormActivity", "Saved Username: $username")
@@ -3052,6 +3562,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Nama Agen: $savedNamaAgen")
             val branchid = getKodeCabangFromPreferences()
             Log.e("FormActivity", "Saved Kode Cabang: $branchid")
+            Log.e("FormActivity", "Saved Akad: $savedAkad")
 
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
@@ -3094,6 +3605,10 @@ class FormActivity : AppCompatActivity() {
                     component.type == 1 && component.label == "No Rekening Agen" -> {
                         componentValues[component.id] = savedNorekening
                         Log.d("FormActivity", "Updated componentValues with savedNorekening for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label == "Pilihan Akad" -> {
+                        componentValues[component.id] = savedAkad
+                        Log.d("FormActivity", "Updated componentValues with akad for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "Nama Rekening Agen" -> {
                         componentValues[component.id] = savedNamaAgen
@@ -3197,6 +3712,84 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+    private fun createBodyPengaduan(screen: Screen): JSONObject? {
+        return try {
+            val body = JSONObject()
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+            val savedKodeAgen = sharedPreferences.getString("kode_agen", "") ?: ""
+            val savedKategori = sharedPreferences.getString("kategori", "") ?: ""
+            Log.d("FormActivity", "saved kategori: $savedKategori")
+            val username = "admin"
+
+            val componentValues = mutableMapOf<String, String>()
+            screen.comp.filter { it.type != 7 && it.type != 15 }.forEach { component ->
+                Log.d("FormActivity", "Component: $component")
+
+                when {
+                    component.type == 1 && component.label == "Username" -> {
+                        componentValues[component.id] = username
+                        Log.d("FormActivity", "Updated componentValues with savedUsername for Component ID: ${component.id}")
+                    }
+                    component.type == 1 && component.label == "Kode Agen" -> {
+                        componentValues[component.id] = savedKodeAgen
+                        Log.d("FormActivity", "Kode Agen : $savedKodeAgen")
+                    }
+                    component.type == 1 && component.label == "Kategori" -> {
+                        componentValues[component.id] = savedKategori
+                        Log.d("FormActivity", "Kategori : $savedKategori")
+                    }
+                    component.type == 1 && component.label != "NIK" -> {
+                        val value = (component.values.get(0)?.second ?: "") as String
+                        componentValues[component.id] = value
+                        Log.d("FormActivity", "Updated componentValues with value for Component ID: ${component.id}")
+                    }
+                    else -> {
+                        componentValues[component.id] = inputValues[component.id] ?: ""
+                    }
+                }
+            }
+
+            // Membuat msgDtParts dari komponen yang dipisahkan dengan '|'
+            val msgDtString = screen.comp
+                .filter { it.type != 7 && it.type != 15 && it.id != "MSG03" && it.id != "PIL03" }
+                .joinToString("|") { component -> componentValues[component.id] ?: "" }
+
+            // Memisahkan string msgDtString menjadi list menggunakan split
+            val msgDtParts = msgDtString.split("|")
+
+            // Memetakan msg_dt ke dalam format JSON
+            if (msgDtParts.size >= 4) {
+                body.put("mid", msgDtParts[0])
+                body.put("judul", msgDtParts[1])
+                body.put("deskripsi", msgDtParts[2])
+                body.put("kategori", msgDtParts[3])
+            }
+
+            lastMessageBody = body
+
+            // Logging the JSON message details
+            Log.d("FormActivity", "Message JSON: ${body.toString()}")
+
+            body
+        } catch (e: Exception) {
+            Log.e("FormActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    fun getUniqueID(): String {
+        val wideVineUuid = UUID(-0x121074568629b532L, -0x5c37d8232ae2de13L)
+        var encodedUid: String = ""
+        try {
+            val wvDrm = MediaDrm(wideVineUuid)
+            val wideVineId = wvDrm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
+            encodedUid = Base64.encodeToString(wideVineId, Base64.NO_WRAP)  // Using Android's Base64.encodeToString
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return encodedUid
+    }
+
     private fun loginUser() {
         lifecycleScope.launch(Dispatchers.IO) {
             val formBodyBuilder = FormBody.Builder()
@@ -3247,24 +3840,9 @@ class FormActivity : AppCompatActivity() {
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
                         val terminalArray = merchantData?.optJSONArray("terminal")
-                        val terminalData = terminalArray?.getJSONObject(0)
 
                         Log.d(TAG, "User status: $userStatus")
                         Log.d(TAG, "Terminal array: $terminalArray")
-
-//                    val msg_ui = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//                    Log.d("FormActivity", "msg_ui: $msg_ui")
-//                    val imeiFromTerminalData = terminalData?.optString("imei")
-//
-//                    if (imeiFromTerminalData == msg_ui) {
-//                        Log.d("FormActivity", "IMEI sesuai dengan msg_ui.")
-//                    } else {
-//                        Log.d("FormActivity", "IMEI tidak sesuai dengan msg_ui.")
-//                        withContext(Dispatchers.Main) {
-//                            Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
-//                        }
-//                        return@launch
-//                    }
 
                         // Check user status
                         when (userStatus) {
@@ -3289,7 +3867,7 @@ class FormActivity : AppCompatActivity() {
                         }
 
                         if (token.isNotEmpty() && merchantData != null) {
-                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                             val editor = sharedPreferences.edit()
 
                             editor.putString("username", username)
@@ -3318,74 +3896,111 @@ class FormActivity : AppCompatActivity() {
                             Log.e ("MID TERMINAL", "MID TERMINAL : $midTerminal")
                             Log.e ("USERNAME", "USERNAME : $username")
 
-                            val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) // ambil IMEI dari perangkat
+//                            val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) // ambil IMEI dari perangkat
+
+                            val imei = getUniqueID()
+                            Log.d(TAG, "Unique Device ID: $imei")
 
                             val storedImeiTerminal = sharedPreferences.getString("imei", null)
                             Log.e ("Imei Terminal", "Imei Terminal : $storedImeiTerminal")
-                            if (terminalArray == null || terminalArray.length() == 0 || storedImeiTerminal == "null") {
+                            val status = checkStatus()
+                            editor.putBoolean("statusImei", status)
+                            editor.apply()
+                            Log.e("status", "STATUS LOGIN : $status")
+                            if (terminalArray == null || terminalArray.length() == 0 || status == true) {
                                 Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
-                                val messageBody = createOTP()
-                                Log.d("LOGIN OTP", "Create OTP : $messageBody")
-                                if (messageBody != null) {
-                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
-                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                        responseBody?.let { body ->
-                                            lifecycleScope.launch {
-                                                val screenJson = JSONObject(body)
-                                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                handleScreenType(newScreen)
+                                createOTP { messageBody ->
+                                    Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                                    if (messageBody != null) {
+                                        Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                        lifecycleScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                    responseBody?.let { body ->
+                                                        lifecycleScope.launch {
+                                                            val screenJson = JSONObject(body)
+                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                            handleScreenType(newScreen)
+                                                        }
+                                                    } ?: run {
+                                                        Log.e("FormActivity", "Failed to fetch response body")
+                                                    }
+                                                }
                                             }
-                                        } ?: run {
-                                            Log.e("FormActivity", "Failed to fetch response body")
                                         }
+                                    } else {
+                                        Log.e("FormActivity", "Failed to create message body, request not sent")
                                     }
-                                } else {
-                                    Log.e("FormActivity", "Failed to create message body, request not sent")
                                 }
+
                             } else {
                                 Log.d(TAG, "Terminal already exists.")
-                                val terminalData = terminalArray?.getJSONObject(0)
+                                val terminalData = terminalArray.getJSONObject(0)
                                 if (terminalData != null) {
-                                    editor.putString("tid", terminalData.optString("tid"))
-                                    editor.putString("imei", terminalData.optString("imei"))
+                                    Log.d(TAG, "Terminal data found. Saving TID and IMEI.")
+
+                                    val tid = terminalData.optString("tid")
+                                    val terminalImei = terminalData.optString("imei")
+
+                                    Log.d(TAG, "TID: $tid, IMEI: $terminalImei") // Log nilai TID dan IMEI
+
+                                    editor.putString("tid", tid)
+                                    editor.putString("imei", terminalImei)
                                     editor.apply()
+                                } else {
+                                    Log.d(TAG, "No terminal data found in the response.") // Log jika data terminal tidak ditemukan
                                 }
 
                                 editor.putInt("login_attempts", 0)
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                if (imei != null && imei != storedImeiTerminal) {
-//                                    withContext(Dispatchers.Main) {
-//                                        Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
-//                                    }
-//                                    return@launch
-//                                }
-                                fun retrieveAuthToken(): String {
-                                // Return the stored auth token
-                                 return "auth_token" // Replace this with the actual logic to retrieve the token
-                                }
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 
-                                // Retrieve FCM token and send it to the server along with user_id
-                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                    if (!task.isSuccessful) {
-                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                        return@addOnCompleteListener
+                                if (imei != null && imei != storedImeiTerminal) {
+                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
+                                    startActivity(intentPopup)
+                                }else{
+                                    fun retrieveAuthToken(): String {
+                                        // Return the stored auth token
+                                        return "auth_token" // Replace this with the actual logic to retrieve the token
                                     }
 
-                                    val fcmToken = task.result
-                                    Log.d("FCM", "FCM Token: $fcmToken")
+                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                        if (!task.isSuccessful) {
+                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                            return@addOnCompleteListener
+                                        }
 
-                                    // Send FCM token and user_id to server
-                                    val authToken = sharedPreferences.getString("token", "") ?: ""
-                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                        val fcmToken = task.result
+                                        Log.d("FCM", "FCM Token: $fcmToken")
+
+                                        // Send FCM token and user_id to server
+                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                    }
+
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                        navigateToScreen()
+                                    }
                                 }
 
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
-                                }
+//                                withContext(Dispatchers.Main) {
+//                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+//                                    navigateToScreen()
+//                                }
+
+//                                withContext(Dispatchers.Main) {
+//                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+//                                    navigateToScreen()
+//                                }
                             }
                         } else {
                             withContext(Dispatchers.Main) {
@@ -3411,7 +4026,7 @@ class FormActivity : AppCompatActivity() {
     }
 
     private suspend fun handleFailedPinAttempt() {
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
 
@@ -3438,7 +4053,7 @@ class FormActivity : AppCompatActivity() {
 
 
     private suspend fun handleFailedLoginAttempt() {
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
 
@@ -3471,7 +4086,7 @@ class FormActivity : AppCompatActivity() {
 
                 val webCaller = WebCallerImpl()
                 val fetchedValue = withContext(Dispatchers.IO) {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val token = sharedPreferences.getString("token", "") ?: ""
                     val id = sharedPreferences.getString("merchant_id", "") ?: ""
                     val response = webCaller.blockAgen(id, token)
@@ -3528,7 +4143,7 @@ class FormActivity : AppCompatActivity() {
 
                 val webCaller = WebCallerImpl()
                 val fetchedValue = withContext(Dispatchers.IO) {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val token = sharedPreferences.getString("token", "") ?: ""
                     val userId = sharedPreferences.getString("id", "") ?: ""
                     val response = webCaller.changePassword(userId, oldPassword ?: "", newPassword ?: "", token)
@@ -3588,7 +4203,7 @@ class FormActivity : AppCompatActivity() {
 
                 val webCaller = WebCallerImpl()
                 val fetchedValue = withContext(Dispatchers.IO) {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val token = sharedPreferences.getString("token", "") ?: ""
                     val id = sharedPreferences.getString("merchant_id", "") ?:""
                     val response = webCaller.changePin(id, oldPin ?: "", newPin ?: "", token)
@@ -3648,7 +4263,7 @@ class FormActivity : AppCompatActivity() {
                 val formBody = formBodyBuilder.build()
                 // Lanjutkan proses jika berhasil, simpan ke SharedPreferences
                 if (newPassword != null && username != null) {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
 
                     editor.putString("username", username)
@@ -3664,24 +4279,25 @@ class FormActivity : AppCompatActivity() {
                 val webCaller = WebCallerImpl()
 
                 // Panggilan untuk membuat OTP sebelum reset password
-                val messageBody = createOTP()
-                if (messageBody != null) {
-                    Log.d("FormActivity", "Message Body OTP: $messageBody")
-                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                        responseBody?.let { body ->
-                            lifecycleScope.launch {
-                                val screenJson = JSONObject(body)
-                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                createOTP { messageBody ->
+                    if (messageBody != null) {
+                        Log.d("FormActivity", "Message Body OTP: $messageBody")
+                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            responseBody?.let { body ->
+                                lifecycleScope.launch {
+                                    val screenJson = JSONObject(body)
+                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
 
-                                // Jika OTP berhasil dibuat, arahkan ke halaman OTP
-                                handleScreenType(newScreen)
+                                    // Jika OTP berhasil dibuat, arahkan ke halaman OTP
+                                    handleScreenType(newScreen)
+                                }
+                            } ?: run {
+                                Log.e("FormActivity", "Failed to fetch response body")
                             }
-                        } ?: run {
-                            Log.e("FormActivity", "Failed to fetch response body")
                         }
+                    } else {
+                        Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
-                } else {
-                    Log.e("FormActivity", "Failed to create message body, request not sent")
                 }
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
@@ -3787,14 +4403,11 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun navigateToLogin() {
-        val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+        startActivity(Intent(this, FormActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            putExtra(Constants.KEY_MENU_ID, "AU00001")
-        }
-        startActivity(intent)
-        finish()
+            putExtra(Constants.KEY_FORM_ID, "AU00001") // Ensure you use the correct key for your intent
+        })
     }
-
 
     fun formatMutasi(mutasiText: String): String {
         val mutasiList = mutasiText.trim().split("\n").filter { it.isNotEmpty() }
@@ -4053,86 +4666,100 @@ class FormActivity : AppCompatActivity() {
 
     private val webCallerImpl = WebCallerImpl()
 
-    private fun createOTP(): JSONObject? {
-        return try {
-            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
-            val username = "admin"
-            val newPassword = sharedPreferences.getString("new_password", null)
+    private fun createOTP(callback: (JSONObject?) -> Unit) {
+        lifecycleScope.launch {
+            try {
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
+                val usernameLogin = sharedPreferences.getString("username", "") ?: ""
+                val newPassword = sharedPreferences.getString("new_password", null)
 
-            Log.d("FormActivity", "Saved New Password: $newPassword")
+                Log.d("FormActivity", "Saved New Password: $newPassword")
+                Log.d("FormActivity", "Merchant OTP: $merchantPhone")
 
-            if (newPassword.isNullOrEmpty()) {
-                Log.e("FormActivity", "New password is null or empty, unable to create OTP.")
-                null
-            } else {
-                // Call forgotPassword() function from WebCallerImpl
-                GlobalScope.launch(Dispatchers.IO) {
-                    val response = webCallerImpl.forgotPassword(username, newPassword)
-                    withContext(Dispatchers.Main) {
-                        if (response != null) {
-                            // Convert response body to a string and parse the JSON
-                            val responseBodyString = response.string()
-                            Log.d("FormActivity", "Forgot password response: $responseBodyString")
-
-                            try {
-                                val jsonResponse = JSONObject(responseBodyString)
-                                val status = jsonResponse.optString("status")
-
-                                if (status == "success") {
-                                    // Replace merchantPhone with phone from the response
-                                    val phone = jsonResponse.optString("phone")
-                                    merchantPhone = phone
-                                    Log.d("FormActivity", "Phone replaced with: $merchantPhone")
-
-                                    // Save the updated phone to SharedPreferences
-                                    sharedPreferences.edit().putString("merchant_phone", phone).apply()
-                                } else {
-                                    // Handle error and display message
-                                    val message = jsonResponse.optString("message")
-                                    Toast.makeText(this@FormActivity, "Error: $message", Toast.LENGTH_LONG).show()
-                                    Log.e("FormActivity", "Error from server: $message")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("FormActivity", "Failed to parse JSON response", e)
-                            }
-                        } else {
-                            Log.e("FormActivity", "Forgot password request failed")
-                        }
+                if (!newPassword.isNullOrEmpty()) {
+                    // Make the network call to get the phone by username
+                    val response = withContext(Dispatchers.IO) {
+                        webCallerImpl.getPhoneByUsername(usernameLogin)
                     }
+
+                    Log.d("FormActivity", "Forgot password RESPONSE: $response")
+
+                    if (response != null) {
+                        try {
+                            val jsonResponse = JSONObject(response)
+                            val status = jsonResponse.optString("status")
+
+                            if (status == "success") {
+                                // Replace merchantPhone with phone from the response
+                                merchantPhone = jsonResponse.optString("phone")
+                                Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+
+                                // Save the updated phone to SharedPreferences
+                                sharedPreferences.edit().putString("merchant_phone", merchantPhone).apply()
+
+                                // IMEI, timestamp, and message details
+                                val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
+                                Log.e("FormActivity", "Saved IMEI: $imei")
+                                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                                val msgUi = imei
+                                val msgId = msgUi + timestamp
+                                val msgSi = "SV0001"
+                                val msgDt = "$usernameLogin|$merchantPhone"
+
+                                val msgObject = JSONObject().apply {
+                                    put("msg_id", msgId)
+                                    put("msg_ui", msgUi)
+                                    put("msg_si", msgSi)
+                                    put("msg_dt", msgDt)
+                                }
+
+                                val msg = JSONObject().apply {
+                                    put("msg", msgObject)
+                                }
+
+                                callback(msg) // Return the message object via callback
+                            } else {
+                                val message = jsonResponse.optString("message")
+                                Toast.makeText(this@FormActivity, message, Toast.LENGTH_LONG).show()
+                                Log.e("FormActivity", "Error from server: $message")
+                                callback(null) // Return null on error
+                            }
+                        } catch (e: Exception) {
+                            Log.e("FormActivity", "Failed to parse JSON response", e)
+                            callback(null) // Return null on exception
+                        }
+                    } else {
+                        Log.e("FormActivity", "Forgot password request failed")
+                        callback(null) // Return null if response is null
+                    }
+                } else {
+                    Log.e("FormActivity", "New password is null or empty.")
+                    // Handle the case where newPassword is null or empty
+                    val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
+                    Log.e("FormActivity", "Saved IMEI: $imei")
+                    val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                    val msgUi = imei
+                    val msgId = msgUi + timestamp
+                    val msgSi = "SV0001"
+                    val msgDt = "$usernameLogin|$merchantPhone"
+
+                    val msgObject = JSONObject().apply {
+                        put("msg_id", msgId)
+                        put("msg_ui", msgUi)
+                        put("msg_si", msgSi)
+                        put("msg_dt", msgDt)
+                    }
+
+                    val msg = JSONObject().apply {
+                        put("msg", msgObject)
+                    }
+                    callback(msg) // Return the message object
                 }
-
-                val imei = sharedPreferences.getString("imei", "") ?: ""
-                Log.e("FormActivity", "Saved Imei: $imei")
-                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-                val msgUi = imei
-                val msgId = msgUi + timestamp
-                val msgSi = "SV0001"
-                val msgDt = "$username|$merchantPhone"
-
-                val msgObject = JSONObject().apply {
-                    put("msg_id", msgId)
-                    put("msg_ui", msgUi)
-                    put("msg_si", msgSi)
-                    put("msg_dt", msgDt)
-                }
-
-                val msg = JSONObject().apply {
-                    put("msg", msgObject)
-                }
-
-                // Logging the JSON message details
-                Log.d("MenuActivity", "Message ID: $msgId")
-                Log.d("MenuActivity", "Message UI: $msgUi")
-                Log.d("MenuActivity", "Message SI: $msgSi")
-                Log.d("MenuActivity", "Message DT: $msgDt")
-                Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
-
-                msg
+            } catch (e: Exception) {
+                Log.e("MenuActivity", "Failed to create message body", e)
+                callback(null) // Return null on any other exception
             }
-        } catch (e: Exception) {
-            Log.e("MenuActivity", "Failed to create message body", e)
-            null
         }
     }
 
@@ -4140,64 +4767,362 @@ class FormActivity : AppCompatActivity() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
         val midTerminal = sharedPreferences.getString("mid", null)
         val token = sharedPreferences.getString("token", "")
-        val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        val imei = getUniqueID()
 
-        Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
+        Log.d(TAG, "Starting terminal creation process. IMEI: $imei, MID: $midTerminal")
 
-            if (imei != null && midTerminal != null) {
-                val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
-                val createTerminalRequest = Request.Builder()
-                    .url(createTerminalUrl)
-                    .post(FormBody.Builder().build())
-                    .addHeader("Authorization", "Bearer $token")
-                    .build()
+        if (imei != null && midTerminal != null) {
+            val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
+            Log.d(TAG, "Create terminal URL: $createTerminalUrl")
 
-                lifecycleScope.launch(Dispatchers.IO) {
-                    try {
-                        val terminalResponse = client.newCall(createTerminalRequest).execute()
-                        val terminalResponseData = terminalResponse.body?.string()
+            val createTerminalRequest = Request.Builder()
+                .url(createTerminalUrl)
+                .post(FormBody.Builder().build())
+                .addHeader("Authorization", "Bearer $token")
+                .build()
 
-                        if (terminalResponse.isSuccessful && terminalResponseData != null) {
-                            val terminalJsonResponse = JSONObject(terminalResponseData)
-                            val terminalStatus = terminalJsonResponse.optBoolean("success", false)
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val terminalResponse = client.newCall(createTerminalRequest).execute()
+                    val terminalResponseData = terminalResponse.body?.string()
 
-                            if (terminalStatus) {
-                                Log.d(TAG, "Terminal berhasil dibuat")
+                    Log.d(TAG, "Terminal response received. Status code: ${terminalResponse.code}, Message: ${terminalResponse.message}")
 
-                                saveTerminalData(terminalJsonResponse)
-                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                                val editor = sharedPreferences.edit()
-                                editor.putInt("login_attempts", 0)
-                                editor.apply()
+                    if (terminalResponse.isSuccessful && terminalResponseData != null) {
+                        Log.d(TAG, "Terminal response body: $terminalResponseData")
 
-//                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                if (imei != null && imei != storedImeiTerminal) {
-//                                    withContext(Dispatchers.Main) {
-//                                        Toast.makeText(this@FormActivity, "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan", Toast.LENGTH_SHORT).show()
-//                                    }
-//                                    return@launch
-//                                }
+                        val terminalJsonResponse = JSONObject(terminalResponseData)
+                        val terminalStatus = terminalJsonResponse.optBoolean("success", false)
 
+                        if (terminalStatus) {
+                            Log.d(TAG, "Terminal berhasil dibuat")
+
+                            saveTerminalData(terminalJsonResponse)
+
+                            val editor = sharedPreferences.edit()
+                            editor.putInt("login_attempts", 0)
+                            editor.apply()
+
+                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                            if (imei != null && imei != storedImeiTerminal) {
+                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                    putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                    putExtra("RETURN_TO_ROOT", false)
+                                }
+                                startActivity(intentPopup)
+                            }else{
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
                                     navigateToScreen()
                                 }
-                            } else {
-                                Log.d(TAG, "Gagal Membuat Terminal Baru")
                             }
                         } else {
-                            Log.d(TAG, "Gagal membuat terminal: ${terminalResponse.message}")
+                            Log.d(TAG, "Gagal Membuat Terminal Baru")
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error occurred while creating terminal", e)
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
+                    } else {
+                        Log.d(TAG, "Gagal membuat terminal. HTTP Status Code: ${terminalResponse.code}, Message: ${terminalResponse.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error occurred while creating terminal", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
         } else {
-            Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
+            Log.d(TAG, "IMEI or MID is null. IMEI: $imei, MID: $midTerminal. Cannot create terminal.")
+        }
+    }
+
+    private fun updateImei() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val midTerminal = sharedPreferences.getString("mid", null)
+        val tidTerminal = sharedPreferences.getString("tid", null)
+        val token = sharedPreferences.getString("token", "")
+        val imei = getUniqueID()
+
+        Log.d(TAG, "Attempting to update IMEI.")
+
+        if (imei != null && midTerminal != null && tidTerminal != null) {
+            val updateImeiUrl = "http://reportntbs.selada.id/api/imei/update" // Sesuaikan URL sesuai dengan route di Laravel
+
+            val jsonBody = """
+        {
+            "tid": "$tidTerminal",
+            "imei": "$imei",
+            "mid": "$midTerminal"
+        }
+        """.trimIndent()
+
+            // Buat RequestBody untuk JSON
+            val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody)
+
+            // Membangun request dengan body JSON dan header Authorization
+            val updateImeiRequest = Request.Builder()
+                .url(updateImeiUrl)
+                .put(requestBody) // Menggunakan PUT request untuk update
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json") // Pastikan menambahkan header Content-Type
+                .build()
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val response = client.newCall(updateImeiRequest).execute()
+                    val responseData = response.body?.string()
+
+                    if (response.isSuccessful && responseData != null) {
+                        val jsonResponse = JSONObject(responseData)
+                        val success = jsonResponse.optBoolean("success", false)
+
+                        if (success) {
+                            Log.d(TAG, "IMEI berhasil diperbarui")
+
+                            // Jika perlu, simpan data atau lakukan tindakan lain
+                            saveTerminalData(jsonResponse)
+
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                            val editor = sharedPreferences.edit()
+                            editor.putInt("login_attempts", 0)
+                            editor.apply()
+
+//                                comment dulu biar bisa login
+                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                            if (imei != null && imei != storedImeiTerminal) {
+                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                    putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                    putExtra("RETURN_TO_ROOT", false)
+                                }
+                                startActivity(intentPopup)
+                            }else{
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                }
+                            }
+                        } else {
+                            Log.d(TAG, "Gagal memperbarui IMEI: ${jsonResponse.optString("message", "No message")}")
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@FormActivity, "Gagal memperbarui IMEI", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "Gagal melakukan request update IMEI: ${response.message}")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@FormActivity, "Request gagal: ${response.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error occurred while updating IMEI", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            Log.d(TAG, "IMEI, MID, atau TID null, tidak bisa update IMEI.")
+            Toast.makeText(this, "IMEI, MID, atau TID tidak ditemukan", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun sendPengaduanToApi(bodyPengaduan: JSONObject) {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("token", "")
+
+        val judul = bodyPengaduan.optString("judul", "")
+        Log.d("FormActivity", "Judul: $judul")
+        if (judul == "Ganti Perangkat") {
+            sendRequestImei()
+        }
+
+        // Definisikan URL API
+        val createPengaduanUrl = "http://reportntbs.selada.id/api/pengaduan/create"
+
+        // Ubah JSONObject menjadi string dan buat RequestBody
+        val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), bodyPengaduan.toString())
+
+        // Buat Request POST
+        val createPengaduanRequest = Request.Builder()
+            .url(createPengaduanUrl)
+            .post(requestBody) // Menggunakan POST request
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        // Menggunakan lifecycleScope untuk mengirim request secara asynchronous
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = client.newCall(createPengaduanRequest).execute()
+                val responseData = response.body?.string()
+
+                if (response.isSuccessful && responseData != null) {
+                    val jsonResponse = JSONObject(responseData)
+                    val success = jsonResponse.optBoolean("success", true)
+
+                    if (success) {
+                        Log.d("FormActivity", "Pengaduan berhasil dikirim")
+
+                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                            putExtra("MESSAGE_BODY", "Pengaduan berhasil dikirim")
+                            putExtra("RETURN_TO_ROOT", true)
+                        }
+                        startActivity(intent)
+                    } else {
+                        Log.d("FormActivity", "Gagal mengirim pengaduan: ${jsonResponse.optString("message", "No message")}")
+
+                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                            putExtra("MESSAGE_BODY", "Gagal mengirim pengaduan")
+                            putExtra("RETURN_TO_ROOT", false)
+                        }
+                        startActivity(intent)
+                    }
+                } else {
+                    Log.d("FormActivity", "Gagal melakukan request pengaduan: ${response.message}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Request gagal: ${response.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error occurred while sending pengaduan", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+
+    private fun sendRequestImei() {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val midTerminal = sharedPreferences.getString("mid", null)
+        val tidTerminal = sharedPreferences.getString("tid", null)
+        val token = sharedPreferences.getString("token", "")
+        val imei = getUniqueID()
+
+        // Log the start of the process
+        Log.d(TAG, "sendRequestImei called with IMEI: $imei, MID: $midTerminal, TID: $tidTerminal")
+
+        if (imei != null && midTerminal != null && tidTerminal != null) {
+            val createTerminalUrl = "http://reportntbs.selada.id/api/imei/store"
+
+            // Create the JSON body and log it for debugging
+            val jsonBody = """
+        {
+            "tid": "$tidTerminal",
+            "imei": "$imei",
+            "mid": "$midTerminal"
+        }
+        """.trimIndent()
+            Log.d(TAG, "Request body: $jsonBody")
+
+            // Create RequestBody for JSON
+            val requestBody = RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody)
+
+            // Build the request and log headers
+            val createTerminalRequest = Request.Builder()
+                .url(createTerminalUrl)
+                .post(requestBody)
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json")
+                .build()
+            Log.d(TAG, "Sending request to $createTerminalUrl with token: Bearer $token")
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    // Log when request is about to be executed
+                    Log.d(TAG, "Executing IMEI request...")
+
+                    val imeiResponse = client.newCall(createTerminalRequest).execute()
+                    val terminalResponseData = imeiResponse.body?.string()
+
+                    // Log the response status and body
+                    Log.d(TAG, "Response code: ${imeiResponse.code}")
+                    Log.d(TAG, "Response message: ${imeiResponse.message}")
+                    Log.d(TAG, "Response body: $terminalResponseData")
+
+                    if (imeiResponse.isSuccessful && terminalResponseData != null) {
+                        val imeiJsonResponse = JSONObject(terminalResponseData)
+                        val terminalStatus = imeiJsonResponse.optBoolean("success", false)
+
+                        // Log based on the success status
+                        if (terminalStatus) {
+                            Log.d(TAG, "IMEI successfully stored")
+                        } else {
+                            Log.e(TAG, "Failed to store IMEI, response status is false")
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to create IMEI, response not successful: ${imeiResponse.message}")
+                    }
+                } catch (e: Exception) {
+                    // Log the error with a detailed message
+                    Log.e(TAG, "Error occurred while creating IMEI request", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            // Log if any of the required parameters are null
+            Log.e(TAG, "IMEI, MID, or TID is null. Cannot send request.")
+        }
+    }
+
+    private suspend fun checkStatus(): Boolean {
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val midTerminal = sharedPreferences.getString("mid", null)
+        val tidTerminal = sharedPreferences.getString("tid", null)
+        val token = sharedPreferences.getString("token", "")
+
+        return if (midTerminal != null && tidTerminal != null && token != null) {
+            val checkStatusUrl = "http://reportntbs.selada.id/api/terminal/checkStatus?tid=$tidTerminal&mid=$midTerminal"
+
+            // Membangun request GET dengan header Authorization
+            val checkStatusRequest = Request.Builder()
+                .url(checkStatusUrl)
+                .get()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            Log.d("CHECKSTATUS", "SEND REQUEST")
+            Log.d("CHECKSTATUS", "MID $midTerminal")
+            Log.d("CHECKSTATUS", "TID $tidTerminal")
+            Log.d("CHECKSTATUS", "TOKEN $token")
+
+            try {
+                val response = client.newCall(checkStatusRequest).execute()
+                val responseData = response.body?.string()
+
+                if (response.isSuccessful && responseData != null) {
+                    val jsonResponse = JSONObject(responseData)
+                    val success = jsonResponse.optBoolean("success", false)
+
+                    if (success) {
+                        val status = jsonResponse.optBoolean("status", false)
+                        if (status) {
+                            Log.d("CHECKSTATUS", "Data ditemukan pada table imei dan status true")
+                            true
+                        } else {
+                            Log.d("CHECKSTATUS", "Data ditemukan pada table imei tetapi status false")
+                            false
+                        }
+                    } else {
+                        Log.d("CHECKSTATUS", "Gagal: ${jsonResponse.optString("message", "No message")}")
+                        false
+                    }
+                } else {
+                    Log.d("CHECKSTATUS", "Gagal melakukan request check status: ${response.message}")
+                    false
+                }
+            } catch (e: Exception) {
+                Log.e("CHECKSTATUS", "Error occurred while checking status", e)
+                false
+            }
+        } else {
+            Log.d("CHECKSTATUS", "MID, TID, atau token null, tidak bisa cek status.")
+            false
         }
     }
 
@@ -4245,4 +5170,3 @@ class FormActivity : AppCompatActivity() {
         })
     }
 }
-

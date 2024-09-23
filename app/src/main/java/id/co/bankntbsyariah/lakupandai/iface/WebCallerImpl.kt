@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody
+import java.io.IOException
 
 class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCaller {
 
@@ -140,7 +141,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun forgotPassword(username: String, newPassword: String): ResponseBody? {
+    override fun forgotPassword(username: String, newPassword: String, callback: (ResponseBody?) -> Unit) {
         // Build the request body
         val formBody = FormBody.Builder()
             .add("username", username)
@@ -149,35 +150,30 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         // Create the request
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/reset/password") // Ensure this is the correct URL
+            .url("http://reportntbs.selada.id/api/reset/password")
             .post(formBody)
             .build()
 
         Log.d(TAG, "Username FORGOT: $username")
         Log.d(TAG, "New Password FORGOT: $newPassword")
 
-        return try {
-            // Execute the request
-            client.newCall(request).execute().let { response ->
-                // Log the response details
-                Log.d(TAG, "Response Code FORGOT: ${response.code}")
-                Log.d(TAG, "Response Message FORGOT: ${response.message}")
+        // Execute the request asynchronously using enqueue
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                Log.e(TAG, "Exception occurred while requesting forgot password", e)
+                callback(null)
+            }
 
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 if (response.isSuccessful) {
-                    // Log success and return the response body
                     Log.d(TAG, "Password reset successful for user: $username")
-                    response.body
+                    callback(response.body)
                 } else {
-                    // Log error if the response is not successful
-                    Log.e(TAG, "Failed to forgot password: ${response.code} - ${response.message}")
-                    null
+                    Log.e(TAG, "Failed to reset password: ${response.code} - ${response.message}")
+                    callback(null)
                 }
             }
-        } catch (e: Exception) {
-            // Log exception details
-            Log.e(TAG, "Exception occurred while requesting forgot password", e)
-            null
-        }
+        })
     }
 
 

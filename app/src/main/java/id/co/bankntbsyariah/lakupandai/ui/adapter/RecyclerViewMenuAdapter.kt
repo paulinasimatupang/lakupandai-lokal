@@ -29,7 +29,9 @@ class RecyclerViewMenuAdapter(
     private val context: Context,
     private val isHamburger: Boolean,
     private val isProfile: Boolean,
-    private val isList: Boolean
+    private val isList: Boolean,
+    private val isKomplain: Boolean,
+    private val isKomplain2: Boolean
 
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
     val TAG: String  // Define a tag for logging
@@ -46,12 +48,15 @@ class RecyclerViewMenuAdapter(
                 R.layout.recycler_profile_list
             } else if(isList){
                 R.layout.recycler_combo_box_provider
-            } else {
+            } else if(isKomplain || isKomplain2){
+                R.layout.recycler_menu_komplain
+            }
+            else {
                 R.layout.recycler_view_menu_item
             },
             parent, false
         )
-        return MenuViewHolder(itemView, isProfile)
+        return MenuViewHolder(itemView, isProfile, isKomplain, isKomplain2)
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
@@ -164,7 +169,7 @@ class RecyclerViewMenuAdapter(
         return menuList.size
     }
 
-    class MenuViewHolder(itemView: View, isProfile: Boolean) : RecyclerView.ViewHolder(itemView) {
+    class MenuViewHolder(itemView: View, isProfile: Boolean, isKomplain: Boolean,  isKomplain2: Boolean) : RecyclerView.ViewHolder(itemView) {
         val menuTitle: TextView = itemView.findViewById(R.id.title)
 
         val menuImage: ImageView? = itemView.findViewById(R.id.header_image)
@@ -172,9 +177,14 @@ class RecyclerViewMenuAdapter(
         val menuDescription: TextView? = if (!isProfile) itemView.findViewById(R.id.body) else null
 
         init {
-            if (isProfile) {
+            if (isProfile){
                 menuSubtitle?.visibility = View.GONE
                 menuDescription?.visibility = View.GONE
+            }
+            if (isKomplain || isKomplain2){
+                menuSubtitle?.visibility = View.GONE
+                menuDescription?.visibility = View.GONE
+                menuImage?.visibility = View.GONE
             }
         }
     }

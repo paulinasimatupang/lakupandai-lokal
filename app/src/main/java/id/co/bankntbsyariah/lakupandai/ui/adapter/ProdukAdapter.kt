@@ -13,15 +13,11 @@ class ProdukAdapter(
     private val items: List<Pair<String?, String?>>,
     private val onItemSelected: (Pair<String?, String?>) -> Unit
 ) : RecyclerView.Adapter<ProdukAdapter.ViewHolder>() {
-
-    // Simpan index dari item yang dipilih
     private var selectedItemPosition: Int? = null
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val textView: TextView = itemView.findViewById(R.id.product_name)
-        val layout: RelativeLayout = itemView.findViewById(R.id.product_layout) // Gunakan layout sebagai container untuk background
-
-        // Function to bind data and apply selected state
+        val layout: RelativeLayout = itemView.findViewById(R.id.product_layout)
         fun bind(item: Pair<String?, String?>, isSelected: Boolean) {
             textView.text = item.first
 
@@ -32,12 +28,9 @@ class ProdukAdapter(
                 layout.background = ContextCompat.getDrawable(itemView.context, R.drawable.card_background)
             }
 
-            // Handle item selection
             itemView.setOnClickListener {
                 onItemSelected(item)
-                // Simpan posisi item yang dipilih
                 selectedItemPosition = adapterPosition
-                // Perbarui tampilan untuk item yang dipilih
                 notifyDataSetChanged()
             }
         }

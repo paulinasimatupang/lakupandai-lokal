@@ -28,26 +28,56 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 const val channelId = "notification_channel"
 const val channelName = "id.co.bankntbsyariah.lakupandai"
-data class Token(val token: String)
+
+data class TokenPayload(val user_id: String, val fcm_token: String)
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private val NOTIFICATION_PERMISSION_CODE = 1001
 
-    // Fungsi ini akan dipanggil saat pesan FCM diterima
+    companion object {
+        var fcmToken: String? = null
+
+        // Function to send FCM token and userId to server
+        fun sendFCMTokenToServer(authToken: String, fcmToken: String, userId: String) {
+            Log.d("FCM", "Sending FCM token to server: $fcmToken for user_id: $userId")
+
+            val retrofit = Retrofit.Builder()
+                .baseUrl("http://reportntbs.selada.id/api/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            val apiService = retrofit.create(ApiService::class.java)
+
+            // Include user_id when sending the FCM token
+            val call: Call<ResponseBody> = apiService.updateFCMToken("Bearer $authToken", TokenPayload(userId, fcmToken))
+            call.enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                    if (response.isSuccessful) {
+                        Log.d("FCM", "FCM token successfully updated on the server")
+                    } else {
+                        Log.e("FCM", "Failed to update token on the server: ${response.errorBody()?.string()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    Log.e("FCM", "Error updating FCM token on the server: ${t.message}")
+                }
+            })
+        }
+    }
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Log.d("FCM", "From: ${remoteMessage.from}")
 
-        // Tambahkan log untuk mencatat isi pesan
+        // Log notification message
         Log.d("FCM", "Notification Data: ${remoteMessage.data}")
         Log.d("FCM", "Notification Message: ${remoteMessage.notification?.body}")
 
-        // Handle notification message
         remoteMessage.notification?.let {
             requestNotificationPermission(it.title ?: "Notifikasi", it.body ?: "Anda memiliki pesan baru.")
         }
 
-        // Handle data payload if present
         if (remoteMessage.data.isNotEmpty()) {
             Log.d("FCM", "Data Payload: ${remoteMessage.data}")
             requestNotificationPermission(
@@ -57,30 +87,37 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    // Function to handle new token generation and sending it to server
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d("FCM", "New token: $token")
-
-        // Tambahkan log untuk mencatat token yang baru dibuat
         Log.d("FCM", "New FCM Token generated: $token")
 
-        // Call sendFCMTokenToServer with both authToken and fcmToken
-        val authToken = retrieveAuthToken()  // Implement your logic to retrieve auth token
-        if (authToken.isNotEmpty()) {
-            sendFCMTokenToServer(authToken, token)  // Now passing both authToken and fcmToken
+        // Store token in global variable
+        fcmToken = token
+
+        // Retrieve authToken and userId from SharedPreferences
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        val authToken = sharedPreferences.getString("auth_token", "") ?: ""
+        val userId = sharedPreferences.getString("id", "") ?: ""  // Retrieve userId
+
+        // Check if authToken and userId are available before sending to server
+        if (authToken.isNotEmpty() && userId.isNotEmpty()) {
+            sendFCMTokenToServer(authToken, token, userId)
         } else {
-            Log.e("FCM", "Auth token is empty. Cannot send FCM token to server.")
+            Log.e("FCM", "Auth token or userId is empty. Cannot send FCM token to server.")
         }
     }
 
-    // Permintaan izin notifikasi
+    private fun retrieveAuthToken(): String {
+        // Retrieve auth token from SharedPreferences
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("auth_token", "") ?: ""
+    }
+
     private fun requestNotificationPermission(title: String, message: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                Log.d("FCM", "Izin notifikasi belum diberikan. Meminta izin...")
+                Log.d("FCM", "Notification permission not granted. Requesting permission...")
 
-                // Menyimpan title dan message yang akan digunakan setelah izin diberikan
                 val permissionIntent = Intent(applicationContext, MenuActivity::class.java)
                 permissionIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 permissionIntent.putExtra("title", title)
@@ -92,21 +129,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                     NOTIFICATION_PERMISSION_CODE
                 )
-                return
             } else {
-                Log.d("FCM", "Izin notifikasi telah diberikan.")
                 generateNotification(title, message)
             }
         } else {
-            // Tidak perlu izin untuk Android sebelum versi 13
             generateNotification(title, message)
         }
     }
 
     private fun generateNotification(title: String, message: String) {
-        Log.d("FCM", "generateNotification called with title: $title, message: $message")
-        Log.d("FCM", "Android version: ${Build.VERSION.SDK_INT}")
-
         val intent = Intent(this, MenuActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
@@ -132,7 +163,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(notificationChannel)
         }
 
-        Log.d("FCM", "Notifying notification manager...")
         notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
     }
 
@@ -143,40 +173,5 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         remoteView.setTextViewText(R.id.message, message)
         remoteView.setImageViewResource(R.id.app_logo, R.mipmap.logo_aja_ntbs)
         return remoteView
-    }
-
-    private fun retrieveAuthToken(): String {
-        // Implementasi pengambilan auth token
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("auth_token", "") ?: ""
-    }
-
-    companion object {
-        fun sendFCMTokenToServer(authToken: String, fcmToken: String) {
-            Log.d("FCM", "Updating FCM token on server: $fcmToken")
-
-            // Ubah URL ini sesuai dengan server Anda
-            val retrofit = Retrofit.Builder()
-                .baseUrl("http://10.0.2.2:8000/")  // Gunakan IP emulator yang benar
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-
-            val apiService = retrofit.create(ApiService::class.java)
-
-            val call: Call<ResponseBody> = apiService.updateFCMToken("Bearer $authToken", Token(fcmToken))
-            call.enqueue(object : Callback<ResponseBody> {
-                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                    if (response.isSuccessful) {
-                        Log.d("FCM", "Token berhasil diperbarui di server")
-                    } else {
-                        Log.e("FCM", "Gagal memperbarui token: ${response.errorBody()?.string()}")
-                    }
-                }
-
-                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                    Log.e("FCM", "Kesalahan saat memperbarui token di server: ${t.message}")
-                }
-            })
-        }
     }
 }

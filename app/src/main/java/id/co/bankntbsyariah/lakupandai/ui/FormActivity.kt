@@ -3362,24 +3362,24 @@ class FormActivity : AppCompatActivity() {
 //                                    }
 //                                    return@launch
 //                                }
-fun retrieveAuthToken(): String {
-    // Return the stored auth token
-    return "auth_token" // Replace this with the actual logic to retrieve the token
-}
+                                fun retrieveAuthToken(): String {
+                                // Return the stored auth token
+                                 return "auth_token" // Replace this with the actual logic to retrieve the token
+                                }
 
+                                // Retrieve FCM token and send it to the server along with user_id
                                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                                     if (!task.isSuccessful) {
                                         Log.w("FCM", "Fetching FCM registration token failed", task.exception)
                                         return@addOnCompleteListener
                                     }
 
-                                    // Get new FCM token
                                     val fcmToken = task.result
                                     Log.d("FCM", "FCM Token: $fcmToken")
 
-                                    // Kirim token FCM ke server, memanggil fungsi dari MyFirebaseMessagingService
-                                    val authToken = retrieveAuthToken() // Panggil fungsi untuk mendapatkan auth token
-                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken)
+                                    // Send FCM token and user_id to server
+                                    val authToken = sharedPreferences.getString("token", "") ?: ""
+                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
                                 }
 
                                 withContext(Dispatchers.Main) {
@@ -3409,6 +3409,7 @@ fun retrieveAuthToken(): String {
             }
         }
     }
+
     private suspend fun handleFailedPinAttempt() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
@@ -4200,7 +4201,6 @@ fun retrieveAuthToken(): String {
         }
     }
 
-
     private fun saveTerminalData(terminalJsonResponse: JSONObject) {
         val terminalData = terminalJsonResponse.optJSONObject("data")
         val tid = terminalData?.optString("tid") ?: ""
@@ -4215,7 +4215,6 @@ fun retrieveAuthToken(): String {
 
         Log.d(TAG, "Saved terminal TID and IMEI to SharedPreferences")
     }
-
 
     // Fungsi untuk mengunggah file ke server
     private fun uploadImageFile(file: File, url: String) {
@@ -4246,3 +4245,4 @@ fun retrieveAuthToken(): String {
         })
     }
 }
+

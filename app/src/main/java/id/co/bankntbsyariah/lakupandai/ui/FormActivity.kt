@@ -373,7 +373,9 @@ class FormActivity : AppCompatActivity() {
                 if (formId == "AU00001") {
                     // If formId is "AU000001", do not navigate to MenuActivity
                     finish()
-                } else {
+                }else if(formId == "LPW0000"){
+                    navigateToLogin()
+                }else {
                     // Otherwise, navigate to MenuActivity
                     finish()
                     startActivity(
@@ -493,6 +495,8 @@ class FormActivity : AppCompatActivity() {
                     WindowManager.LayoutParams.WRAP_CONTENT
                 )
                 otpDialog?.show()
+                
+                startOtpTimer()
             }
 
             else -> {

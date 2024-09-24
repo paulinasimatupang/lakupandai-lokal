@@ -1013,7 +1013,7 @@ class FormActivity : AppCompatActivity() {
                                                             val preferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                                             val token = preferences.getString("token", "") ?: ""
                                                             val terminalId = preferences.getString("tid", "") ?: ""
-                                                            val messageId = msgId
+                                                            val messageId = msgId.replace("+", "%2B")
 
 
                                                             Log.d("FormActivity", "token: $token, tid: $terminalId, msg: $messageId")

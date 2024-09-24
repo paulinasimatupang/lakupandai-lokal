@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -29,8 +30,18 @@ class CheckUpdateActivity : AppCompatActivity() {
         processHandler = Handler(mainLooper)
         binding = ActivityCheckUpdateBinding.inflate(layoutInflater, null, false)
         setContentView(binding.root)
-
+        clearSharedPreferences()
         nextProcessStage()
+    }
+
+    private fun clearSharedPreferences() {
+        // Get the SharedPreferences instance
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.clear()
+        editor.apply()
+        val allPreferences = sharedPreferences.all
+        Log.d("SharedPreferences", "Contents after clear: $allPreferences")
     }
 
     private fun nextProcessStage() {

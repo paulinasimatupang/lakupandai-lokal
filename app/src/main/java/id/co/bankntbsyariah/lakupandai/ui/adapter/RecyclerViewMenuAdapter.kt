@@ -159,6 +159,10 @@ class RecyclerViewMenuAdapter(
             "reversal" to "reversal.png",
             "create cif" to "create_cif.png",
             "create rekening" to "create_rekening.png",
+            "profile_username" to "profile_username.png",
+            "profile_agen" to "profile_agen.png",
+            "profile_phone" to "profile_phone.png",
+            "profile_email" to "profile_email.png",
         )
         // Check if the icon name exists in the mapping
         return compIconMapping.containsValue(iconName)

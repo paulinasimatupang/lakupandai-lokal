@@ -421,8 +421,8 @@ class MenuActivity : AppCompatActivity() {
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
         menuList.clear()
 
-        val email = sharedPreferences.getString("email", "")
-        val phone = sharedPreferences.getString("phone", "")
+        val email = sharedPreferences.getString("merchant_email", "")
+        val phone = sharedPreferences.getString("merchant_phone", "")
         val username = sharedPreferences.getString("username", "")
         val mid = sharedPreferences.getString("mid", "")
 

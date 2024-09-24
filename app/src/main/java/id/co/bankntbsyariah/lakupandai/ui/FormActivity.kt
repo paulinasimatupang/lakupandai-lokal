@@ -137,6 +137,7 @@ class FormActivity : AppCompatActivity() {
     private var fileFotoKTP: File? = null
     private var fileFotoOrang: File? = null
     private val msgIdMap = mutableMapOf<String, String>()
+    private var currentTimer: CountDownTimer? = null
 
     data class Token(val token: String)
 
@@ -178,16 +179,16 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-        initLoginRegisterUI()
+//        initLoginRegisterUI()
 
         lifecycleScope.launch {
             val formValue = loadForm()
             setupScreen(formValue)
         }
 
-        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
-            registerFingerprint(it)
-        }
+//        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
+//            registerFingerprint(it)
+//        }
 
 
         findViewById<TextView>(R.id.forgot_password)?.setOnClickListener {
@@ -198,17 +199,17 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun initLoginRegisterUI() {
-        setContentView(R.layout.activity_form_login)
-        executor = ContextCompat.getMainExecutor(this)
-
-        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
-            authenticateFingerprint { encryptedFingerprint ->
-                encryptedFingerprint?.let { loginWithFingerprint(it) }
-            }
-        }
-
-    }
+//    private fun initLoginRegisterUI() {
+//        setContentView(R.layout.activity_form_login)
+//        executor = ContextCompat.getMainExecutor(this)
+//
+//        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
+//            authenticateFingerprint { encryptedFingerprint ->
+//                encryptedFingerprint?.let { loginWithFingerprint(it) }
+//            }
+//        }
+//
+//    }
 
     private fun authenticateFingerprint(callback: (String?) -> Unit) {
         val biometricPrompt = BiometricPrompt(this, executor,
@@ -619,6 +620,32 @@ class FormActivity : AppCompatActivity() {
             putExtra("MESSAGE_BODY", message)
         }
         startActivity(intent)
+    }
+
+    private fun startTimer(timerTextView: TextView): CountDownTimer {
+        val countDownTimer = object : CountDownTimer(120000, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val minutes = millisUntilFinished / 60000
+                val seconds = (millisUntilFinished % 60000) / 1000
+                val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+                timerTextView.text = timeFormatted
+            }
+
+            override fun onFinish() {
+                timerTextView.text = "00:00"
+            }
+        }
+
+        countDownTimer.start()
+        return countDownTimer
+    }
+
+    private fun resetTimer(timerTextView: TextView) {
+        currentTimer?.cancel()
+
+        timerTextView.text = ""
+        timerTextView.text = "02:00"
+        currentTimer = startTimer(timerTextView)
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -2075,7 +2102,10 @@ class FormActivity : AppCompatActivity() {
                     // Setup Resend OTP TextView
                     resendOtpTextView?.let {
                         Log.e("FormActivity", "RESEND OTP NOT null.")
-                        it.setOnClickListener { resendOtp() }
+                        it.setOnClickListener {
+                            resendOtp()
+                            resetTimer(timerTextView)
+                        }
 
                         val text = "Resend OTP"
                         val spannable = SpannableString(text).apply {
@@ -2083,22 +2113,7 @@ class FormActivity : AppCompatActivity() {
                         }
                         it.text = spannable
                     }
-
-                    val countDownTimer = object : CountDownTimer(120000, 1000) {
-                        override fun onTick(millisUntilFinished: Long) {
-                            val minutes = millisUntilFinished / 60000
-                            val seconds = (millisUntilFinished % 60000) / 1000
-                            val timeFormatted = String.format("%02d:%02d", minutes, seconds)
-                            timerTextView.text = timeFormatted
-                        }
-
-                        override fun onFinish() {
-                            timerTextView.text = "00:00"
-                            // Handle timeout scenario, e.g., disable inputs or show a message
-                        }
-                    }
-
-                    countDownTimer.start()
+                    currentTimer = startTimer(timerTextView)
 
                     // Setup OTP Digits
                     val otpDigits = listOf(

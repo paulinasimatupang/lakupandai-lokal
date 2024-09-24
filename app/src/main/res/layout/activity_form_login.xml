@@ -119,19 +119,19 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/fingerprintLoginButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Login Fingerprint"
-            android:onClick="loginFingerprint" />
+<!--        <Button-->
+<!--            android:id="@+id/fingerprintLoginButton"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Login Fingerprint"-->
+<!--            android:onClick="loginFingerprint" />-->
 
-        <Button
-            android:id="@+id/fingerprintRegisterButton"
-            android:layout_width="202dp"
-            android:layout_height="124dp"
-            android:onClick="registerFingerprint"
-            android:text="Register Fingerprint" />
+<!--        <Button-->
+<!--            android:id="@+id/fingerprintRegisterButton"-->
+<!--            android:layout_width="202dp"-->
+<!--            android:layout_height="124dp"-->
+<!--            android:onClick="registerFingerprint"-->
+<!--            android:text="Register Fingerprint" />-->
 
     </LinearLayout>
 

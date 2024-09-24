@@ -9,36 +9,34 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:background="@drawable/text_view_background"
-        android:padding="4dp">
+        android:background="@drawable/rounded_light_grey"
+        tools:ignore="MissingConstraints">
 
         <ImageView
             android:id="@+id/header_image"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:scaleType="fitCenter"
-            android:padding="3dp"
+            android:padding="8dp"
             android:src="@mipmap/logo_aja_ntbs"
-            app:layout_constraintBottom_toTopOf="@id/title"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.039"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.031" />
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/title"
+            app:layout_constraintHorizontal_chainStyle="packed" />
 
         <TextView
             android:id="@+id/title"
-            android:layout_width="262dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginBottom="16dp"
             android:text="Menu Item"
             android:textColor="@color/black"
             android:textSize="15sp"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.157"
             app:layout_constraintStart_toEndOf="@id/header_image"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
             tools:ignore="TextSizeCheck" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

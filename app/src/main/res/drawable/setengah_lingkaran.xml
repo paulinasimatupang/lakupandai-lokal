@@ -4,8 +4,7 @@
     <!-- Set ukuran setengah lingkaran -->
     <size
         android:width="200dp"
-        android:height="100dp" /> <!-- Ganti ukuran sesuai kebutuhan -->
-    <!-- Set sudut yang akan membentuk setengah lingkaran menghadap ke bawah -->
+        android:height="200dp" />
     <corners
         android:topLeftRadius="0dp"
         android:topRightRadius="0dp"

@@ -23,7 +23,7 @@ class ProdukAdapter(
 
             // Ubah background jika item dipilih
             if (isSelected) {
-                layout.background = ContextCompat.getDrawable(itemView.context, R.drawable.card_grey)
+                layout.background = ContextCompat.getDrawable(itemView.context, R.drawable.semi_circle_white)
             } else {
                 layout.background = ContextCompat.getDrawable(itemView.context, R.drawable.card_background)
             }

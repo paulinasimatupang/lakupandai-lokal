@@ -1631,7 +1631,7 @@ class FormActivity : AppCompatActivity() {
                                             Log.d(
                                                 "FormActivity",
                                                 "SELECTED OPTIONS : $selectedOptions")
-                                            if (component.id == "PR006") {
+                                            if (component.id == "PR006" || component.id == "PR007" || component.id == "PR008" || component.id == "PR009" || component.id == "PR010") {
                                                 selectedOptions
                                             } else {
                                                 mutableListOf(
@@ -1655,13 +1655,13 @@ class FormActivity : AppCompatActivity() {
                                         }
                                     }
                                 } else {
-                                    if (component.id == "PR006") {
+                                    if (component.id == "PR006" || component.id == "PR007" || component.id == "PR008" || component.id == "PR009" || component.id == "PR010") {
                                         compOption.map { Pair(it.print, it.value) }
                                     } else {
                                         mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
                                     }
                                 }
-                            if (component.id == "PR006") {
+                            if (component.id == "PR006" || component.id == "PR007" || component.id == "PR008" || component.id == "PR009" || component.id == "PR010") {
                                 val recyclerView = RecyclerView(this@FormActivity).apply {
                                     layoutManager = GridLayoutManager(this@FormActivity, 2)
                                     adapter = ProdukAdapter(options) { selectedItem ->
@@ -4998,9 +4998,6 @@ class FormActivity : AppCompatActivity() {
 
         val judul = bodyPengaduan.optString("judul", "")
         Log.d("FormActivity", "Judul: $judul")
-        if (judul == "Ganti Perangkat") {
-            sendRequestImei()
-        }
 
         // Definisikan URL API
         val createPengaduanUrl = "http://reportntbs.selada.id/api/pengaduan/create"
@@ -5028,13 +5025,24 @@ class FormActivity : AppCompatActivity() {
 
                     if (success) {
                         Log.d("FormActivity", "Pengaduan berhasil dikirim")
+                        val message = jsonResponse.optString("message", "Pengaduan berhasil dikirim")
+                        val data = jsonResponse.optJSONObject("data")
 
-                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                            putExtra("MESSAGE_BODY", "Pengaduan berhasil dikirim")
-                            putExtra("RETURN_TO_ROOT", true)
+
+                        data?.let {
+                            val id = it.optInt("id")
+                            if (judul == "Ganti Perangkat") {
+                                sendRequestImei(id.toString())
+                            }
+                            val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                putExtra("MESSAGE_BODY", message)
+                                putExtra("RETURN_TO_ROOT", true)
+                            }
+                            startActivity(intent)
+                        } ?: run {
+                            Log.e("FormActivity", "Data field is null")
                         }
-                        startActivity(intent)
                     } else {
                         Log.d("FormActivity", "Gagal mengirim pengaduan: ${jsonResponse.optString("message", "No message")}")
 
@@ -5061,7 +5069,7 @@ class FormActivity : AppCompatActivity() {
     }
 
 
-    private fun sendRequestImei() {
+    private fun sendRequestImei(id: String) {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
         val midTerminal = sharedPreferences.getString("mid", null)
         val tidTerminal = sharedPreferences.getString("tid", null)
@@ -5079,7 +5087,8 @@ class FormActivity : AppCompatActivity() {
         {
             "tid": "$tidTerminal",
             "imei": "$imei",
-            "mid": "$midTerminal"
+            "mid": "$midTerminal",
+            "id_pengaduan": "$id"
         }
         """.trimIndent()
             Log.d(TAG, "Request body: $jsonBody")

@@ -142,64 +142,20 @@ class MenuActivity : AppCompatActivity() {
             userGreetingTextView.text = "HI, $Userfullname!"
         }
 
-        // Mendapatkan referensi ke TextView dan ImageView
-        val namaDepanTextView: TextView? = findViewById(R.id.namaDepanTextView)
-        val userTextView: TextView? = findViewById(R.id.user)
-        val usernameTextView: TextView? = findViewById(R.id.username)
-        val emailTextView: TextView? = findViewById(R.id.email)
-        val nomorTeleponTextView: TextView? = findViewById(R.id.nomor_telepon) // Referensi untuk nomor telepon
-        val formText: TextView? = findViewById(R.id.text)
-        val formImage: ImageView? = findViewById(R.id.image)
-        val alamatTextView: TextView? = findViewById(R.id.alamat)
-
-        if (userTextView != null && namaDepanTextView != null && usernameTextView != null && emailTextView != null && nomorTeleponTextView != null && alamatTextView != null) {
-
+        val user: TextView? = findViewById(R.id.user)
+        if (user != null) {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val userFullName = sharedPreferences.getString("fullname", "") ?: ""
-            val username = sharedPreferences.getString("username", "-") ?: "-"
-            val email = sharedPreferences.getString("email", "-") ?: "-"
-            val nomorTelepon = sharedPreferences.getString("phone", "-") ?: "-"
-            val alamat = sharedPreferences.getString("address", "-") ?: "-" // Default alamat
-
-
-            val namaDepan = userFullName.split(" ").firstOrNull() ?: ""
-
-            val namaDepanDuaHuruf = if (namaDepan.length >= 2) {
-                namaDepan.substring(0, 2)
-            } else {
-                namaDepan
-            }
-
-
-            userTextView.text = userFullName
-
-            namaDepanTextView.text = namaDepanDuaHuruf
-
-            usernameTextView.text = username
-
-            emailTextView.text = email
-
-            nomorTeleponTextView.text = nomorTelepon
-
-            alamatTextView.text = if (alamat.isEmpty() || alamat == "-") "-" else alamat
-
-            // Log untuk debugging
-            Log.d("MenuActivity", "Nama User: $userFullName")
-            Log.d("MenuActivity", "Nama Depan Dua Huruf: $namaDepanDuaHuruf")
-            Log.d("MenuActivity", "Username: $username")
-            Log.d("MenuActivity", "Email: $email")
-            Log.d("MenuActivity", "Nomor Telepon: $nomorTelepon")
-            Log.d("MenuActivity", "Alamat: $alamat")
+            val userFullname = sharedPreferences.getString("fullname", "") ?: ""
+            user.text = userFullname
         }
 
-        formText?.setOnClickListener {
-            navigateToScreen("MN00000")
+        val namaDepanTextView: TextView? = findViewById(R.id.namaDepanTextView)
+        if (namaDepanTextView != null) {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val userFullname = sharedPreferences.getString("fullname", "") ?: ""
+            val firstLetter = userFullname.firstOrNull()?.toString()?.uppercase() ?: ""
+            namaDepanTextView.text = firstLetter
         }
-
-        formImage?.setOnClickListener {
-            navigateToScreen("MN00000")
-        }
-
 
         // Initialize Image Slider only if the current layout contains the image slider
         val imageSliderView: View? = findViewById(R.id.imageSlider)
@@ -464,12 +420,28 @@ class MenuActivity : AppCompatActivity() {
         val spacing = (resources.displayMetrics.density * 8).toInt()
         menuContainer?.addItemDecoration(SpacingItemDecorator(spacing))
         menuList.clear()
+
+        val email = sharedPreferences.getString("email", "")
+        val phone = sharedPreferences.getString("phone", "")
+        val username = sharedPreferences.getString("username", "")
+        val mid = sharedPreferences.getString("mid", "")
+
         val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001", menuId == "PR00000",  menuId== "KOM0000", menuId=="PKOM001")
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->
             if (!comp.visible) return@forEach
-            menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+            if (screen.id == "PP00001") {
+                when (comp.label) {
+                    "username" -> menuList.add(MenuItem(comp.icon, username ?: comp.label, comp.label, comp.desc, comp.action))
+                    "mid" -> menuList.add(MenuItem(comp.icon, mid ?: comp.label, comp.label, comp.desc, comp.action))
+                    "email" -> menuList.add(MenuItem(comp.icon, email ?: comp.label, comp.label, comp.desc, comp.action))
+                    "phone" -> menuList.add(MenuItem(comp.icon, phone ?: comp.label, comp.label, comp.desc, comp.action))
+                    else -> menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                }
+            } else {
+                menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+            }
         }
         Log.d("MenuActivity", "Menu item count: ${menuList.size}")
         menuAdapter.notifyDataSetChanged()

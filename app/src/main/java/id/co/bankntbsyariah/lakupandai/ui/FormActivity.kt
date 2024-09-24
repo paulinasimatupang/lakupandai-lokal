@@ -3655,7 +3655,7 @@ class FormActivity : AppCompatActivity() {
             val unf04Value = componentValues["SET10"] ?: ""
             val unf05Value = componentValues["NAR05"] ?: ""
             val rnr06Value = componentValues["TRF30"] ?: ""
-            val rnr07Value = componentValues["TRT07 "] ?: ""
+            val rnr07Value = componentValues["TRT07"] ?: ""
             val rnr08Value = componentValues["TRF31"] ?: ""
             val rnr09Value = componentValues["TRF30"] ?: ""
             val rnr10Value = componentValues["T0002"] ?: ""

@@ -178,12 +178,17 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-//        initLoginRegisterUI()
+        initLoginRegisterUI()
 
         lifecycleScope.launch {
             val formValue = loadForm()
             setupScreen(formValue)
         }
+
+        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
+            registerFingerprint(it)
+        }
+
 
         findViewById<TextView>(R.id.forgot_password)?.setOnClickListener {
             val intent = Intent(this, FormActivity::class.java).apply {
@@ -193,19 +198,17 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-//    private fun initLoginRegisterUI() {
-//        setContentView(R.layout.activity_form_login)
-//        executor = ContextCompat.getMainExecutor(this)
-//
-//        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
-//            authenticateFingerprint { encryptedFingerprint ->
-//                encryptedFingerprint?.let { loginWithFingerprint(it) }
-//            }
-//        }
-//        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
-//            registerFingerprint()
-//        }
-//    }
+    private fun initLoginRegisterUI() {
+        setContentView(R.layout.activity_form_login)
+        executor = ContextCompat.getMainExecutor(this)
+
+        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
+            authenticateFingerprint { encryptedFingerprint ->
+                encryptedFingerprint?.let { loginWithFingerprint(it) }
+            }
+        }
+
+    }
 
     private fun authenticateFingerprint(callback: (String?) -> Unit) {
         val biometricPrompt = BiometricPrompt(this, executor,
@@ -287,17 +290,23 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun registerFingerprint() {
+    fun registerFingerprint(view: View) {
         val userId = getUserIdFromSession()
 
         if (userId != null) {
             authenticateFingerprint { fingerprintData ->
-                fingerprintData?.let { registerFingerprintWithServer(userId, it) }
+                if (fingerprintData != null) {
+                    registerFingerprintWithServer(userId, fingerprintData)
+                } else {
+                    Toast.makeText(this, "Fingerprint data is null", Toast.LENGTH_SHORT).show()
+                }
             }
         } else {
             Toast.makeText(this, "You must be logged in to register a fingerprint", Toast.LENGTH_SHORT).show()
         }
     }
+
+
 
     private fun registerFingerprintWithServer(userId: String, fingerprintData: String) {
         lifecycleScope.launch(Dispatchers.IO) {

@@ -108,6 +108,7 @@ import android.os.CancellationSignal
 import android.text.InputFilter
 import androidx.biometric.BiometricPrompt
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import java.util.concurrent.Executor
@@ -3610,9 +3611,6 @@ class FormActivity : AppCompatActivity() {
 //            var msgId = msgUi + timestamp
             var msgSi = screen.actionUrl
 
-            val msgId = msgSi?.let { manageMsgId(it, imei, timestamp) }
-            println("Generated Message ID: $msgId")
-
             Log.d("FormActivity", "msgSi: $msgSi")
             Log.d("FormActivity", "PICK OTP: $pickOTP")
 
@@ -3727,6 +3725,9 @@ class FormActivity : AppCompatActivity() {
 
             Log.d("Form", "Component : ${componentValues}")
 
+            val msgId = manageMsgId(msgSi ?: "", imei, timestamp)
+
+            Log.d("FormActivity", "Generated Message ID: $msgId")
             val msgObject = JSONObject().apply {
                 put("msg_id", msgId)
                 put("msg_ui", msgUi)
@@ -3751,67 +3752,60 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun manageMsgId(serviceId: String, imei: String, timestamp: String) {
+    fun manageMsgId(serviceId: String, imei: String, timestamp: String): String {
         val msgUi = imei
         val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val token = sharedPreferences.getString("token", "") ?: ""
         Log.d("GETPARAM2", "TOKEN MSG ID: $token")
 
-
-        lifecycleScope.launch {
-            val response = withContext(Dispatchers.IO) {
-                webCallerImpl.getParam2(serviceId, token)
-            }
-
-            Log.d("FormActivity", "getParam2 RESPONSE: $response")
-
-            if (response != null) {
-                val param2 = response.optString("param2")
-                val countLimit = response.optInt("count", 0)
-                Log.d("GETPARAM2", "param2 response: $param2")
-
-                if (param2 != "null" && param2 != "") {
-                    Log.d("GETPARAM2", "MASUK")
-                    // Ambil msgIds yang ada untuk param2 ini
-                    val msgIds = msgIdMap[param2] ?: mutableListOf()
-                    val currentCountLimit = countLimitMap[param2] ?: countLimit
-
-                    // Jika ada msgId yang telah digunakan
-                    if (msgIds.isNotEmpty() && currentCountLimit > 0) {
-                        // Menggunakan msgId yang ada
-                        Log.d("FormActivity", "Using existing msgId: ${msgIds.last()} for param2: $param2")
-                        countLimitMap[param2] = currentCountLimit - 1 // Kurangi countLimit
-
-                        // Jika countLimit menjadi 0
-                        if (currentCountLimit - 1 == 0) {
-                            msgIdMap.remove(param2) // Hapus msgId lama
-                            countLimitMap.remove(param2) // Hapus countLimit
-                            Log.d("FormActivity", "Count limit reached for param2: $param2. Clearing msgId and countLimit.")
-                        }
-                    } else {
-                        // Jika tidak ada msgId atau countLimit sudah 0, buat msgId baru
-                        val newMsgId = msgUi + timestamp
-                        msgIds.add(newMsgId) // Tambahkan msgId baru ke list
-                        msgIdMap[param2] = msgIds // Simpan kembali list ke map
-                        countLimitMap[param2] = countLimit - 1 // Atur countLimit ke satu kurang
-
-                        Log.d("FormActivity", "New msgId created: $newMsgId for param2: $param2 with new countLimit: ${countLimit - 1}")
-                    }
-                } else {
-                    Log.d("GETPARAM2", "GAK ADA PARAM2")
-                    // Jika tidak ada param2, buat msgId baru
-                    val msgId = msgUi + timestamp
-                    Log.d("FormActivity", "New msgId created: $msgId (no param2)")
+        // Call the webCaller synchronously (blocking)
+        val response = runBlocking {
+            try {
+                withContext(Dispatchers.IO) {
+                    webCallerImpl.getParam2(serviceId, token)
                 }
-
-                Log.d("FormActivity", "Current msgIdMap: $msgIdMap")
-                Log.d("FormActivity", "Current countLimitMap: $countLimitMap")
-            } else {
-                // Hit API gagal
-                val failedMsgId = msgUi + timestamp
-                Log.d("FormActivity", "API call failed, created msgId: $failedMsgId")
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error fetching param2: ${e.message}")
+                null
             }
         }
+
+        Log.d("FormActivity", "getParam2 RESPONSE: $response")
+
+        var msgId = msgUi + timestamp // Default if no param2 or failure
+        if (response != null) {
+            val param2 = response.optString("param2")
+            val countLimit = response.optInt("count", 0)
+            Log.d("GETPARAM2", "param2 response: $param2")
+
+            if (param2 != "null" && param2.isNotEmpty()) {
+                Log.d("GETPARAM2", "MASUK")
+                // Fetch existing msgIds for param2
+                val msgIds = msgIdMap[param2] ?: mutableListOf()
+                val currentCountLimit = countLimitMap[param2] ?: countLimit
+
+                if (msgIds.isNotEmpty() && currentCountLimit > 0) {
+                    msgId = msgIds.last()
+                    countLimitMap[param2] = currentCountLimit - 1
+                    if (currentCountLimit - 1 == 0) {
+                        msgIdMap.remove(param2)
+                        countLimitMap.remove(param2)
+                    }
+                } else {
+                    msgId = msgUi + timestamp
+                    msgIds.add(msgId)
+                    msgIdMap[param2] = msgIds
+                    countLimitMap[param2] = countLimit - 1
+                }
+            }else{
+                Log.d("GETPARAM2", "Tidak punya param2 atau param2 null")
+            }
+        } else {
+            Log.d("FormActivity", "API call failed, created msgId: $msgId")
+        }
+
+        Log.d("FormActivity", "Generated msgId: $msgId")
+        return msgId
     }
 
     private fun createBodyPengaduan(screen: Screen): JSONObject? {

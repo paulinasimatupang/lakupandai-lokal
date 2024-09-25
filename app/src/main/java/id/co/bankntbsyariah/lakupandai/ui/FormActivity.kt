@@ -136,7 +136,9 @@ class FormActivity : AppCompatActivity() {
     private var signatureFile: File? = null
     private var fileFotoKTP: File? = null
     private var fileFotoOrang: File? = null
-    private val msgIdMap = mutableMapOf<String, String>()
+    private val msgIdMap = mutableMapOf<String, MutableList<String>>()
+    private val countLimitMap = mutableMapOf<String, Int>()
+
     private var currentTimer: CountDownTimer? = null
 
     data class Token(val token: String)
@@ -148,6 +150,7 @@ class FormActivity : AppCompatActivity() {
     private var otpScreen: Screen? = null
 
     private lateinit var executor: Executor
+    private val webCallerImpl = WebCallerImpl()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -2019,6 +2022,10 @@ class FormActivity : AppCompatActivity() {
 
                                 if (pinLogin != "null" && pinLogin == pinValue) {
                                     otpScreen?.let { screen ->
+                                        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                        val editor = sharedPreferences.edit()
+                                        editor.putInt("pin_attempts", 0)
+                                        editor.apply()
                                         handleScreenType(screen)
                                     }
                                 } else {
@@ -3744,47 +3751,68 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun manageMsgId(serviceId: String, imei: String, timestamp: String): String {
+    private fun manageMsgId(serviceId: String, imei: String, timestamp: String) {
         val msgUi = imei
-        val msgId: String
+        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+        val token = sharedPreferences.getString("token", "") ?: ""
+        Log.d("GETPARAM2", "TOKEN MSG ID: $token")
 
-        // Logika untuk mendapatkan atau menghasilkan msg_id
-        when (serviceId) {
-            "BPR001" -> {
-                msgId = msgUi + timestamp // Buat msg_id baru untuk BPR001
-                msgIdMap["BPR001"] = msgId // Simpan
+
+        lifecycleScope.launch {
+            val response = withContext(Dispatchers.IO) {
+                webCallerImpl.getParam2(serviceId, token)
             }
-            "BPR002" -> {
-                // Gunakan msg_id yang disimpan dari BPR001
-                msgId = msgIdMap["BPR001"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
-                msgIdMap.remove("BPR001") // Hapus setelah digunakan
-            }
-            "PLN000" -> {
-                msgId = msgUi + timestamp // Buat msg_id baru untuk PLN000
-                msgIdMap["PLN000"] = msgId // Simpan
-            }
-            "PLN001", "PLN002" -> {
-                // Gunakan msg_id yang disimpan dari PLN000
-                msgId = msgIdMap["PLN000"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
-                msgIdMap.remove("PLN000") // Hapus setelah digunakan
-            }
-            "PDAM00" -> {
-                msgId = msgUi + timestamp // Buat msg_id baru untuk PLNBR01
-                msgIdMap["PDAM00"] = msgId // Simpan
-            }
-            "PDAM01", "PDAM02" -> {
-                // Gunakan msg_id yang disimpan dari PLNBR01
-                msgId = msgIdMap["PDAM00"] ?: (msgUi + timestamp) // Buat baru jika tidak ada
-                msgIdMap.remove("PDAM00") // Hapus setelah digunakan
-            }
-            else -> {
-                msgId = msgUi + timestamp // Default: buat msg_id baru jika tidak ada aturan
+
+            Log.d("FormActivity", "getParam2 RESPONSE: $response")
+
+            if (response != null) {
+                val param2 = response.optString("param2")
+                val countLimit = response.optInt("count", 0)
+                Log.d("GETPARAM2", "param2 response: $param2")
+
+                if (param2 != "null" && param2 != "") {
+                    Log.d("GETPARAM2", "MASUK")
+                    // Ambil msgIds yang ada untuk param2 ini
+                    val msgIds = msgIdMap[param2] ?: mutableListOf()
+                    val currentCountLimit = countLimitMap[param2] ?: countLimit
+
+                    // Jika ada msgId yang telah digunakan
+                    if (msgIds.isNotEmpty() && currentCountLimit > 0) {
+                        // Menggunakan msgId yang ada
+                        Log.d("FormActivity", "Using existing msgId: ${msgIds.last()} for param2: $param2")
+                        countLimitMap[param2] = currentCountLimit - 1 // Kurangi countLimit
+
+                        // Jika countLimit menjadi 0
+                        if (currentCountLimit - 1 == 0) {
+                            msgIdMap.remove(param2) // Hapus msgId lama
+                            countLimitMap.remove(param2) // Hapus countLimit
+                            Log.d("FormActivity", "Count limit reached for param2: $param2. Clearing msgId and countLimit.")
+                        }
+                    } else {
+                        // Jika tidak ada msgId atau countLimit sudah 0, buat msgId baru
+                        val newMsgId = msgUi + timestamp
+                        msgIds.add(newMsgId) // Tambahkan msgId baru ke list
+                        msgIdMap[param2] = msgIds // Simpan kembali list ke map
+                        countLimitMap[param2] = countLimit - 1 // Atur countLimit ke satu kurang
+
+                        Log.d("FormActivity", "New msgId created: $newMsgId for param2: $param2 with new countLimit: ${countLimit - 1}")
+                    }
+                } else {
+                    Log.d("GETPARAM2", "GAK ADA PARAM2")
+                    // Jika tidak ada param2, buat msgId baru
+                    val msgId = msgUi + timestamp
+                    Log.d("FormActivity", "New msgId created: $msgId (no param2)")
+                }
+
+                Log.d("FormActivity", "Current msgIdMap: $msgIdMap")
+                Log.d("FormActivity", "Current countLimitMap: $countLimitMap")
+            } else {
+                // Hit API gagal
+                val failedMsgId = msgUi + timestamp
+                Log.d("FormActivity", "API call failed, created msgId: $failedMsgId")
             }
         }
-
-        return msgId
     }
-
 
     private fun createBodyPengaduan(screen: Screen): JSONObject? {
         return try {
@@ -4122,7 +4150,7 @@ class FormActivity : AppCompatActivity() {
     private suspend fun handleFailedPinAttempt() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
-        val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
+        val currentAttempts = sharedPreferences.getInt("pin_attempts", 0)
 
         if (currentAttempts >= 3) {
             blockUserAccount()
@@ -4134,7 +4162,7 @@ class FormActivity : AppCompatActivity() {
             }
             startActivity(intentPopup)
         } else {
-            editor.putInt("login_attempts", currentAttempts + 1)
+            editor.putInt("pin_attempts", currentAttempts + 1)
             editor.apply()
             val attemptsLeft = 3 - (currentAttempts + 1)
             withContext(Dispatchers.Main) {
@@ -4757,8 +4785,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
-    private val webCallerImpl = WebCallerImpl()
 
     private fun createOTP(callback: (JSONObject?) -> Unit) {
         lifecycleScope.launch {

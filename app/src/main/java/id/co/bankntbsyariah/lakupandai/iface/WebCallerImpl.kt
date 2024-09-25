@@ -8,6 +8,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody
+import org.json.JSONException
+import org.json.JSONObject
 import java.io.IOException
 
 class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCaller {
@@ -252,4 +254,41 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             null
         }
     }
+
+    override fun getParam2(serviceId: String, token: String): JSONObject? {
+        val url = "http://reportntbs.selada.id/api/service/param2/$serviceId"
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        Log.d("GETPARAM2", "Token: $token")
+        Log.d("GETPARAM2", "Service ID: $serviceId")
+
+        return try {
+            client.newCall(request).execute().let { response ->
+                if (!response.isSuccessful) {
+                    Log.e("GETPARAM2", "Failed to fetch param2: ${response.message}, Code: ${response.code}")
+                    null
+                } else {
+                    val responseBody = response.body?.string() // Ambil body sebagai string
+                    Log.d("GETPARAM2", "Raw response body: $responseBody") // Tambahkan log untuk melihat raw response
+
+                    // Cek apakah respons body adalah JSON yang valid
+                    return try {
+                        JSONObject(responseBody) // Parse JSON
+                    } catch (jsonException: JSONException) {
+                        Log.e("GETPARAM2", "Response is not a valid JSON: ${jsonException.message}")
+                        null
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("GETPARAM2", "Exception occurred while fetching param2", e)
+            null
+        }
+    }
+
 }

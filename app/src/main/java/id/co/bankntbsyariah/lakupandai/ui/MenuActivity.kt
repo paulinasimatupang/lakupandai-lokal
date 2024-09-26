@@ -276,6 +276,18 @@ class MenuActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        findViewById<TextView>(R.id.textkembali)?.setOnClickListener {
+            val intent = Intent(this, MenuActivity::class.java)
+            intent.putExtra("formId", "MN00000")
+            startActivity(intent)
+        }
+
+        findViewById<ImageView>(R.id.imagekembali)?.setOnClickListener {
+            val intent = Intent(this, MenuActivity::class.java)
+            intent.putExtra("formId", "MN00000")
+            startActivity(intent)
+        }
+
         findViewById<ImageButton>(R.id.history_nav)?.setOnClickListener {
             val intent = Intent(this@MenuActivity, FormActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

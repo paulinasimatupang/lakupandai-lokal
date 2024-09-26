@@ -106,6 +106,7 @@ import android.hardware.fingerprint.FingerprintManager
 import android.media.MediaDrm
 import android.os.CancellationSignal
 import android.text.InputFilter
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -183,16 +184,16 @@ class FormActivity : AppCompatActivity() {
 
         handleBackPress()
 
-//        initLoginRegisterUI()
+        initLoginRegisterUI()
 
         lifecycleScope.launch {
             val formValue = loadForm()
             setupScreen(formValue)
         }
 
-//        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
-//            registerFingerprint(it)
-//        }
+        findViewById<Button>(R.id.fingerprintRegisterButton).setOnClickListener {
+            registerFingerprint(it)
+        }
 
 
         findViewById<TextView>(R.id.forgot_password)?.setOnClickListener {
@@ -202,65 +203,117 @@ class FormActivity : AppCompatActivity() {
             startActivity(intent)
         }
     }
+    private fun initLoginRegisterUI() {
+        setContentView(R.layout.activity_form_login)
+        executor = ContextCompat.getMainExecutor(this)
 
-//    private fun initLoginRegisterUI() {
-//        setContentView(R.layout.activity_form_login)
-//        executor = ContextCompat.getMainExecutor(this)
-//
-//        findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
-//            authenticateFingerprint { encryptedFingerprint ->
-//                encryptedFingerprint?.let { loginWithFingerprint(it) }
-//            }
-//        }
-//
-//    }
+        if (isFingerprintSupported()) {
+            findViewById<Button>(R.id.fingerprintLoginButton).visibility = View.VISIBLE
+            findViewById<Button>(R.id.fingerprintLoginButton).setOnClickListener {
+                loginFingerprint(it)
+            }
+        } else {
+            Log.d("FormActivity", "Fingerprint not supported")
+        }
+    }
 
-    private fun authenticateFingerprint(callback: (String?) -> Unit) {
-        val biometricPrompt = BiometricPrompt(this, executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    Toast.makeText(this@FormActivity, "Authentication error: $errString", Toast.LENGTH_SHORT).show()
-                }
+    fun loginFingerprint(view: View) {
+        authenticateFingerprintForLogin { fingerprintData ->
+            if (fingerprintData != null) {
+                Log.d("FormActivity", "Fingerprint data received: $fingerprintData")
+                loginWithFingerprint(fingerprintData)
+            } else {
+                Log.e("FormActivity", "Fingerprint data is null")
+                Toast.makeText(this, "Failed to retrieve fingerprint data.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
+    private fun authenticateFingerprintForLogin(callback: (String?) -> Unit) {
+        if (!isFingerprintSupported()) {
+            Toast.makeText(this, "Fingerprint authentication not supported.", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-                    // Retrieve userId from session or other identifiable user data
-                    val userId = getUserIdFromSession()
+        val biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                val hashedFingerprint = hashFingerprintData(result.cryptoObject?.signature?.toString() ?: "")
+                callback(hashedFingerprint)
+            }
 
-                    // Simulate fingerprint by hashing userId
-                    val hashedFingerprint = userId?.let { hashUserId(it) }
-                    callback(hashedFingerprint)
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    Toast.makeText(this@FormActivity, "Authentication failed", Toast.LENGTH_SHORT).show()
-                }
-            })
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                Log.e("BiometricAuth", "Authentication failed")
+                Toast.makeText(this@FormActivity, "Authentication failed, please try again.", Toast.LENGTH_SHORT).show()
+            }
+        })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Fingerprint Authentication")
-            .setSubtitle("Use fingerprint to authenticate")
+            .setSubtitle("Use your fingerprint to login")
             .setNegativeButtonText("Cancel")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
             .build()
 
         biometricPrompt.authenticate(promptInfo)
     }
 
-    private fun hashUserId(userId: String): String {
-        // Use SHA-256 to hash the user ID
+    private fun hashFingerprintData(fingerprintData: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(userId.toByteArray())
-        // Convert to Base64 string for easy transmission
+        val hashBytes = digest.digest(fingerprintData.toByteArray())
         return Base64.encodeToString(hashBytes, Base64.NO_WRAP)
+    }
+
+    private fun authenticateFingerprint(callback: (String?) -> Unit) {
+        if (!isFingerprintSupported()) {
+            Toast.makeText(this, "Fingerprint authentication not supported.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val biometricPrompt = BiometricPrompt(this, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    val userId = getUserIdFromSession()
+                    val hashedFingerprint = hashFingerprintData(result.cryptoObject?.signature?.toString() ?: "")
+                    callback(hashedFingerprint)
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Log.e("BiometricAuth", "Authentication failed")
+                    Toast.makeText(this@FormActivity, "Authentication failed, please try again.", Toast.LENGTH_SHORT).show()
+                }
+            })
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Fingerprint Authentication")
+            .setSubtitle("Use your fingerprint to authenticate")
+            .setNegativeButtonText("Cancel")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    private fun isFingerprintSupported(): Boolean {
+        val biometricManager = BiometricManager.from(this)
+        return biometricManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    private fun generateMsgUi(): String {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 16)
     }
 
     private fun loginWithFingerprint(fingerprintData: String) {
         lifecycleScope.launch(Dispatchers.IO) {
+            val hashedFingerprint = hashFingerprintData(fingerprintData)
+            Log.d("FingerprintLogin", "Hashed fingerprint for login: $hashedFingerprint")
+
             val requestBody = FormBody.Builder()
-                .add("finger_print", fingerprintData)
+                .add("finger_print", hashedFingerprint)
+                .add("msg_ui", generateMsgUi())
                 .build()
 
             val request = Request.Builder()
@@ -269,55 +322,61 @@ class FormActivity : AppCompatActivity() {
                 .build()
 
             try {
+                Log.d("FingerprintLogin", "Sending login request with fingerprint data...")
                 val response = client.newCall(request).execute()
-                val responseData = response.body?.string()
+                val responseBody = response.body?.string()
+                Log.d("FingerprintLogin", "Raw response body: $responseBody")
 
-                if (response.isSuccessful && responseData != null) {
-                    val jsonResponse = JSONObject(responseData)
-                    val token = jsonResponse.optString("token")
-                    val user = jsonResponse.optJSONObject("data")
-                    withContext(Dispatchers.Main) {
-                        saveUserSession(user, token)
-                        Toast.makeText(this@FormActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+                if (response.isSuccessful && responseBody != null) {
+                    val jsonResponse = JSONObject(responseBody)
+                    val status = jsonResponse.optBoolean("status", false)
 
-                        val intent = Intent(this@FormActivity, MenuActivity::class.java).apply {
-                            putExtra("screen_id", "idMN00000")
+                    if (status) {
+                        val token = jsonResponse.optString("token")
+                        val user = jsonResponse.optJSONObject("data")
+
+                        if (user != null) {
+                            withContext(Dispatchers.Main) {
+                                saveUserSession(user, token)
+
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                val terminalImei = sharedPreferences.getString("imei", "") ?: ""
+                                Log.d(TAG, "IMEI Login Finger: $terminalImei")
+
+                                if (terminalImei.isNotEmpty()) {
+                                    Toast.makeText(this@FormActivity, "Login berhasil dengan sidik jari", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                } else {
+                                    Log.e(TAG, "IMEI not found in SharedPreferences")
+                                    Toast.makeText(this@FormActivity, "IMEI tidak ditemukan", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            Log.e("FingerprintLogin", "User data is null")
                         }
-                        startActivity(intent)
-                        finish()
+                    } else {
+                        Log.e("FingerprintLogin", "Login failed with status false")
+                        handleFailedLoginAttempt(responseBody)
                     }
                 } else {
-                    handleFailedLoginAttempt(responseData)
+                    Log.e("FingerprintLogin", "Login failed with response code: ${response.code}")
+                    handleFailedLoginAttempt(responseBody)
                 }
             } catch (e: Exception) {
-                Log.e("FingerprintLogin", "Error: ${e.message}")
+                Log.e("FingerprintLogin", "Error during login: ${e.message}")
             }
         }
     }
-
-    fun registerFingerprint(view: View) {
-        val userId = getUserIdFromSession()
-
-        if (userId != null) {
-            authenticateFingerprint { fingerprintData ->
-                if (fingerprintData != null) {
-                    registerFingerprintWithServer(userId, fingerprintData)
-                } else {
-                    Toast.makeText(this, "Fingerprint data is null", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            Toast.makeText(this, "You must be logged in to register a fingerprint", Toast.LENGTH_SHORT).show()
-        }
-    }
-
 
 
     private fun registerFingerprintWithServer(userId: String, fingerprintData: String) {
         lifecycleScope.launch(Dispatchers.IO) {
+            val hashedFingerprint = hashFingerprintData(fingerprintData)
+            Log.d("FingerprintRegister", "Hashed fingerprint for registration: $hashedFingerprint")
+
             val requestBody = FormBody.Builder()
                 .add("id", userId)
-                .add("finger_print", fingerprintData)
+                .add("finger_print", hashedFingerprint)
                 .build()
 
             val request = Request.Builder()
@@ -327,18 +386,39 @@ class FormActivity : AppCompatActivity() {
 
             try {
                 val response = client.newCall(request).execute()
-                val responseData = response.body?.string()
+                if (!response.isSuccessful) {
+                    handleFailedRegistration(response.body?.string())
+                    return@launch
+                }
 
-                if (response.isSuccessful && responseData != null) {
+                val jsonResponse = JSONObject(response.body?.string() ?: "{}")
+                val status = jsonResponse.optBoolean("status", false)
+                if (status) {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@FormActivity, "Fingerprint registered successfully!", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    handleFailedRegistration(responseData)
+                    handleFailedRegistration(jsonResponse.toString())
                 }
             } catch (e: Exception) {
                 Log.e("FingerprintRegister", "Error: ${e.message}")
             }
+        }
+    }
+
+    fun registerFingerprint(view: View) {
+        val userId = getUserIdFromSession()
+        if (userId != null) {
+            authenticateFingerprint { fingerprintData ->
+                if (fingerprintData != null) {
+                    registerFingerprintWithServer(userId, fingerprintData)
+                    Log.e("FingerprintRegist", "Fingerprint registration value: $fingerprintData")
+                } else {
+                    Toast.makeText(this, "Fingerprint data is null", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(this, "You must be logged in to register a fingerprint", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -351,6 +431,7 @@ class FormActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.Main) {
             val jsonResponse = JSONObject(responseData ?: "{}")
             val errorMessage = jsonResponse.optString("message", "Login failed.")
+            Log.e("LoginAttempt", errorMessage)
             Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
         }
     }
@@ -363,15 +444,41 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveUserSession(user: JSONObject?, token: String) {
+    private fun saveUserSession(user: JSONObject, token: String) {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
 
-        editor.putString("id", user?.optString("id"))
+        editor.putString("username", user.optString("username", "Unknown"))
         editor.putString("token", token)
-        editor.apply()
-    }
+        editor.putString("fullname", user.optString("fullname", "Unknown"))
+        editor.putString("id", user.optString("id", "Unknown"))
 
+        val merchantData = user.optJSONObject("merchant")
+        val terminalArray = merchantData?.optJSONArray("terminal")
+
+        if (merchantData != null) {
+            editor.putString("merchant_id", merchantData.optString("id", "Unknown"))
+            editor.putString("merchant_name", merchantData.optString("name", "Unknown"))
+            editor.putString("norekening", merchantData.optString("no", "Unknown"))
+            editor.putString("merchant_code", merchantData.optString("code", "Unknown"))
+            editor.putString("merchant_address", merchantData.optString("address", "Unknown"))
+            editor.putString("merchant_phone", merchantData.optString("phone", "Unknown"))
+            editor.putString("merchant_email", merchantData.optString("email", "Unknown"))
+            editor.putString("merchant_balance", merchantData.optString("balance", "0"))
+            editor.putString("merchant_avatar", merchantData.optString("avatar", "Unknown"))
+            editor.putInt("merchant_status", merchantData.optInt("status", 0))
+        }
+
+        val terminalData = terminalArray?.getJSONObject(0)
+        if (terminalData != null) {
+            val terminalImei = terminalData.optString("imei", "Unknown")
+            editor.putString("imei", terminalImei)
+            Log.d(TAG, "IMEI Finger: $terminalImei")
+        }
+
+        editor.apply()
+        Log.d(TAG, "IMEI saved in SharedPreferences: ${sharedPreferences.getString("imei", "null")}")
+    }
 
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->

@@ -36,10 +36,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" />
 
-<!--    <Button-->
-<!--        android:id="@+id/fingerprintRegisterButton"-->
-<!--        android:layout_width="223dp"-->
-<!--        android:layout_height="77dp"-->
-<!--        android:text="Register Fingerprint"-->
-<!--        android:onClick="registerFingerprint"/>-->
+    <Button
+        android:id="@+id/fingerprintRegisterButton"
+        android:layout_width="223dp"
+        android:layout_height="77dp"
+        android:text="Register Fingerprint"
+        android:onClick="registerFingerprint"/>
 </LinearLayout>

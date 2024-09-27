@@ -121,7 +121,7 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
 
         val requestBody = RequestBody.create(mediaType, msg.toString())
         val request = Request.Builder()
-            .url("http://108.137.154.8:8080/ARRest/api/")
+            .url("http://16.78.84.90:8080/ARRest/api/")
             .addHeader("Content-Type", "text/plain")
             .post(requestBody)
             .build()

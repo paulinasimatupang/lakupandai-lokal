@@ -12,13 +12,23 @@
         android:padding="5dp"
         android:background="@color/white">
 
-        <!-- Title -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="VERIFIKASI OTP"
             android:textSize="20sp"
             android:textStyle="bold"
+            android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:textColor="#000000"/>
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/messageOTP"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OTP Telah Terkirim"
+            android:textSize="15sp"
             android:layout_gravity="center"
             android:layout_marginBottom="20dp"
             android:textColor="#000000"/>

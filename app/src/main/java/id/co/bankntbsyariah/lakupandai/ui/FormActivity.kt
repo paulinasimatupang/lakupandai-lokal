@@ -150,6 +150,9 @@ class FormActivity : AppCompatActivity() {
     private var otpAttempts = mutableListOf<Long>()
     private val otpCooldownTime = 3 * 60 * 1000L // 30 minutes in milliseconds
     private var otpScreen: Screen? = null
+    private var remainingMillis: Long = 0
+    private var okButtonPressCount = 0
+    lateinit var timerTextView: TextView
 
     private lateinit var executor: Executor
     private val webCallerImpl = WebCallerImpl()
@@ -733,9 +736,10 @@ class FormActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun startTimer(timerTextView: TextView): CountDownTimer {
-        val countDownTimer = object : CountDownTimer(120000, 1000) {
+    private fun startTimer(timeInMillis: Long): CountDownTimer {
+        val countDownTimer = object : CountDownTimer(timeInMillis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
+                remainingMillis = millisUntilFinished
                 val minutes = millisUntilFinished / 60000
                 val seconds = (millisUntilFinished % 60000) / 1000
                 val timeFormatted = String.format("%02d:%02d", minutes, seconds)
@@ -751,12 +755,23 @@ class FormActivity : AppCompatActivity() {
         return countDownTimer
     }
 
-    private fun resetTimer(timerTextView: TextView) {
+    private fun resetTimer(timeInMillis: Long): CountDownTimer {
         currentTimer?.cancel()
 
-        timerTextView.text = ""
-        timerTextView.text = "02:00"
-        currentTimer = startTimer(timerTextView)
+        if (!::timerTextView.isInitialized) {
+            Log.e("FormActivity", "timerTextView is not initialized")
+            throw UninitializedPropertyAccessException("timerTextView is not initialized")
+        }
+
+        timerTextView.text = null
+
+        val minutes = timeInMillis / 60000
+        val seconds = (timeInMillis % 60000) / 1000
+        val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+
+        timerTextView.text = timeFormatted
+
+        return startTimer(timeInMillis)
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -2128,41 +2143,46 @@ class FormActivity : AppCompatActivity() {
                                 val pinValue = inputValues["PIN"]
                                 Log.e("PIN", "PIN INPUT: $pinValue")
 
-                                if (pinLogin != "null" && pinLogin == pinValue) {
-                                    otpScreen?.let { screen ->
-                                        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-                                        val editor = sharedPreferences.edit()
-                                        editor.putInt("pin_attempts", 0)
-                                        editor.apply()
-                                        handleScreenType(screen)
+                                if (pinLogin != null && pinLogin == pinValue) {
+                                    Log.d("FormActivity", "OTP attempts: ${otpAttempts.size}")
+                                    if (otpAttempts.size < 3) {
+                                        otpAttempts.add(System.currentTimeMillis())
+                                        otpScreen?.let { screen ->
+                                            handleScreenType(screen)
+                                        }
+                                    } else {
+                                        val currentTime = System.currentTimeMillis()
+                                        Log.d("FormActivity", "Current time: $currentTime")
+                                        val remainingTime = remainingMillis
+
+                                        if (remainingTime > 0) {
+                                            if (okButtonPressCount >= 3 || otpAttempts.size >= 3) {
+                                                val minutesRemaining = remainingTime / 60000
+                                                val secondsRemaining = (remainingTime % 60000) / 1000
+
+                                                Toast.makeText(
+                                                    this@FormActivity,
+                                                    "Please wait $minutesRemaining minutes and $secondsRemaining seconds before requesting OTP again.",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        }
+                                        else {
+                                            otpAttempts.clear()
+                                            otpAttempts.add(System.currentTimeMillis())
+                                            otpScreen?.let { screen ->
+                                                handleScreenType(screen)
+                                            }
+                                        }
                                     }
                                 } else {
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         handleFailedPinAttempt()
                                     }
                                 }
-                            } else if (component.id == "OTP09") {
-                                // Periksa apakah percobaan OTP kurang dari 3
-                                if (otpAttempts.size < 3) {
-                                    otpAttempts.add(System.currentTimeMillis())
-                                    handleButtonClick(component, screen)
-                                } else {
-                                    val lastAttemptTime = otpAttempts.last()
-                                    val currentTime = System.currentTimeMillis()
+                            }
 
-                                    if (currentTime - lastAttemptTime < otpCooldownTime) {
-                                        Toast.makeText(
-                                            this@FormActivity,
-                                            "OTP send limit exceeded. Please wait 30 minutes.",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    } else {
-                                        otpAttempts.clear()
-                                        otpAttempts.add(currentTime)
-                                        handleButtonClick(component, screen)
-                                    }
-                                }
-                            }else if (formId == "AU00001" && component.id != "OTP10") {
+                            else if (formId == "AU00001" && component.id != "OTP10") {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
@@ -2181,7 +2201,7 @@ class FormActivity : AppCompatActivity() {
                                 changePin()
                             } else if (formId == "LPW0000" && component.id != "OTP10") {
                                 forgotPassword()
-                            }else {
+                            } else {
                                 handleButtonClick(component, screen)
                             }
                         }
@@ -2210,16 +2230,36 @@ class FormActivity : AppCompatActivity() {
                 15 -> {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
-                    val timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
-
+                    timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
                     val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
+                    val messageOTP = otpView.findViewById<TextView>(R.id.messageOTP)
 
-                    // Setup Resend OTP TextView
+                    when (screen.id) {
+                        "CS00003", "TF00004", "OT002" -> {
+                            messageOTP.text = "OTP Berhasil terkirim kepada Nasabah"
+                        }
+                        "ON001" -> {
+                            messageOTP.text = "OTP Berhasil terkirim kepada Agen"
+                        }
+                        else -> {
+                            messageOTP.text = ""
+                        }
+                    }
+
                     resendOtpTextView?.let {
                         Log.e("FormActivity", "RESEND OTP NOT null.")
                         it.setOnClickListener {
-                            resendOtp()
-                            resetTimer(timerTextView)
+                            Log.d("FormActivity", "OTP attempts2 : ${otpAttempts.size}")
+                            if (otpAttempts.size < 3) {
+                                resendOtp()
+                                resetTimer(120000)
+                            } else if (otpAttempts.size == 3) {
+                                otpAttempts.add(System.currentTimeMillis())
+                                Toast.makeText(this@FormActivity, "OTP send limit exceeded. Please wait 30 minutes.", Toast.LENGTH_LONG).show()
+                                resetTimer(30 * 60 * 1000)
+                            } else {
+                                Toast.makeText(this@FormActivity, "Please wait until time ends", Toast.LENGTH_LONG).show()
+                            }
                         }
 
                         val text = "Resend OTP"
@@ -2228,9 +2268,13 @@ class FormActivity : AppCompatActivity() {
                         }
                         it.text = spannable
                     }
-                    currentTimer = startTimer(timerTextView)
 
-                    // Setup OTP Digits
+                    if (otpAttempts.size < 3) {
+                        currentTimer = resetTimer(120000)
+                    } else {
+                        currentTimer = resetTimer(30 * 60 * 1000)
+                    }
+
                     val otpDigits = listOf(
                         otpView.findViewById<EditText>(R.id.otpDigit1),
                         otpView.findViewById<EditText>(R.id.otpDigit2),
@@ -2274,6 +2318,7 @@ class FormActivity : AppCompatActivity() {
                     }
                     container.addView(otpView)
                 }
+
 
                 16 -> {
                     LinearLayout(this@FormActivity).apply {

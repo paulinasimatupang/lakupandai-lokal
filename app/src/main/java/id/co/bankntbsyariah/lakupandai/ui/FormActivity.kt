@@ -1914,56 +1914,62 @@ class FormActivity : AppCompatActivity() {
 
                                             when (component.id) {
                                                 "NRK01" -> {
+                                                    pickNRK = selectedValue
+                                                    Log.d("Form", "Norekening yang dipilih: $selectedValue")
+
                                                     val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                                     val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
-                                                    val userFullname = sharedPreferences.getString("fullname", "") ?: "" // Get the full name correctly
+                                                    val userFullname = sharedPreferences.getString("fullname", "") ?: ""
 
-                                                    Log.d("FormActivity", "Fetched Userfullname: '$userFullname'") // Log to verify
+                                                    Log.d("FormActivity", "Fetched Userfullname: '$userFullname'")
 
-                                                    if (savedNorekening.isNotEmpty()) {
-                                                        inputValues[component.id] = savedNorekening // Set value to saved No Rekening
-                                                        inputValues["AccountName"] = userFullname // Store the account name separately
-
-                                                        Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
-                                                    } else {
-                                                        // If no saved No Rekening, prompt user to enter a new one
-                                                        val editTextRekening = EditText(this@FormActivity).apply {
-                                                            hint = "Masukkan No. Rekening"
+                                                    if (selectedValue == "Rekening Nasabah") {
+                                                        val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
+                                                            putExtra(Constants.KEY_FORM_ID, "PRP0006")
                                                         }
-                                                        val editTextNama = EditText(this@FormActivity).apply {
-                                                            hint = "Masukkan Nama Rekening"
-                                                        }
+                                                        startActivity(intent)
+                                                    } else if (selectedValue == "Rekening Agen") {
+                                                        if (savedNorekening.isNotEmpty()) {
+                                                            inputValues[component.id] = savedNorekening
+                                                            inputValues["AccountName"] = userFullname
 
-                                                        val layout = LinearLayout(this@FormActivity).apply {
-                                                            orientation = LinearLayout.VERTICAL
-                                                            addView(editTextRekening)
-                                                            addView(editTextNama)
-                                                        }
-
-                                                        AlertDialog.Builder(this@FormActivity)
-                                                            .setTitle("Input No. Rekening dan Nama Rekening")
-                                                            .setView(layout)
-                                                            .setPositiveButton("OK") { dialog, which ->
-                                                                val enteredRekening = editTextRekening.text.toString()
-                                                                val enteredNama = editTextNama.text.toString()
-                                                                if (enteredRekening.isNotEmpty() && enteredNama.isNotEmpty()) {
-                                                                    inputValues[component.id] = enteredRekening
-                                                                    inputValues["AccountName"] = enteredNama // Store account name separately
-                                                                    Log.d("FormActivity", "No. Rekening Nasabah entered: $enteredRekening, Account Name: $enteredNama")
-
-                                                                    // Save the entered account name to shared preferences
-                                                                    val editor = sharedPreferences.edit()
-                                                                    editor.putString("fullname", enteredNama) // Update key to "fullname" for consistency
-                                                                    editor.apply()
-                                                                } else {
-                                                                    Toast.makeText(this@FormActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
-                                                                }
+                                                            Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
+                                                        } else {
+                                                            val editTextRekening = EditText(this@FormActivity).apply {
+                                                                hint = "Masukkan No. Rekening"
                                                             }
-                                                            .setNegativeButton("Batal", null)
-                                                            .show()
+                                                            val editTextNama = EditText(this@FormActivity).apply {
+                                                                hint = "Masukkan Nama Rekening"
+                                                            }
+
+                                                            val layout = LinearLayout(this@FormActivity).apply {
+                                                                orientation = LinearLayout.VERTICAL
+                                                                addView(editTextRekening)
+                                                                addView(editTextNama)
+                                                            }
+
+                                                            AlertDialog.Builder(this@FormActivity)
+                                                                .setTitle("Input No. Rekening dan Nama Rekening")
+                                                                .setView(layout)
+                                                                .setPositiveButton("OK") { dialog, which ->
+                                                                    val enteredRekening = editTextRekening.text.toString()
+                                                                    val enteredNama = editTextNama.text.toString()
+                                                                    if (enteredRekening.isNotEmpty() && enteredNama.isNotEmpty()) {
+                                                                        inputValues[component.id] = enteredRekening
+                                                                        inputValues["AccountName"] = enteredNama
+                                                                        Log.d("FormActivity", "No. Rekening Agen entered: $enteredRekening, Account Name: $enteredNama")
+                                                                        val editor = sharedPreferences.edit()
+                                                                        editor.putString("fullname", enteredNama)
+                                                                        editor.apply()
+                                                                    } else {
+                                                                        Toast.makeText(this@FormActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                                .setNegativeButton("Batal", null)
+                                                                .show()
+                                                        }
                                                     }
 
-                                                    // Log the final values of NRK01 and AccountName for debugging
                                                     val finalNorekening = inputValues["NRK01"]
                                                     val finalAccountName = inputValues["AccountName"]
                                                     Log.d("FormActivity", "Final value of NRK01: $finalNorekening, Account Name: $finalAccountName")

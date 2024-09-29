@@ -128,6 +128,7 @@ class FormActivity : AppCompatActivity() {
     private var feeValue = 0.0
     private var inputRekening = mutableMapOf<String, String>()
     private var pickOTP: String? = null
+    private var pickNRK: String? = null
     private val CAMERA_REQUEST_CODE = 1001
     private val CAMERA_PERMISSION_CODE = 1002
     private var photo: Bitmap? = null
@@ -1879,6 +1880,7 @@ class FormActivity : AppCompatActivity() {
                                             val selectedPair = options[position]
                                             val selectedValue = selectedPair.first
                                             val selectedCompValue = selectedPair.second
+                                            var spinner: Spinner? = null
 
                                             if (screen.id == "CCIF001") {
                                                 inputRekening[component.id] =
@@ -1896,6 +1898,62 @@ class FormActivity : AppCompatActivity() {
                                             )
 
                                             when (component.id) {
+                                                "NRK01" -> {
+                                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                                    val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
+                                                    val userFullname = sharedPreferences.getString("fullname", "") ?: "" // Get the full name correctly
+
+                                                    Log.d("FormActivity", "Fetched Userfullname: '$userFullname'") // Log to verify
+
+                                                    if (savedNorekening.isNotEmpty()) {
+                                                        inputValues[component.id] = savedNorekening // Set value to saved No Rekening
+                                                        inputValues["AccountName"] = userFullname // Store the account name separately
+
+                                                        Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
+                                                    } else {
+                                                        // If no saved No Rekening, prompt user to enter a new one
+                                                        val editTextRekening = EditText(this@FormActivity).apply {
+                                                            hint = "Masukkan No. Rekening"
+                                                        }
+                                                        val editTextNama = EditText(this@FormActivity).apply {
+                                                            hint = "Masukkan Nama Rekening"
+                                                        }
+
+                                                        val layout = LinearLayout(this@FormActivity).apply {
+                                                            orientation = LinearLayout.VERTICAL
+                                                            addView(editTextRekening)
+                                                            addView(editTextNama)
+                                                        }
+
+                                                        AlertDialog.Builder(this@FormActivity)
+                                                            .setTitle("Input No. Rekening dan Nama Rekening")
+                                                            .setView(layout)
+                                                            .setPositiveButton("OK") { dialog, which ->
+                                                                val enteredRekening = editTextRekening.text.toString()
+                                                                val enteredNama = editTextNama.text.toString()
+                                                                if (enteredRekening.isNotEmpty() && enteredNama.isNotEmpty()) {
+                                                                    inputValues[component.id] = enteredRekening
+                                                                    inputValues["AccountName"] = enteredNama // Store account name separately
+                                                                    Log.d("FormActivity", "No. Rekening Nasabah entered: $enteredRekening, Account Name: $enteredNama")
+
+                                                                    // Save the entered account name to shared preferences
+                                                                    val editor = sharedPreferences.edit()
+                                                                    editor.putString("fullname", enteredNama) // Update key to "fullname" for consistency
+                                                                    editor.apply()
+                                                                } else {
+                                                                    Toast.makeText(this@FormActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                            .setNegativeButton("Batal", null)
+                                                            .show()
+                                                    }
+
+                                                    // Log the final values of NRK01 and AccountName for debugging
+                                                    val finalNorekening = inputValues["NRK01"]
+                                                    val finalAccountName = inputValues["AccountName"]
+                                                    Log.d("FormActivity", "Final value of NRK01: $finalNorekening, Account Name: $finalAccountName")
+                                                }
+
                                                 "PIL03" -> {
                                                     pickOTP = selectedValue
                                                     pickOTP = selectedValue
@@ -2856,6 +2914,7 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+
     private fun getCurrentTime(): String {
         val timeFormat = SimpleDateFormat("h:mm:ss a", Locale.getDefault())
         return timeFormat.format(Date())
@@ -2886,6 +2945,8 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
                 }
             }
+
+
             "Pilihan Akad" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
@@ -2912,10 +2973,10 @@ class FormActivity : AppCompatActivity() {
                     getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 val Userfullname = sharedPreferences.getString("fullname", "") ?: ""
                 if (currentValue == "null" && Userfullname != "0") {
-                    Log.d("FormActivity", "No Rekening Agen diisi dengan nilai: $Userfullname")
+                    Log.d("FormActivity", "Nama Rekening Agen diisi dengan nilai: $Userfullname")
                     component.compValues?.compValue?.firstOrNull()?.value = Userfullname
                 } else {
-                    Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $Userfullname")
+                    Log.d("FormActivity", "Nama Rekening Agen sudah terisi dengan: $Userfullname")
                 }
             }
             "NIK" -> {
@@ -3783,6 +3844,10 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] = inputValues[component.id] ?: ""
                     }
                 }
+                if (component.id == "NRK01") {
+                    componentValues["norekening"] = savedNorekening
+                    componentValues["namaAgen"] = savedNamaAgen
+                }
 
             }
             val unf01Value = componentValues["AG009"] ?: ""
@@ -3828,6 +3893,16 @@ class FormActivity : AppCompatActivity() {
                     .joinToString("|") { component ->
                         componentValues[component.id] ?: ""
                     }
+            }
+            screen.comp.firstOrNull { it.id == "NRK01" }?.let { component ->
+                val norekening = componentValues["norekening"] ?: ""
+                val namaAgen = componentValues["namaAgen"] ?: ""
+
+                if (norekening.isNotEmpty() && namaAgen.isNotEmpty()) {
+                    msgDt = "$norekening|$namaAgen|${componentValues["BF004"] ?: ""}|${componentValues["BF003"] ?: ""}|${componentValues["BF001"] ?: ""}|${componentValues["BF005"] ?: ""}|${componentValues["PR006"] ?: ""}|${componentValues["PL001"] ?: ""}|${componentValues["MSG05"] ?: ""}"
+                } else {
+                    Log.d("Screen", "NRK01 is missing No Rekening or Nama Agen.")
+                }
             }
 
             Log.d("Form", "Component : ${componentValues}")

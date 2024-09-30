@@ -87,7 +87,7 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
     override fun fetchImage(id: String): Bitmap? {
         Log.i(TAG, "Fetching image with ID: $id")
         val request = Request.Builder()
-            .url("http://108.137.154.8:8081/ARRest/static/$id")
+            .url("http://16.78.84.90:8081/ARRest/static/$id")
             .build()
 
         return try {

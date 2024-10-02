@@ -128,6 +128,7 @@ class FormActivity : AppCompatActivity() {
     private var feeValue = 0.0
     private var inputRekening = mutableMapOf<String, String>()
     private var pickOTP: String? = null
+    private var pickNorek: String? = null
     private var pickNRK: String? = null
     private val CAMERA_REQUEST_CODE = 1001
     private val CAMERA_PERMISSION_CODE = 1002
@@ -502,6 +503,11 @@ class FormActivity : AppCompatActivity() {
                     navigateToLogin()
                 }else {
                     // Otherwise, navigate to MenuActivity
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.remove("norek_biller")
+                    editor.remove("namarek_biller")
+                    editor.apply()
                     finish()
                     startActivity(
                         Intent(this@FormActivity, MenuActivity::class.java)
@@ -1849,14 +1855,31 @@ class FormActivity : AppCompatActivity() {
 
                                 addView(recyclerView)
                             }
-
                             else {
                                 val spinner = Spinner(this@FormActivity).apply {
                                     background = getDrawable(R.drawable.combo_box)
                                     val adapter = ArrayAdapter(
                                         this@FormActivity,
                                         android.R.layout.simple_spinner_item,
-                                        options.map { it.first } // Display only the 'print' value
+                                        options.map { option ->
+                                            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                            val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
+                                            val userFullname = sharedPreferences.getString("fullname", "") ?: ""
+                                            if (option.first == "Rekening Agen") {
+                                                "$savedNorekening - $userFullname (AGEN)"
+                                            } else if (option.first == "Rekening Nasabah"){
+                                                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                                val norekBillerNasabah = sharedPreferences.getString("norek_biller", null)
+                                                val namarekBillerNasabah = sharedPreferences.getString("namarek_biller", null)
+                                                if (!norekBillerNasabah.isNullOrEmpty() && !namarekBillerNasabah.isNullOrEmpty()) {
+                                                    "$norekBillerNasabah - $namarekBillerNasabah (NASABAH)"
+                                                } else {
+                                                    option.first ?: ""
+                                                }
+                                            } else {
+                                                option.first ?: "" // Tampilkan print, jika null tampilkan string kosong
+                                            }
+                                        }
                                     )
                                     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                                     this.adapter = adapter
@@ -1923,60 +1946,54 @@ class FormActivity : AppCompatActivity() {
 
                                                     Log.d("FormActivity", "Fetched Userfullname: '$userFullname'")
 
-                                                    if (selectedValue == "Rekening Nasabah") {
-                                                        val intent = Intent(this@FormActivity, FormActivity::class.java).apply {
-                                                            putExtra(Constants.KEY_FORM_ID, "PRP0006")
-                                                        }
-                                                        startActivity(intent)
-                                                    } else if (selectedValue == "Rekening Agen") {
-                                                        if (savedNorekening.isNotEmpty()) {
-                                                            inputValues[component.id] = savedNorekening
-                                                            inputValues["AccountName"] = userFullname
+                                                    var norekToSave: String? = null
+                                                    var namaToSave: String? = null
 
+                                                    if (selectedValue == "Rekening Nasabah") {
+                                                        val norekBillerNasabah = sharedPreferences.getString("norek_biller", null)
+                                                        val namarekBillerNasabah = sharedPreferences.getString("namarek_biller", null)
+                                                        if (norekBillerNasabah != null && namarekBillerNasabah != null && norekBillerNasabah.isNotEmpty() && namarekBillerNasabah.isNotEmpty()) {
+                                                            norekToSave = norekBillerNasabah
+                                                            namaToSave = namarekBillerNasabah
+                                                            Log.d("FormActivity", "NRK01 set to saved No Rekening: $norekBillerNasabah, Account Name: $namarekBillerNasabah")
+                                                        } else {
+                                                            lifecycleScope.launch {
+                                                                val editor = sharedPreferences.edit()
+                                                                editor.putString("screen_biller", screen.id)
+                                                                editor.apply()
+                                                                var newScreenId = "PRP0006"
+                                                                var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
+                                                                if (formValue.isNullOrEmpty()) {
+                                                                    formValue = withContext(Dispatchers.IO) {
+                                                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
+                                                                    }
+                                                                    Log.i("FormActivity", "Fetched formValue: $formValue")
+                                                                }
+                                                                setupScreen(formValue)
+                                                            }
+                                                        }
+                                                    } else if (selectedValue == "Rekening Agen") {
+                                                        if (savedNorekening.isNotEmpty() && userFullname.isNotEmpty()) {
+                                                            norekToSave = savedNorekening
+                                                            namaToSave = userFullname
                                                             Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
                                                         } else {
-                                                            val editTextRekening = EditText(this@FormActivity).apply {
-                                                                hint = "Masukkan No. Rekening"
-                                                            }
-                                                            val editTextNama = EditText(this@FormActivity).apply {
-                                                                hint = "Masukkan Nama Rekening"
-                                                            }
-
-                                                            val layout = LinearLayout(this@FormActivity).apply {
-                                                                orientation = LinearLayout.VERTICAL
-                                                                addView(editTextRekening)
-                                                                addView(editTextNama)
-                                                            }
-
-                                                            AlertDialog.Builder(this@FormActivity)
-                                                                .setTitle("Input No. Rekening dan Nama Rekening")
-                                                                .setView(layout)
-                                                                .setPositiveButton("OK") { dialog, which ->
-                                                                    val enteredRekening = editTextRekening.text.toString()
-                                                                    val enteredNama = editTextNama.text.toString()
-                                                                    if (enteredRekening.isNotEmpty() && enteredNama.isNotEmpty()) {
-                                                                        inputValues[component.id] = enteredRekening
-                                                                        inputValues["AccountName"] = enteredNama
-                                                                        Log.d("FormActivity", "No. Rekening Agen entered: $enteredRekening, Account Name: $enteredNama")
-                                                                        val editor = sharedPreferences.edit()
-                                                                        editor.putString("fullname", enteredNama)
-                                                                        editor.apply()
-                                                                    } else {
-                                                                        Toast.makeText(this@FormActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
-                                                                    }
-                                                                }
-                                                                .setNegativeButton("Batal", null)
-                                                                .show()
+                                                            Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
                                                         }
                                                     }
 
-                                                    val finalNorekening = inputValues["NRK01"]
-                                                    val finalAccountName = inputValues["AccountName"]
-                                                    Log.d("FormActivity", "Final value of NRK01: $finalNorekening, Account Name: $finalAccountName")
+                                                    // Set inputValues hanya di akhir
+                                                    if (norekToSave != null && namaToSave != null) {
+                                                        inputValues[component.id] = "$norekToSave|$namaToSave"
+                                                        Log.e("FormActivity", "Norek dan Namarek Nasabah dihapus")
+                                                        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                                        val editor = sharedPreferences.edit()
+                                                        editor.remove("norek_biller")
+                                                        editor.remove("namarek_biller")
+                                                        editor.apply()
+                                                    }
                                                 }
-
                                                 "PIL03" -> {
-                                                    pickOTP = selectedValue
                                                     pickOTP = selectedValue
                                                     Log.d("Form", "PICK OTP: $selectedValue")
 
@@ -2054,11 +2071,9 @@ class FormActivity : AppCompatActivity() {
                                                         "Provinsi set to: ${inputValues[component.id]}"
                                                     )
                                                 }
-
                                                 else -> inputValues[component.id] =
                                                     (position ?: selectedValue).toString()
                                             }
-
                                         }
 
                                         override fun onNothingSelected(parent: AdapterView<*>) {
@@ -2222,7 +2237,8 @@ class FormActivity : AppCompatActivity() {
                                         if (remainingTime > 0) {
                                             if (okButtonPressCount >= 3 || otpAttempts.size >= 3) {
                                                 val minutesRemaining = remainingTime / 60000
-                                                val secondsRemaining = (remainingTime % 60000) / 1000
+                                                val secondsRemaining =
+                                                    (remainingTime % 60000) / 1000
 
                                                 Toast.makeText(
                                                     this@FormActivity,
@@ -2230,8 +2246,7 @@ class FormActivity : AppCompatActivity() {
                                                     Toast.LENGTH_LONG
                                                 ).show()
                                             }
-                                        }
-                                        else {
+                                        } else {
                                             otpAttempts.clear()
                                             otpAttempts.add(System.currentTimeMillis())
                                             otpScreen?.let { screen ->
@@ -2244,9 +2259,19 @@ class FormActivity : AppCompatActivity() {
                                         handleFailedPinAttempt()
                                     }
                                 }
-                            }
 
-                            else if (formId == "AU00001" && component.id != "OTP10") {
+                            }else if(component.id == "OK002"){
+                                val pinValue = inputValues["PIN"]
+                                Log.e("PIN", "PIN INPUT: $pinValue")
+                                Log.e("PIN", "PIN Login: $pinLogin")
+                                if (pinLogin != null && pinLogin == pinValue) {
+                                    handleButtonClick(component, screen)
+                                } else {
+                                    lifecycleScope.launch(Dispatchers.IO) {
+                                        handleFailedPinAttempt()
+                                    }
+                                }
+                            } else if (formId == "AU00001" && component.id != "OTP10") {
                                 loginUser()
                                 requestAndHandleKodeCabang(screen) { kodeCabangResult ->
                                     if (kodeCabangResult != null) {
@@ -3174,7 +3199,7 @@ class FormActivity : AppCompatActivity() {
         val allErrors = mutableListOf<String>()
 
         screen?.comp?.forEach { comp ->
-            if (comp.type == 2) {
+            if (comp.type == 2 && screen.id != "PRP0006") {
                 allErrors.addAll(validateInput(comp))
             }
         }
@@ -3526,6 +3551,8 @@ class FormActivity : AppCompatActivity() {
                 val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
                 val sendPengaduan = screen?.comp?.find { it.id == "G0002" }
                 Log.d("Form", "Send Pengaduan : $sendPengaduan")
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val svcBiller = sharedPreferences.getString("biller", "") ?: ""
                 if(sendPengaduan != null){
                     val bodyPengaduan = screen?.let { createBodyPengaduan(it) }
                     Log.d("FormActivity", "Create Message Pengaduan $bodyPengaduan")
@@ -3540,7 +3567,7 @@ class FormActivity : AppCompatActivity() {
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
-                                Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                Log.e("FormActivity", "NEW SCREEN BUKAN OTP ${newScreen.id} ")
                                 if(sendOTPComponent != null) {
                                     var pinScreen = "P000001"
                                     var formValue =
@@ -3675,7 +3702,86 @@ class FormActivity : AppCompatActivity() {
                                                 putExtra("MESSAGE_BODY", "Pesan sudah teririm")
                                             }
                                         startActivity(intent)
-                                    } else {
+                                    } else if (newScreen.id == "PRP0007") {
+                                        Log.e("FormActivity", "Masuk PRP0007")
+
+                                        var nomorRekening: String? = null
+                                        var namaRekening: String? = null
+
+                                        // Loop melalui komponen untuk menemukan Nomor Rekening dan Nama Rekening
+                                        for (component in newScreen.comp) {
+                                            when (component.id) {
+                                                "NR006" -> { // Untuk Nomor Rekening
+                                                    nomorRekening =
+                                                        component.compValues?.compValue?.firstOrNull()?.value
+                                                    Log.e(
+                                                        "FormActivity",
+                                                        "Nomor Rekening Biller: $nomorRekening"
+                                                    )
+                                                }
+
+                                                "UNF04" -> { // Untuk Nama Rekening
+                                                    namaRekening =
+                                                        component.compValues?.compValue?.firstOrNull()?.value
+                                                    Log.e(
+                                                        "FormActivity",
+                                                        "Nama Rekening Biller: $namaRekening"
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        // Jika kedua nilai sudah ditemukan, simpan ke SharedPreferences
+                                        val sharedPreferences = getSharedPreferences(
+                                            "MyAppPreferences",
+                                            Context.MODE_PRIVATE
+                                        )
+                                        if (nomorRekening != null && namaRekening != null) {
+                                            val editor = sharedPreferences.edit()
+                                            editor.putString("norek_biller", nomorRekening)
+                                            editor.putString("namarek_biller", namaRekening)
+                                            editor.apply()
+                                        }
+                                        otpDialog?.dismiss()
+                                        val newScreenId =
+                                            sharedPreferences.getString("screen_biller", "") ?: ""
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(
+                                                newScreenId
+                                            )
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue =
+                                                withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(
+                                                        OkHttpClient()
+                                                    ).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                            Log.i(
+                                                "FormActivity",
+                                                "Fetched formValue: $formValue"
+                                            )
+                                        }
+                                        setupScreen(formValue)
+                                        // BILLER
+                                    } else if (svcBiller == "true" && newScreen.id != "000000F"){
+                                        Log.e("FormActivity", "Masuk Service Biller")
+                                        val messageBody = createMessageBody(newScreen)
+                                        if (messageBody != null) {
+                                            Log.d("FormActivity", "Message Body Biller: $messageBody")
+                                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                responseBody?.let { body ->
+                                                    lifecycleScope.launch {
+                                                        val screenJson = JSONObject(body)
+                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                        Log.e("FormActivity", "SCREEN Biller ${screen.id} ")
+                                                        Log.e("FormActivity", "NEW SCREEN Biller ${newScreen.id} ")
+                                                        handleScreenType(newScreen)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else{
                                         handleScreenType(newScreen)
                                     }
                                 }
@@ -3832,6 +3938,7 @@ class FormActivity : AppCompatActivity() {
 
             Log.d("FormActivity", "msgSi: $msgSi")
             Log.d("FormActivity", "PICK OTP: $pickOTP")
+            Log.d("FormActivity", "PICK NRK Create: $pickNRK")
 
             // Kondisi untuk mengubah msgSi berdasarkan screen.id dan comp_id PIL03
             if (screen.comp.any { it.id == "PIL03" } && pickOTP == "SMS") {
@@ -3844,8 +3951,14 @@ class FormActivity : AppCompatActivity() {
                     "CCIF001" -> msgSi = "CC0002"
                     "RT001" -> msgSi = "RTT002"
                     "RS001" -> msgSi = "OTN002"
+                    "PR00010" -> msgSi = "PPR003"
                     else -> msgSi = screen.actionUrl
                 }
+            }
+
+            if (screen.title.contains("BL") && pickNRK == "Rekening Nasabah") {
+                Log.d("FormActivity", "Ganti MSG SI Rekening Nasabah")
+                msgSi = "OPR002"
             }
 
             // Menyimpan nilai komponen ke dalam map
@@ -3932,7 +4045,7 @@ class FormActivity : AppCompatActivity() {
                     componentValues["MSG05"] = "Pesan tidak diketahui."
                 }
             }
-            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03")
+            val excludedCompIds = listOf("SIG01", "SIG02", "SIG03", "P0000")
 
             var msgDt = ""
             Log.d("Screen", "SCREEN CREATE MESSAGE : ${screen.id}")
@@ -3945,17 +4058,6 @@ class FormActivity : AppCompatActivity() {
                         componentValues[component.id] ?: ""
                     }
             }
-            screen.comp.firstOrNull { it.id == "NRK01" }?.let { component ->
-                val norekening = componentValues["norekening"] ?: ""
-                val namaAgen = componentValues["namaAgen"] ?: ""
-
-                if (norekening.isNotEmpty() && namaAgen.isNotEmpty()) {
-                    msgDt = "$norekening|$namaAgen|${componentValues["BF004"] ?: ""}|${componentValues["BF003"] ?: ""}|${componentValues["BF001"] ?: ""}|${componentValues["BF005"] ?: ""}|${componentValues["PR006"] ?: ""}|${componentValues["PL001"] ?: ""}|${componentValues["MSG05"] ?: ""}"
-                } else {
-                    Log.d("Screen", "NRK01 is missing No Rekening or Nama Agen.")
-                }
-            }
-
             Log.d("Form", "Component : ${componentValues}")
 
             val msgId = manageMsgId(msgSi ?: "", imei, timestamp)
@@ -3996,6 +4098,7 @@ class FormActivity : AppCompatActivity() {
             try {
                 withContext(Dispatchers.IO) {
                     webCallerImpl.getParam2(serviceId, token)
+
                 }
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error fetching param2: ${e.message}")
@@ -4010,6 +4113,8 @@ class FormActivity : AppCompatActivity() {
             val param2 = response.optString("param2")
             val countLimit = response.optInt("count", 0)
             Log.d("GETPARAM2", "param2 response: $param2")
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+            val editor = sharedPreferences.edit()
 
             if (param2 != "null" && param2.isNotEmpty()) {
                 Log.d("GETPARAM2", "MASUK")
@@ -4018,17 +4123,33 @@ class FormActivity : AppCompatActivity() {
                 val currentCountLimit = countLimitMap[param2] ?: countLimit
 
                 if (msgIds.isNotEmpty() && currentCountLimit > 0) {
+                    Log.e("FormActivity", "CURRENT LIMIT = $currentCountLimit")
                     msgId = msgIds.last()
                     countLimitMap[param2] = currentCountLimit - 1
                     if (currentCountLimit - 1 == 0) {
                         msgIdMap.remove(param2)
                         countLimitMap.remove(param2)
+
+                        Log.e("FormActivity", "Biller dihapus")
+                        editor.remove("biller")
+                        editor.apply()
+                    }
+                    if (currentCountLimit - 1 == 1) {
+                        Log.e("FormActivity", "Biller Aktif")
+                        editor.putString("biller", "true")
+                        editor.apply()
                     }
                 } else {
                     msgId = msgUi + timestamp
                     msgIds.add(msgId)
                     msgIdMap[param2] = msgIds
                     countLimitMap[param2] = countLimit - 1
+
+                    if (currentCountLimit - 1 == 1) {
+                        Log.e("FormActivity", "Biller Aktif")
+                        editor.putString("biller", "true")
+                        editor.apply()
+                    }
                 }
             }else{
                 Log.d("GETPARAM2", "Tidak punya param2 atau param2 null")

@@ -233,6 +233,32 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
+    override fun blockAgenLogin(username: String): ResponseBody? {
+        // Create form body with the parameters
+        val formBody = FormBody.Builder()
+            .add("username", username)
+            .build()
+
+        val request = Request.Builder()
+            .url("http://reportntbs.selada.id/api/agen/block/login")
+            .post(formBody)
+            .build()
+
+        return try {
+            client.newCall(request).execute().let { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to change password: ${response.message}")
+                    null
+                } else {
+                    response.body
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while changing password", e)
+            null
+        }
+    }
+
     override fun historyPengaduan(mid: String, token: String): ResponseBody? {
         val request = Request.Builder()
             .url("http://reportntbs.selada.id/api/pengaduan/history?mid=$mid")

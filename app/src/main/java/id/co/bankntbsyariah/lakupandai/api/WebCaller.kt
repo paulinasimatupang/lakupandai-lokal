@@ -15,6 +15,7 @@ interface WebCaller {
     fun getPhoneByUsername(username: String): String?
     fun changePin(id: String, old_pin: String, new_pin: String, token: String): ResponseBody?
     fun blockAgen(id: String, token: String): ResponseBody?
+    fun blockAgenLogin(username: String): ResponseBody?
     fun historyPengaduan(mid: String, token: String): ResponseBody?
     fun getParam2(serviceId: String, token: String): JSONObject?
 }

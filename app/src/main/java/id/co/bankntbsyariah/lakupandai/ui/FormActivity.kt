@@ -143,7 +143,7 @@ class FormActivity : AppCompatActivity() {
     private val msgIdMap = mutableMapOf<String, MutableList<String>>()
     private val countLimitMap = mutableMapOf<String, Int>()
 
-    private var currentTimer: CountDownTimer? = null
+    private var countDownTimer: CountDownTimer? = null
 
     data class Token(val token: String)
 
@@ -208,6 +208,7 @@ class FormActivity : AppCompatActivity() {
             startActivity(intent)
         }
     }
+
     private fun initLoginRegisterUI() {
         setContentView(R.layout.activity_form_login)
         executor = ContextCompat.getMainExecutor(this)
@@ -265,8 +266,10 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun hashFingerprintData(fingerprintData: String): String {
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        val dataToHash = fingerprintData + deviceId // Combine fingerprint data with device ID
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(fingerprintData.toByteArray())
+        val hashBytes = digest.digest(dataToHash.toByteArray())
         return Base64.encodeToString(hashBytes, Base64.NO_WRAP)
     }
 
@@ -372,7 +375,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun registerFingerprintWithServer(userId: String, fingerprintData: String) {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -626,8 +628,6 @@ class FormActivity : AppCompatActivity() {
                     WindowManager.LayoutParams.WRAP_CONTENT
                 )
                 otpDialog?.show()
-                
-                startOtpTimer()
             }
 
             else -> {
@@ -763,14 +763,15 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun resetTimer(timeInMillis: Long): CountDownTimer {
-        currentTimer?.cancel()
+        remainingMillis = 0
 
         if (!::timerTextView.isInitialized) {
             Log.e("FormActivity", "timerTextView is not initialized")
             throw UninitializedPropertyAccessException("timerTextView is not initialized")
         }
 
-        timerTextView.text = null
+        timerTextView.text = ""
+        countDownTimer?.cancel()
 
         val minutes = timeInMillis / 60000
         val seconds = (timeInMillis % 60000) / 1000
@@ -778,7 +779,8 @@ class FormActivity : AppCompatActivity() {
 
         timerTextView.text = timeFormatted
 
-        return startTimer(timeInMillis)
+        countDownTimer = startTimer(timeInMillis)
+        return countDownTimer!!
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -1688,6 +1690,7 @@ class FormActivity : AppCompatActivity() {
                                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                             background = getDrawable(R.drawable.pass_bg)
                             id = View.generateViewId()
+                            tag = component.id
                             setTextSize(16f) // Ukuran teks untuk input
                             setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
 
@@ -2224,8 +2227,17 @@ class FormActivity : AppCompatActivity() {
 
                                 if (pinLogin != null && pinLogin == pinValue) {
                                     Log.d("FormActivity", "OTP attempts: ${otpAttempts.size}")
-                                    if (otpAttempts.size < 3) {
+                                    if (otpAttempts.size == 0) {
                                         otpAttempts.add(System.currentTimeMillis())
+                                        otpScreen?.let { screen ->
+                                            handleScreenType(screen)
+                                        }
+                                    } else if (otpAttempts.size > 0 && otpAttempts.size < 3) {
+                                        resendOtp()
+                                        otpScreen?.let { screen ->
+                                            handleScreenType(screen)
+                                        }
+                                    }else if (otpAttempts.size == 3) {
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
@@ -2269,19 +2281,6 @@ class FormActivity : AppCompatActivity() {
                                 } else {
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         handleFailedPinAttempt()
-                                    }
-                                }
-                            } else if (formId == "AU00001" && component.id != "OTP10") {
-                                loginUser()
-                                requestAndHandleKodeCabang(screen) { kodeCabangResult ->
-                                    if (kodeCabangResult != null) {
-                                        // Perbarui properti kelas kodeCabang
-                                        saveKodeCabangToPreferences(kodeCabangResult)
-                                        Log.d("FORM", "KODE CABANG : $kodeCabangResult")
-
-                                        Log.e("FORM", "KODE CABANGSS : $kodeCabangResult")
-                                    } else {
-                                        Log.e("FORM", "Failed to retrieve kodeCabang")
                                     }
                                 }
                             } else if (formId == "LS00001") {
@@ -2359,9 +2358,9 @@ class FormActivity : AppCompatActivity() {
                     }
 
                     if (otpAttempts.size < 3) {
-                        currentTimer = resetTimer(120000)
+                        resetTimer(120000)
                     } else {
-                        currentTimer = resetTimer(30 * 60 * 1000)
+                        resetTimer(30 * 60 * 1000)
                     }
 
                     val otpDigits = listOf(
@@ -3197,28 +3196,47 @@ class FormActivity : AppCompatActivity() {
 
     private fun handleButtonClick(component: Component, screen: Screen?) {
         val allErrors = mutableListOf<String>()
-
-        screen?.comp?.forEach { comp ->
-            if (comp.type == 2 && screen.id != "PRP0006") {
-                allErrors.addAll(validateInput(comp))
-            }
-        }
+        val allErrorsPassword = mutableListOf<String>()
         screen?.comp?.forEach { comp ->
             if (comp.id == "PIL03" && pickOTP.isNullOrEmpty()) {
                 allErrors.add("Harus memilih WA atau SMS.")
             }
         }
-        if (allErrors.isNotEmpty()) {
-            // Tampilkan semua pesan kesalahan
-            Toast.makeText(
-                this,
-                "Validasi gagal:\n${allErrors.joinToString("\n")}",
-                Toast.LENGTH_LONG
-            ).show()
-            return // Hentikan eksekusi jika ada kesalahan
+        if (formId == "AU00001") {
+            screen?.comp?.forEach { comp ->
+                if (comp.type == 2) {
+                    allErrors.addAll(validateInput(comp))
+                }
+                if (comp.type == 3) {
+                    allErrorsPassword.addAll(validateInput(comp))
+                    Log.d("PasswordErrors", "All password errors: ${allErrorsPassword.joinToString(", ")}")
+                }
+            }
+//            if (allErrors.contains("Password Wajib Diisi") || allErrorsPassword.contains("Password Wajib Diisi")) {
+//                return
+//            }
+        }
+        else {
+            screen?.comp?.forEach { comp ->
+                if (comp.id == "PIL03" && pickOTP.isNullOrEmpty()) {
+                    allErrors.add("Harus memilih WA atau SMS.")
+                }
+            }
+            if (allErrors.isNotEmpty()) {
+                return
+            }
         }
 
-        if (screen?.id == "MB81120") {
+        if (formId == "AU00001" && component.id != "OTP10") {
+            loginUser { isSuccess ->
+                if (!isSuccess) {
+                    return@loginUser
+                }
+            }
+            return
+        }
+
+        else if (screen?.id == "MB81120") {
             val startDateComponent = screen.comp.find { it.id == "SD001" }
             val endDateComponent = screen.comp.find { it.id == "ED001" }
 
@@ -3301,66 +3319,6 @@ class FormActivity : AppCompatActivity() {
                 putExtra(Constants.KEY_MENU_ID, "AU00001")
             })
             finish()
-        }
-        else if (screen?.id == "TF00001" || screen?.id == "FT0001" ||screen?.id == "ST001") {
-            var norekComponent: Component? = null
-            var nominalComponent: Component? = null
-            var norek: String? = null
-
-            when (screen.id) {
-                "TF00001" -> {
-                    norekComponent = screen.comp.find { it.label.contains("rekening pengirim", ignoreCase = true) }
-                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
-                    norek = inputValues[norekComponent?.id]
-                }
-                "FT0001" -> {
-                    norekComponent = screen.comp.find { it.label.contains("rekening nasabah", ignoreCase = true) }
-                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
-                    norek = inputValues[norekComponent?.id]
-                }
-                "ST001" -> {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-                    norek = sharedPreferences.getString("norekening", "")
-                    nominalComponent = screen.comp.find { it.label.contains("nominal", ignoreCase = true) }
-                }
-            }
-
-            val nominalStr = inputValues[nominalComponent?.id]
-            val nominal = nominalStr?.toDoubleOrNull()
-
-            Log.d("FormActivity", "norek $norek")
-            Log.d("FormActivity", "nominal $nominal")
-
-            if (norek != null && nominal != null) {
-                checkSaldo(nominal, norek, onSuccess = {
-                    Log.d("FormActivity", "Saldo cukup, melanjutkan proses...")
-                    createMessageBody(screen)
-                    val messageBody = createMessageBody(screen)
-                    if (messageBody != null) {
-                        Log.d("FormActivity", "Message Body: $messageBody")
-                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                            responseBody?.let { body ->
-                                lifecycleScope.launch {
-                                    val screenJson = JSONObject(body)
-                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                    Log.e("FormActivity", "SCREEN ${screen.id} ")
-                                    Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                    handleScreenType(newScreen)
-                                }
-                            }
-                        }
-                    }
-                }, onError = { errorMsg ->
-                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                        putExtra("MESSAGE_BODY", errorMsg)
-                        putExtra("RETURN_TO_ROOT", false)
-                    }
-                    startActivity(intentPopup)
-                })
-            } else {
-                Toast.makeText(this, "Mohon masukkan norek dan nominal yang valid", Toast.LENGTH_SHORT).show()
-            }
         }
         else {
             val otpComponent = screen?.comp?.find { it.id == "OTP01" }
@@ -3797,88 +3755,6 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
-    private fun createMessageBodyForSaldoCheck(norek: String): JSONObject? {
-        return try {
-            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val username = "lakupandai"
-            val imei = sharedPreferences.getString("imei", "") ?: ""
-            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-            val msgId = imei + timestamp
-            val msgSi = "N00001"
-            val msgDt = "$username|$norek|null|null"
-
-            JSONObject().apply {
-                put("msg", JSONObject().apply {
-                    put("msg_id", msgId)
-                    put("msg_ui", imei)
-                    put("msg_si", msgSi)
-                    put("msg_dt", msgDt)
-                })
-            }
-        } catch (e: Exception) {
-            Log.e("MenuActivity", "Failed to create message body", e)
-            null
-        }
-    }
-
-    private fun checkSaldo(nominal: Double, norek: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val messageBody = createMessageBodyForSaldoCheck(norek)
-        if (messageBody != null) {
-            Log.d("FormActivity", "Requesting saldo with message: $messageBody")
-
-            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                responseBody?.let {
-                    Log.d("FormActivity", "Received response: $it")
-                    try {
-                        val jsonResponse = JSONObject(it)
-                        Log.d("FormActivity", "Parsed JSON response: $jsonResponse")
-                        val msgObject = jsonResponse.optJSONObject("screen")
-
-                        // Check if the screen object exists
-                        if (msgObject != null) {
-                            val comps = msgObject.optJSONObject("comps")
-                            val compArray = comps?.optJSONArray("comp")
-                            var saldo: Double? = null
-
-                            compArray?.let {
-                                for (i in 0 until it.length()) {
-                                    val comp = it.getJSONObject(i)
-                                    val label = comp.optString("comp_lbl")
-                                    val value = comp.optJSONObject("comp_values")
-                                        ?.optJSONArray("comp_value")?.optJSONObject(0)
-                                        ?.optString("value")
-
-                                    if (label == "Saldo Akhir") {
-                                        saldo = value?.replace("-", "")?.replace(",", "")?.toDoubleOrNull()
-                                    }
-                                }
-                            }
-
-                            saldo?.let {
-                                if (it >= nominal) {
-                                    onSuccess()
-                                } else {
-                                    onError("Saldo tidak cukup")
-                                }
-                            } ?: run {
-                                onError("No rekening tidak ditemukan")
-                            }
-                        } else {
-                            onError("Gagal mengambil saldo")
-                        }
-                    } catch (e: Exception) {
-                        Log.e("MenuActivity", "Failed to parse response", e)
-                        onError("Gagal memproses respon saldo")
-                    }
-                } ?: run {
-                    onError("Respon saldo kosong")
-                }
-            }
-        } else {
-            onError("Gagal membuat request body")
-        }
-    }
-
     private fun showDatePickerDialog(editText: EditText, onDateSelected: (String) -> Unit) {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
@@ -4240,7 +4116,7 @@ class FormActivity : AppCompatActivity() {
         return encodedUid
     }
 
-    private fun loginUser() {
+    private fun loginUser(callback: (Boolean) -> Unit){
         lifecycleScope.launch(Dispatchers.IO) {
             val formBodyBuilder = FormBody.Builder()
             var username: String? = null
@@ -4275,12 +4151,12 @@ class FormActivity : AppCompatActivity() {
             try {
                 val response = client.newCall(request).execute()
                 val responseData = response.body?.string()
+                val jsonResponse = JSONObject(responseData)
+                val status = jsonResponse.optBoolean("status", false)
 
                 Log.d(TAG, "Received response from server. Response code: ${response.code}, Response body: $responseData")
 
                 if (response.isSuccessful && responseData != null) {
-                    val jsonResponse = JSONObject(responseData)
-                    val status = jsonResponse.optBoolean("status", false)
 
                     if (status) {
                         val token = jsonResponse.optString("token")
@@ -4465,6 +4341,7 @@ class FormActivity : AppCompatActivity() {
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
                                     navigateToScreen()
+                                    callback(true)
                                 }
 
 //                                withContext(Dispatchers.Main) {
@@ -4472,19 +4349,39 @@ class FormActivity : AppCompatActivity() {
 //                                    navigateToScreen()
 //                                }
                             }
-                        } else {
+                        }
+                        else {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
                             }
-                        }
-                    } else {
-                        val errorMessage = jsonResponse.optString("message", "Login gagal.")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
+                            callback(false)
                         }
                     }
-                } else {
-                    handleFailedLoginAttempt()
+                    else {
+                        callback(false)
+                    }
+                }
+                else {
+                    val errorMessage = jsonResponse.optString("message", "Login gagal.")
+
+                    withContext(Dispatchers.Main) {
+                        when {
+                            errorMessage.contains("username", ignoreCase = true) -> {
+                                Toast.makeText(this@FormActivity, "Username tidak terdaftar", Toast.LENGTH_SHORT).show()
+                            }
+                            errorMessage.contains("incorrect", ignoreCase = true) -> {
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                                val editor = sharedPreferences.edit()
+                                editor.putString("username_input", username)
+                                editor.apply()
+                                handleFailedLoginAttempt()
+                            }
+                            else -> {
+                                Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    callback(false)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception occurred while logging in", e)
@@ -4526,16 +4423,20 @@ class FormActivity : AppCompatActivity() {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val currentAttempts = sharedPreferences.getInt("login_attempts", 0)
+        val maxLoginAttempt = sharedPreferences.getInt("max_login_attempt", 0)
+        val username_input = sharedPreferences.getString("username_input", "")
 
-        if (currentAttempts >= 3) {
-            blockUserAccount()
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
+        if (currentAttempts > maxLoginAttempt) {
+            if (username_input != null) {
+                blockUserAccountLogin(username_input)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
+                }
             }
         } else {
             editor.putInt("login_attempts", currentAttempts + 1)
             editor.apply()
-            val attemptsLeft = 3 - (currentAttempts + 1)
+            val attemptsLeft = maxLoginAttempt - (currentAttempts + 1)
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@FormActivity, "Username atau password salah. Kesalahan ke-${currentAttempts + 1}. Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
             }
@@ -4560,6 +4461,44 @@ class FormActivity : AppCompatActivity() {
                     val token = sharedPreferences.getString("token", "") ?: ""
                     val id = sharedPreferences.getString("merchant_id", "") ?: ""
                     val response = webCaller.blockAgen(id, token)
+                    response?.string()
+                }
+
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        // Debug log for the raw response
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optString("status", "") ?: JSONArray()
+                        val message = jsonResponse.optBoolean("message", false)
+                        if (status as Boolean) {
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error : ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun blockUserAccountLogin(username : String) {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    val response = webCaller.blockAgenLogin(username)
                     response?.string()
                 }
 
@@ -4815,42 +4754,57 @@ class FormActivity : AppCompatActivity() {
         val maxLength = component.opt.substring(6).toIntOrNull() ?: Int.MAX_VALUE
 
         val errors = mutableListOf<String>()
+        var lengthError = false
+        val characterTypeErrors = mutableListOf<String>()
 
         if (mandatory == 1 && inputValue.isEmpty()) {
             errors.add("${component.label} Wajib Diisi")
-        } else if (inputValue.length < minLength) {
-            errors.add("${component.label} Minimal $minLength karakter")
-        } else if (inputValue.length > maxLength) {
-            errors.add("${component.label} Maksimal $maxLength karakter")
+        } else if (inputValue.length < minLength || inputValue.length > maxLength) {
+            lengthError = true
         }
 
         when (conType) {
             0 -> {
-                if (!inputValue.matches(Regex("[\\w\\s\\p{Punct}]*"))) {
-                    errors.add("${component.label} Harus terdiri dari huruf, angka,dan simbol")
+                if (!inputValue.matches(Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]*$"))) {
+                    characterTypeErrors.add("dan mengandung huruf besar, huruf kecil, serta angka")
                 }
             }
             1 -> {
                 if (!inputValue.matches(Regex("[a-zA-Z\\s]*"))) {
-                    errors.add("${component.label} Harus terdiri dari huruf")
+                    characterTypeErrors.add("dan mengandung huruf saja")
                 }
             }
             2 -> {
                 if (!inputValue.matches(Regex("[0-9]*"))) {
-                    errors.add("${component.label} Harus terdiri dari angka saja")
+                    characterTypeErrors.add("dan mengandung angka saja")
                 }
             }
             4 -> {
                 if (!inputValue.matches(Regex("\\d+(\\.\\d{1,2})?"))) {
-                    errors.add("${component.label} Format uang tidak valid")
+                    characterTypeErrors.add("dan format uang tidak valid")
+                }
+            }
+            5 -> {
+                if (!inputValue.matches(Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_]).+$"))) {
+                    characterTypeErrors.add("dan mengandung huruf besar, huruf kecil, angka, serta simbol")
                 }
             }
             3 -> {
                 // No Constraint
             }
             else -> {
-                errors.add("${component.label} Tipe validasi tidak dikenali")
+
             }
+        }
+
+        if (lengthError || characterTypeErrors.isNotEmpty()) {
+            val lengthErrorMessage = "${component.label} harus terdiri dari $minLength - $maxLength karakter"
+            val combinedErrors = if (characterTypeErrors.isNotEmpty()) {
+                "$lengthErrorMessage ${characterTypeErrors.joinToString()}"
+            } else {
+                lengthErrorMessage
+            }
+            errors.add(combinedErrors)
         }
 
         editText.error = null

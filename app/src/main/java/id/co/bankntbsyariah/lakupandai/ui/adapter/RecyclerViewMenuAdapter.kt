@@ -89,7 +89,7 @@ class RecyclerViewMenuAdapter(
 
             holder.menuImage?.let {
                 Glide.with(context)
-                    .load("http://108.137.154.8:8081/ARRest/static/$iconName")
+                    .load("http://16.78.84.90:8081/ARRest/static/$iconName")
                     .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))
                     .into(it)
             }

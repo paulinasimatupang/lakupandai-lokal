@@ -40,6 +40,12 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="notification_channel" />
 
+        <activity
+            android:name=".ui.theme.NotificationHistoryActivity"
+            android:configChanges="orientation"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
         <activity
             android:name=".ui.FormActivity"

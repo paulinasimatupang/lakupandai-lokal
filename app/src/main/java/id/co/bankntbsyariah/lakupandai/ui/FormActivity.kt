@@ -93,6 +93,7 @@ import com.bumptech.glide.Glide
 import id.co.bankntbsyariah.lakupandai.common.CompValues
 import id.co.bankntbsyariah.lakupandai.common.ComponentValue
 import id.co.bankntbsyariah.lakupandai.ui.adapter.ProdukAdapter
+import id.co.bankntbsyariah.lakupandai.local.NotificationDatabaseHelper
 import com.google.firebase.messaging.FirebaseMessaging
 import id.co.bankntbsyariah.lakupandai.MyFirebaseMessagingService
 import id.co.bankntbsyariah.lakupandai.api.ApiService
@@ -1447,6 +1448,71 @@ class FormActivity : AppCompatActivity() {
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Gagal mengambil data", Toast.LENGTH_SHORT).show()
                                 }
+                            }
+                        }
+                    }else if (component.id == "NOT01") {
+                        Log.d("FormActivity", "Tombol NOT00 ditekan, memulai proses insert dan pengambilan notifikasi...")
+
+                        // Mengambil layout atau container di mana data akan ditampilkan
+                        val container = findViewById<LinearLayout>(R.id.menu_container)
+
+                        if (container != null) {
+                            Log.d("FormActivity", "Container ditemukan, memulai pengaturan...")
+                            container.removeAllViews()
+                        } else {
+                            Log.e("FormActivity", "Container tidak ditemukan, cek layout!")
+                        }
+
+                        // Inisialisasi Database Helper untuk menyimpan dan mengambil data dari SQLite
+                        val notificationDbHelper = NotificationDatabaseHelper(this)
+
+                        // Simpan notifikasi untuk tes insert
+                        val testTitle = "Contoh Notifikasi"
+                        val testMessage = "Ini adalah pesan notifikasi untuk pengujian"
+                        val testTimestamp = System.currentTimeMillis()
+
+                        Log.d("InsertNotification", "Menyimpan notifikasi: Title: $testTitle, Message: $testMessage")
+                        val insertResult = notificationDbHelper.insertNotification(testTitle, testMessage, testTimestamp)
+
+                        if (insertResult) {
+                            Log.d("InsertNotification", "Notifikasi berhasil disimpan")
+                        } else {
+                            Log.e("InsertNotification", "Gagal menyimpan notifikasi")
+                        }
+
+                        // Mengambil data notifikasi dari database
+                        val notifications = notificationDbHelper.getAllNotifications()
+
+                        Log.d("NotificationFetch", "Total notifikasi ditemukan: ${notifications.size}")
+
+                        // Jika tidak ada notifikasi, tampilkan pesan kosong
+                        if (notifications.isEmpty()) {
+                            val emptyView = TextView(this).apply {
+                                text = "Tidak ada riwayat notifikasi."
+                                textSize = 16f
+                                setTextColor(ContextCompat.getColor(this@FormActivity, android.R.color.black))
+                                setPadding(16, 16, 16, 16)
+                            }
+                            container.addView(emptyView)
+                        } else {
+                            // Loop melalui daftar notifikasi
+                            for (notification in notifications) {
+                                Log.d("NotificationFetch", "Notifikasi ditemukan: ${notification.title}, ${notification.message}, ${notification.timestamp}")
+
+                                // Inflate tampilan item untuk setiap notifikasi
+                                val itemView = LayoutInflater.from(this).inflate(R.layout.notification, container, false)
+
+                                // Set judul, pesan, dan timestamp dari notifikasi
+                                val titleView = itemView.findViewById<TextView>(R.id.notification_title)
+                                val messageView = itemView.findViewById<TextView>(R.id.notification_message)
+                                val timestampView = itemView.findViewById<TextView>(R.id.notification_timestamp)
+
+                                titleView.text = notification.title
+                                messageView.text = notification.message
+                                timestampView.text = android.text.format.DateFormat.format("dd-MM-yyyy hh:mm", notification.timestamp)
+
+                                // Tambahkan item ke container
+                                container.addView(itemView)
                             }
                         }
                     }

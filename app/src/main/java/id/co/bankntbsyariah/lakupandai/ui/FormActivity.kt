@@ -201,7 +201,6 @@ class FormActivity : AppCompatActivity() {
             registerFingerprint(it)
         }
 
-
         findViewById<TextView>(R.id.forgot_password)?.setOnClickListener {
             val intent = Intent(this, FormActivity::class.java).apply {
                 putExtra(Constants.KEY_FORM_ID, "LPW0000")
@@ -475,6 +474,9 @@ class FormActivity : AppCompatActivity() {
             editor.putString("merchant_balance", merchantData.optString("balance", "0"))
             editor.putString("merchant_avatar", merchantData.optString("avatar", "Unknown"))
             editor.putInt("merchant_status", merchantData.optInt("status", 0))
+            editor.putString("kode_agen", merchantData.optString("mid"))
+            editor.putString("pin", merchantData.optString("pin"))
+            editor.putString("mid", merchantData.optString("mid"))
         }
 
         val terminalData = terminalArray?.getJSONObject(0)
@@ -678,6 +680,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
             screenTitle.contains("Cek Saldo Berhasil", ignoreCase = true) -> R.layout.activity_saldo
             screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
+            screenTitle.contains("Biometrik", ignoreCase = true) -> R.layout.activity_bio
             screenTitle.contains("Berhasil", ignoreCase = true) ->
             {
                 showSuccessPopup(screenTitle)
@@ -2140,8 +2143,6 @@ class FormActivity : AppCompatActivity() {
                                                         "Provinsi set to: ${inputValues[component.id]}"
                                                     )
                                                 }
-                                                else -> inputValues[component.id] =
-                                                    (position ?: selectedValue).toString()
                                             }
                                         }
 
@@ -3151,69 +3152,7 @@ class FormActivity : AppCompatActivity() {
                 Regex("""\[(?:OI|oi)\](\d+)""").find(it)?.groupValues?.get(1)
             }
         }
-
-        return when (component.id) {
-//            "CB001" -> {
-//                if (currentValue != "OI") currentValue ?: "" else ""
-//            }
-            "CIF32" -> when (currentValue) {
-                "1" -> "Laki-Laki"
-                "2" -> "Perempuan"
-                else -> ""
-            }
-            "CIF34" -> when (currentValue) {
-                "1" -> "Kawin"
-                "2" -> "Belum Kawin"
-                "3" -> "Janda/Duda"
-                else -> ""
-            }
-            "CIF33" -> when (currentValue) {
-                "1" -> "Islam"
-                "2" -> "Kristen Protestan"
-                "3" -> "Katholik"
-                "4" -> "Budha"
-                "5" -> "Hindu"
-                "6" -> "Konghucu"
-                else -> ""
-            }
-
-            "CIF42" -> when (currentValue) {
-                "0" -> "Tidak Menetap"
-                "1" -> "Menetap"
-                else -> ""
-            }
-            "CIF43" -> when (currentValue) {
-                "1" -> "WNI"
-                "2" -> "WNA"
-                else -> ""
-            }
-            "CIF47" -> when (currentValue) {
-                "1" -> "KTP"
-                "2" -> "PASSPORT"
-                else -> ""
-            }
-            "CIF49" -> when (currentValue) {
-                "0" -> "A"
-                "1" -> "AB"
-                "2" -> "B"
-                "3" -> "O"
-                "4" -> "-"
-                else -> ""
-            }
-            "CIF51" -> when (currentValue) {
-                "1" -> "SD"
-                "2" -> "SLTP"
-                "3" -> "SMA"
-                "4" -> "AKADEMI"
-                "5" -> "S1"
-                "6" -> "S2"
-                "7" -> "S3"
-                "8" -> "OTHERS"
-                else -> ""
-            }
-            else -> currentValue ?: ""
-        }
-
+        return currentValue.toString()
     }
 
     private fun parseKodeCabangFromResponse(response: String): String? {

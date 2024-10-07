@@ -683,6 +683,11 @@ class FormActivity : AppCompatActivity() {
                 showSuccessPopup(screenTitle)
                 R.layout.activity_berhasil
             }
+            screenTitle.contains("Gagal", ignoreCase = true) ->
+            {
+                showFailedPopup(screenTitle)
+                R.layout.activity_gagal
+            }
             else -> R.layout.activity_form
         }
         if (layoutId != R.layout.activity_form) {
@@ -707,6 +712,15 @@ class FormActivity : AppCompatActivity() {
             Log.d("FormActivity", "Formatted title: $formattedTitle")
 
             val processedTitle = screenTitle.replace("Berhasil", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
+        if (screenTitle.contains("Gagal", ignoreCase = true)) {
+            val formattedTitle = screenTitle.replace("Gagal", "").trim()
+            Log.d("FormActivity", "Formatted title: $formattedTitle")
+
+            val processedTitle = screenTitle.replace("Gagal", "", ignoreCase = true).trim()
             val textView: TextView = findViewById(R.id.text_center)
             textView?.text = processedTitle
         }
@@ -739,6 +753,14 @@ class FormActivity : AppCompatActivity() {
     private fun showSuccessPopup(message: String) {
         val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
             putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+            putExtra("MESSAGE_BODY", message)
+        }
+        startActivity(intent)
+    }
+
+    private fun showFailedPopup(message: String) {
+        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
             putExtra("MESSAGE_BODY", message)
         }
         startActivity(intent)

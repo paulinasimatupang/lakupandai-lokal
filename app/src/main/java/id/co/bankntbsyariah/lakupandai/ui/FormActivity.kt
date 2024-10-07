@@ -2137,31 +2137,13 @@ class FormActivity : AppCompatActivity() {
                                                     )
                                                 }
 
-                                                "CIF13" -> {
+                                                "CIF13" , "CIF14"-> {
                                                     if (selectedCompValue != null) {
-                                                        inputValues[component.id] =
-                                                            selectedCompValue.replace("[OI]CK", "")
+                                                        inputValues[component.id] = selectedValue ?: ""
                                                     }
                                                     Log.d(
                                                         "FormActivity",
                                                         "Kab Kota set to: ${inputValues[component.id]}"
-                                                    )
-                                                }
-
-                                                "CIF23" -> inputValues[component.id] =
-                                                    (position - 1).toString()
-
-                                                "CIF14" -> {
-                                                    if (selectedCompValue != null) {
-                                                        inputValues[component.id] =
-                                                            selectedCompValue.replace(
-                                                                "[OI]CIFP",
-                                                                ""
-                                                            )
-                                                    }
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "Provinsi set to: ${inputValues[component.id]}"
                                                     )
                                                 }
                                                 else -> inputValues[component.id] = selectedCompValue ?: ""

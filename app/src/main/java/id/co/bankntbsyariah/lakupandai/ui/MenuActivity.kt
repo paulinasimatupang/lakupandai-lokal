@@ -487,6 +487,8 @@ class MenuActivity : AppCompatActivity() {
             showLogoutPopup()
         }else if(targetScreenId == "MN00002") {
             showMenuInBottomSheet("MN00002")
+        }else if(targetScreenId == "MN00001") {
+            showMenuInBottomSheet("MN00001")
         }else if(screenAwal == "PKOM001"){
             val editor = sharedPreferences.edit()
             editor.putString("kategori", menuList[position].title)

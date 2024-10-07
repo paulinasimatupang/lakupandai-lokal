@@ -96,6 +96,30 @@ class RecyclerViewMenuAdapter(
 
             holder.menuTitle.text = menuList[position].title
 
+            // Tentukan apakah ini adalah item pertama di baris baru
+            val isFirstInRow = position % 4 == 0 // Misalnya, 4 item per baris
+
+            // Contoh untuk menghitung item dengan subtitle tertentu
+            val specificItemCount = menuList.count { it.subtitle == "Transaksi Lainnya" }
+            Log.d(TAG, "Number of items with specific subtitle: $specificItemCount")
+
+
+            // Selain dashboard
+            if (specificItemCount != 0) {
+                if (isFirstInRow) {
+                    when (position) {
+                        0 -> holder.textAboveRow?.text = "Lakupandai"
+                        4 -> holder.textAboveRow?.text = "Biller"
+                        else -> holder.textAboveRow?.visibility = View.GONE
+                    }
+                    holder.textAboveRow?.visibility = View.VISIBLE
+                } else {
+                    holder.textAboveRow?.visibility = View.GONE
+                }
+            } else {
+                holder.textAboveRow?.visibility = View.GONE
+            }
+
             if (isProfile) {
                 holder.menuSubtitle?.visibility = View.GONE
                 holder.menuDescription?.visibility = View.GONE
@@ -175,7 +199,7 @@ class RecyclerViewMenuAdapter(
 
     class MenuViewHolder(itemView: View, isProfile: Boolean, isKomplain: Boolean,  isKomplain2: Boolean) : RecyclerView.ViewHolder(itemView) {
         val menuTitle: TextView = itemView.findViewById(R.id.title)
-
+        val textAboveRow: TextView? = itemView.findViewById(R.id.text_above_row)
         val menuImage: ImageView? = itemView.findViewById(R.id.header_image)
         val menuSubtitle: TextView? = if (!isProfile) itemView.findViewById(R.id.subhead) else null
         val menuDescription: TextView? = if (!isProfile) itemView.findViewById(R.id.body) else null

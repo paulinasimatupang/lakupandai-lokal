@@ -18,4 +18,5 @@ interface WebCaller {
     fun blockAgenLogin(username: String): ResponseBody?
     fun historyPengaduan(mid: String, token: String): ResponseBody?
     fun getParam2(serviceId: String, token: String): JSONObject?
+    fun forgotPin(mid: String, token: String, callback: (Boolean, String?) -> Unit)
 }

@@ -29,7 +29,6 @@ import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import id.co.bankntbsyariah.lakupandai.ui.SignatureActivity
 import com.github.gcacace.signaturepad.views.SignaturePad
 import id.co.bankntbsyariah.lakupandai.R
 import id.co.bankntbsyariah.lakupandai.common.Component
@@ -41,7 +40,6 @@ import id.co.bankntbsyariah.lakupandai.iface.StorageImpl
 import id.co.bankntbsyariah.lakupandai.ui.adapter.MutationAdapter
 import id.co.bankntbsyariah.lakupandai.utils.ScreenParser
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -76,44 +74,28 @@ import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl
 import okhttp3.*
-import  id.co.bankntbsyariah.lakupandai.utils.createTextView
 import android.widget.EditText
 import org.json.JSONArray
 import java.text.ParseException
-import android.os.Handler
-import android.os.Looper
 import android.text.Spannable
 import android.text.style.StyleSpan
 import android.graphics.Color
 import android.text.method.PasswordTransformationMethod
 import android.view.KeyEvent
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.GridLayoutManager
-import com.bumptech.glide.Glide
 import id.co.bankntbsyariah.lakupandai.common.CompValues
 import id.co.bankntbsyariah.lakupandai.common.ComponentValue
 import id.co.bankntbsyariah.lakupandai.ui.adapter.ProdukAdapter
 import id.co.bankntbsyariah.lakupandai.local.NotificationDatabaseHelper
 import com.google.firebase.messaging.FirebaseMessaging
 import id.co.bankntbsyariah.lakupandai.MyFirebaseMessagingService
-import id.co.bankntbsyariah.lakupandai.api.ApiService
 import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.ResponseBody // Pastikan impor ini benar
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import android.hardware.fingerprint.FingerprintManager
 import android.media.MediaDrm
-import android.os.CancellationSignal
 import android.text.InputFilter
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import com.google.gson.Gson
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import okhttp3.*
 import java.util.concurrent.Executor
 import java.security.MessageDigest
 import java.util.UUID
@@ -683,6 +665,7 @@ class FormActivity : AppCompatActivity() {
             screenTitle.contains("Pilih", ignoreCase = true) -> R.layout.pilihan_otp
             screenTitle.contains("Transfer", ignoreCase = true) -> R.layout.activity_transfer
             screenTitle.contains("Cek Saldo Berhasil", ignoreCase = true) -> R.layout.activity_saldo
+            screenTitle.contains("Lupa PIN", ignoreCase = true) -> R.layout.forgot_pin
             screenTitle.contains("PIN", ignoreCase = true) -> R.layout.screen_pin
             screenTitle.contains("Biometrik", ignoreCase = true) -> R.layout.activity_bio
             screenTitle.contains("Berhasil", ignoreCase = true) ->
@@ -702,46 +685,21 @@ class FormActivity : AppCompatActivity() {
             Log.d("FormActivity", "Displaying layout with ID: $layoutId")
         }
 
-        if (screenTitle.contains("Form", ignoreCase = true)) {
-            val processedTitle = screenTitle.replace("FORM", "", ignoreCase = true).trim()
-            val textView: TextView = findViewById(R.id.text_center)
-            textView?.text = processedTitle
-        }
+        val textView: TextView? = findViewById(R.id.text_center)
 
-        if (screenTitle.contains("Form BL", ignoreCase = true)) {
-            val processedTitle = screenTitle.replace("FORM BL", "", ignoreCase = true).trim()
-            val textView: TextView = findViewById(R.id.text_center)
-            textView?.text = processedTitle
-        }
+        textView?.let {
+            val processedTitle = when {
+                screenTitle.contains("Form BL", ignoreCase = true) -> screenTitle.replace("FORM BL", "", ignoreCase = true).trim()
+                screenTitle.contains("Form", ignoreCase = true) -> screenTitle.replace("FORM", "", ignoreCase = true).trim()
+                screenTitle.contains("Review", ignoreCase = true) -> screenTitle.replace("Review", "", ignoreCase = true).trim()
+                screenTitle.contains("Berhasil", ignoreCase = true) -> screenTitle.replace("Berhasil", "", ignoreCase = true).trim()
+                screenTitle.contains("Gagal", ignoreCase = true) -> screenTitle.replace("Gagal", "", ignoreCase = true).trim()
+                screenTitle.contains("Transfer", ignoreCase = true) -> screenTitle.replace("Transfer", "", ignoreCase = true).trim()
+                else -> screenTitle
+            }
 
-        if (screenTitle.contains("Review", ignoreCase = true)) {
-            val processedTitle = screenTitle.replace("Review", "", ignoreCase = true).trim()
-            val textView: TextView = findViewById(R.id.text_center)
-            textView?.text = processedTitle
-        }
-
-        if (screenTitle.contains("Berhasil", ignoreCase = true)) {
-            val formattedTitle = screenTitle.replace("Berhasil", "").trim()
-            Log.d("FormActivity", "Formatted title: $formattedTitle")
-
-            val processedTitle = screenTitle.replace("Berhasil", "", ignoreCase = true).trim()
-            val textView: TextView = findViewById(R.id.text_center)
-            textView?.text = processedTitle
-        }
-
-        if (screenTitle.contains("Gagal", ignoreCase = true)) {
-            val formattedTitle = screenTitle.replace("Gagal", "").trim()
-            Log.d("FormActivity", "Formatted title: $formattedTitle")
-
-            val processedTitle = screenTitle.replace("Gagal", "", ignoreCase = true).trim()
-            val textView: TextView = findViewById(R.id.text_center)
-            textView?.text = processedTitle
-        }
-
-        if (screenTitle.contains("Transfer", ignoreCase = true)) {
-            val processedTitle = screenTitle.replace("Transfer", "", ignoreCase = true).trim()
-            val textView: TextView = findViewById(R.id.text_center)
-            textView?.text = processedTitle
+            it.text = processedTitle
+            Log.d("FormActivity", "Processed title: $processedTitle")
         }
     }
 
@@ -2304,6 +2262,7 @@ class FormActivity : AppCompatActivity() {
                             "MSG10" -> getDrawable(R.drawable.button_green)
                             else -> getDrawable(R.drawable.button_yellow)
                         }
+                        Log.d("FormActivity", "Screen Button Form: $formId")
                         setBackground(background)
                         setOnClickListener {
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
@@ -2714,6 +2673,32 @@ class FormActivity : AppCompatActivity() {
                         }
                         false
                     }
+                    val resendPinTextView = pinView.findViewById<TextView>(R.id.tvForgotPin)
+                    resendPinTextView?.let {
+                        Log.e("FormActivity", "Forget PIN NOT null.")
+                        it.setOnClickListener {
+                            lifecycleScope.launch {
+                                var forgotScreen = "P000002"
+                                var formValue =
+                                    StorageImpl(applicationContext).fetchForm(forgotScreen)
+                                if (formValue.isNullOrEmpty()) {
+                                    formValue = withContext(Dispatchers.IO) {
+                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                            forgotScreen
+                                        )
+                                    }
+                                    Log.i("FormActivity", "Fetched pinValue: $formValue")
+                                }
+                                setupScreen(formValue)
+                            }
+                        }
+                        val text = "Lupa PIN?"
+                        val spannable = SpannableString(text).apply {
+                            setSpan(UnderlineSpan(), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        it.text = spannable
+                    }
+
                     container.addView(pinView)
 
                 }
@@ -3367,7 +3352,8 @@ class FormActivity : AppCompatActivity() {
                     if (screen.id == "WS0001") {
                         Log.e("OTP", "Create Terminal: $otpValue")
 
-                        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                        val sharedPreferences =
+                            getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                         val storedImeiTerminal = sharedPreferences.getString("imei", null)
                         Log.e("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
 
@@ -3377,40 +3363,66 @@ class FormActivity : AppCompatActivity() {
 
                         // Periksa newPassword terlebih dahulu
                         if (!newPassword.isNullOrEmpty()) {
-                            Log.e("FormActivity", "New password is not null or empty, attempting to reset password.")
+                            Log.e(
+                                "FormActivity",
+                                "New password is not null or empty, attempting to reset password."
+                            )
                             lifecycleScope.launch {
                                 val username = sharedPreferences.getString("username", null)
                                 if (!username.isNullOrEmpty()) {
                                     try {
                                         // Call forgotPassword asynchronously
-                                        WebCallerImpl().forgotPassword(username, newPassword) { response ->
+                                        WebCallerImpl().forgotPassword(
+                                            username,
+                                            newPassword
+                                        ) { response ->
                                             lifecycleScope.launch {
                                                 if (response != null) {
-                                                    Log.d("FormActivity", "Forgot Password success: ${response.string()}")
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "Forgot Password success: ${response.string()}"
+                                                    )
                                                     sharedPreferences.edit().apply {
                                                         remove("new_password")  // Remove the new_password
                                                         remove("username")
                                                         apply()                 // Save changes
                                                     }
-                                                    Log.d("FormActivity", "New password cleared from SharedPreferences")
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "New password cleared from SharedPreferences"
+                                                    )
                                                     navigateToLogin()
                                                 } else {
-                                                    Log.e("FormActivity", "Failed to reset password")
+                                                    Log.e(
+                                                        "FormActivity",
+                                                        "Failed to reset password"
+                                                    )
                                                 }
                                             }
                                         }
                                     } catch (e: Exception) {
-                                        Log.e("FormActivity", "Error during forgot password request", e)
+                                        Log.e(
+                                            "FormActivity",
+                                            "Error during forgot password request",
+                                            e
+                                        )
                                     }
                                 } else {
-                                    Log.e("FormActivity", "Username is null or empty, unable to reset password.")
+                                    Log.e(
+                                        "FormActivity",
+                                        "Username is null or empty, unable to reset password."
+                                    )
                                 }
                             }
                         } else {
                             // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
                             lifecycleScope.launch {
-                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-                                val status = sharedPreferences.getBoolean("statusImei", false)  // Mengambil status sebagai boolean
+                                val sharedPreferences =
+                                    getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val status = sharedPreferences.getBoolean(
+                                    "statusImei",
+                                    false
+                                )  // Mengambil status sebagai boolean
                                 Log.d("STATUS IMEI", "Status: $status")
                                 if (status) {
                                     updateImei()
@@ -3419,8 +3431,45 @@ class FormActivity : AppCompatActivity() {
                                 }
                             }
                         }
-                        
-                    } else{
+
+                    }else if (screen.id == "P000003"){
+                        lifecycleScope.launch {
+                            try {
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val mid = sharedPreferences.getString("mid", null)
+                                val token = sharedPreferences.getString("token", "")
+
+                                if (!mid.isNullOrEmpty() && !token.isNullOrEmpty()) {
+                                    Log.e("FormActivity", "Mengirim Request Forgot PIN")
+                                    WebCallerImpl().forgotPin(mid, token) { success, message ->
+                                        val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                            if (success) {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", "PIN Baru Telah Dikirim Melalui Email. Silahkan Cek Email dan Lakukan Login Kembali.")
+                                                putExtra("RETURN_TO_ROOT", true)
+                                                putExtra(Constants.KEY_FORM_ID, "AU00001")
+                                            } else {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                putExtra("MESSAGE_BODY", message ?: "Terjadi Kesalahan Dalam Proses Lupa PIN. Silahkan Coba Kembali atau Hubungi Call Center.")
+                                                putExtra("RETURN_TO_ROOT", true)
+                                            }
+                                        }
+                                        startActivity(intentPopup)
+                                    }
+                                } else {
+                                    Log.e("FormActivity", "MID or Token is null or empty")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("FormActivity", "Error during change PIN request", e)
+                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                    putExtra("MESSAGE_BODY", "Terjadi Kesalahan Dalam Proses Lupa PIN. Silahkan Coba Kembali atau Hubungi Call Center.")
+                                    putExtra("RETURN_TO_ROOT", true)
+                                }
+                                startActivity(intentPopup)
+                            }
+                        }
+                    }else{
                         val messageBody = createMessageBody(screen)
                         if (messageBody != null) {
                             Log.d("FormActivity", "Message Body: $messageBody")
@@ -3895,6 +3944,7 @@ class FormActivity : AppCompatActivity() {
             val savedBranchid = sharedPreferences.getString("merchant_branchid", "")?: ""
             val savedAkad = sharedPreferences.getString("akad", "") ?: ""
             val savedToken = sharedPreferences.getString("token", "") ?: ""
+            val savedNoAgen = sharedPreferences.getString("merchant_phone", "") ?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
             val username = "lakupandai"
             Log.e("FormActivity", "Saved Username: $username")
@@ -3904,6 +3954,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Kode Cabang: $savedBranchid")
             Log.e("FormActivity", "Saved Akad: $savedAkad")
             Log.e("FormActivity", "Saved Token: $savedToken")
+            Log.e("FormActivity", "Saved No Agen: $savedNoAgen")
 
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
@@ -3931,6 +3982,7 @@ class FormActivity : AppCompatActivity() {
                     "RT001" -> msgSi = "RTT002"
                     "RS001" -> msgSi = "OTN002"
                     "PR00010" -> msgSi = "PPR003"
+                    "P000002" -> msgSi = "LPI002"
                     else -> msgSi = screen.actionUrl
                 }
             }
@@ -3975,6 +4027,10 @@ class FormActivity : AppCompatActivity() {
                     component.type == 1 && component.label == "Kode Agen" -> {
                         componentValues[component.id] = savedKodeAgen.toString()
                         Log.d("FormActivity", "Kode Agen : $savedKodeAgen")
+                    }
+                    component.type == 1 && component.label == "No Handphone Agen" -> {
+                        componentValues[component.id] = savedNoAgen
+                        Log.d("FormActivity", "No Agen : $savedNoAgen")
                     }
                     component.type == 1 && component.label == "NIK" -> {
                         componentValues[component.id] = nikValue ?: ""

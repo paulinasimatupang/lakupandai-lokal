@@ -3,6 +3,8 @@ package id.co.bankntbsyariah.lakupandai.iface
 import android.annotation.SuppressLint
 import android.util.Log
 import id.co.bankntbsyariah.lakupandai.api.WebCaller
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -315,6 +317,45 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             Log.e("GETPARAM2", "Exception occurred while fetching param2", e)
             null
         }
+    }
+
+    override fun forgotPin(mid: String, token: String, callback: (Boolean, String?) -> Unit) {
+        val formBody = FormBody.Builder()
+            .add("mid", mid)
+            .build()
+
+        val request = Request.Builder()
+            .url("http://reportntbs.selada.id/api/auth/forgot_pin")
+            .addHeader("Authorization", "Bearer $token")
+            .post(formBody)
+            .build()
+
+        // Pemanggilan API tanpa lifecycleScope
+        Thread {
+            try {
+                val response = client.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    val jsonResponse = JSONObject(responseBody ?: "")
+                    val successMessage = jsonResponse.optString("success")
+
+                    if (successMessage.isNotEmpty()) {
+                        callback(true, successMessage)
+                    } else {
+                        callback(false, "Terjadi kesalahan saat memproses respons.")
+                    }
+                } else {
+                    val errorBody = response.body?.string()
+                    val jsonResponse = JSONObject(errorBody ?: "")
+                    val errorMessage = jsonResponse.optString("error", "Merchant tidak ditemukan.")
+                    callback(false, errorMessage)
+                }
+            } catch (e: Exception) {
+                Log.e("WebCallerImpl", "Exception occurred while changing password", e)
+                callback(false, "Terjadi kesalahan dalam memproses permintaan.")
+            }
+        }.start() // Menjalankan dalam thread terpisah untuk menghindari blocking UI thread
     }
 
 }

@@ -93,7 +93,7 @@ class MenuActivity : AppCompatActivity() {
                 "KOM0000" , "PKOM001"-> R.layout.komplain_menu
                 "LOG0001","HMB0000" -> R.layout.hamburger
                 "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
-                "PR00000" -> R.layout.menu_header
+                "PR00000", "VCG0000" -> R.layout.menu_header
                 Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
                 else -> R.layout.activity_menu
             }
@@ -438,7 +438,15 @@ class MenuActivity : AppCompatActivity() {
         val username = sharedPreferences.getString("username", "")
         val mid = sharedPreferences.getString("mid", "")
 
-        val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, menuId == "HMB0000",menuId == "PP00001", menuId == "PR00000",  menuId== "KOM0000", menuId=="PKOM001")
+        val menuAdapter = RecyclerViewMenuAdapter(
+            menuList,
+            this@MenuActivity,
+            menuId == "HMB0000",
+            menuId == "PP00001",
+            menuId == "PR00000" || menuId == "VCG0000",  // List Biller
+            menuId == "KOM0000",
+            menuId == "PKOM001"
+        )
         menuContainer?.adapter = menuAdapter
 
         screen.comp.forEach { comp ->

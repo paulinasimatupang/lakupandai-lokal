@@ -474,6 +474,7 @@ class FormActivity : AppCompatActivity() {
             editor.putString("merchant_address", merchantData.optString("address", "Unknown"))
             editor.putString("merchant_phone", merchantData.optString("phone", "Unknown"))
             editor.putString("merchant_email", merchantData.optString("email", "Unknown"))
+            editor.putString("merchant_branchid", merchantData.optString("branchid", "Unknown"))
             editor.putString("merchant_balance", merchantData.optString("balance", "0"))
             editor.putString("merchant_avatar", merchantData.optString("avatar", "Unknown"))
             editor.putInt("merchant_status", merchantData.optInt("status", 0))
@@ -510,6 +511,12 @@ class FormActivity : AppCompatActivity() {
                 }else if(formId == "LPW0000"){
                     navigateToLogin()
                 }else {
+                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.remove("norek_biller")
+                    editor.remove("namarek_biller")
+                    editor.remove("nomor_biller")
+                    editor.apply()
                     finish()
                     startActivity(
                         Intent(this@FormActivity, MenuActivity::class.java)
@@ -697,6 +704,12 @@ class FormActivity : AppCompatActivity() {
 
         if (screenTitle.contains("Form", ignoreCase = true)) {
             val processedTitle = screenTitle.replace("FORM", "", ignoreCase = true).trim()
+            val textView: TextView = findViewById(R.id.text_center)
+            textView?.text = processedTitle
+        }
+
+        if (screenTitle.contains("Form BL", ignoreCase = true)) {
+            val processedTitle = screenTitle.replace("FORM BL", "", ignoreCase = true).trim()
             val textView: TextView = findViewById(R.id.text_center)
             textView?.text = processedTitle
         }
@@ -2034,18 +2047,22 @@ class FormActivity : AppCompatActivity() {
                                                     val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                                     val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
                                                     val userFullname = sharedPreferences.getString("fullname", "") ?: ""
+                                                    val noAgen = sharedPreferences.getString("merchant_phone", "") ?: ""
 
                                                     Log.d("FormActivity", "Fetched Userfullname: '$userFullname'")
 
                                                     var norekToSave: String? = null
                                                     var namaToSave: String? = null
+                                                    var nomorToSave: String? = null
 
                                                     if (selectedValue == "Rekening Nasabah") {
                                                         val norekBillerNasabah = sharedPreferences.getString("norek_biller", null)
                                                         val namarekBillerNasabah = sharedPreferences.getString("namarek_biller", null)
+                                                        val nomorBillerNasabah = sharedPreferences.getString("nomor_biller", null)
                                                         if (norekBillerNasabah != null && namarekBillerNasabah != null && norekBillerNasabah.isNotEmpty() && namarekBillerNasabah.isNotEmpty()) {
                                                             norekToSave = norekBillerNasabah
                                                             namaToSave = namarekBillerNasabah
+                                                            nomorToSave = nomorBillerNasabah
                                                             Log.d("FormActivity", "NRK01 set to saved No Rekening: $norekBillerNasabah, Account Name: $namarekBillerNasabah")
                                                         } else {
                                                             lifecycleScope.launch {
@@ -2069,6 +2086,7 @@ class FormActivity : AppCompatActivity() {
                                                         if (savedNorekening.isNotEmpty() && userFullname.isNotEmpty()) {
                                                             norekToSave = savedNorekening
                                                             namaToSave = userFullname
+                                                            nomorToSave = noAgen
                                                             Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
                                                         } else {
                                                             Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
@@ -2077,12 +2095,13 @@ class FormActivity : AppCompatActivity() {
 
                                                     // Set inputValues hanya di akhir
                                                     if (norekToSave != null && namaToSave != null) {
-                                                        inputValues[component.id] = "$norekToSave|$namaToSave"
+                                                        inputValues[component.id] = "$norekToSave|$namaToSave|$nomorToSave"
                                                         Log.e("FormActivity", "Norek dan Namarek Nasabah dihapus")
                                                         val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                                         val editor = sharedPreferences.edit()
                                                         editor.remove("norek_biller")
                                                         editor.remove("namarek_biller")
+                                                        editor.remove("nomor_biller")
                                                         editor.apply()
                                                     }
                                                 }
@@ -2118,7 +2137,7 @@ class FormActivity : AppCompatActivity() {
                                                         Log.d("Form", "PICK OTP is null")
                                                     }
                                                 }
-                                                "CB001" -> {
+                                                "CB001"-> {
                                                     if (selectedCompValue != null) {
                                                         inputValues[component.id] =
                                                             selectedCompValue.replace("[OI]", "")
@@ -3230,6 +3249,10 @@ class FormActivity : AppCompatActivity() {
                 if (comp.id == "PIL03" && pickOTP.isNullOrEmpty()) {
                     allErrors.add("Harus memilih WA atau SMS.")
                 }
+                if (comp.type == 2 && screen.id != "PRP0006") {
+                    Log.d ("Validate", "Validate")
+                    allErrors.addAll(validateInput(comp))
+                }
             }
             if (allErrors.isNotEmpty()) {
                 return
@@ -3721,6 +3744,7 @@ class FormActivity : AppCompatActivity() {
 
                                         var nomorRekening: String? = null
                                         var namaRekening: String? = null
+                                        var nomorHP: String? = null
 
                                         // Loop melalui komponen untuk menemukan Nomor Rekening dan Nama Rekening
                                         for (component in newScreen.comp) {
@@ -3742,6 +3766,15 @@ class FormActivity : AppCompatActivity() {
                                                         "Nama Rekening Biller: $namaRekening"
                                                     )
                                                 }
+
+                                                "CIF45" -> { // Untuk Nomor
+                                                    nomorHP =
+                                                        component.compValues?.compValue?.firstOrNull()?.value
+                                                    Log.e(
+                                                        "FormActivity",
+                                                        "Nomor Biller: $nomorHP"
+                                                    )
+                                                }
                                             }
                                         }
                                         // Jika kedua nilai sudah ditemukan, simpan ke SharedPreferences
@@ -3753,6 +3786,7 @@ class FormActivity : AppCompatActivity() {
                                             val editor = sharedPreferences.edit()
                                             editor.putString("norek_biller", nomorRekening)
                                             editor.putString("namarek_biller", namaRekening)
+                                            editor.putString("nomor_biller", nomorHP)
                                             editor.apply()
                                         }
                                         otpDialog?.dismiss()
@@ -3858,6 +3892,7 @@ class FormActivity : AppCompatActivity() {
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
+            val savedBranchid = sharedPreferences.getString("merchant_branchid", "")?: ""
             val savedAkad = sharedPreferences.getString("akad", "") ?: ""
             val savedToken = sharedPreferences.getString("token", "") ?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
@@ -3866,8 +3901,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
             Log.e("FormActivity", "Saved Nama Agen: $savedNamaAgen")
-            val branchid = getKodeCabangFromPreferences()
-            Log.e("FormActivity", "Saved Kode Cabang: $branchid")
+            Log.e("FormActivity", "Saved Kode Cabang: $savedBranchid")
             Log.e("FormActivity", "Saved Akad: $savedAkad")
             Log.e("FormActivity", "Saved Token: $savedToken")
 
@@ -3947,7 +3981,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "Kode Cabang" -> {
-                        val branchid = getKodeCabangFromPreferences()
+                        val branchid = sharedPreferences.getString("merchant_branchid", "")?: ""
                         componentValues[component.id] = branchid ?: ""
                         Log.d("FormActivity", "Updated componentValues with branchid : ${branchid}")
                     }
@@ -4356,7 +4390,7 @@ class FormActivity : AppCompatActivity() {
 //                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
 //                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 //
-//                                if (imei != null && imei != storedImeiTerminal) {
+//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
 //                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
 //                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
 //                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
@@ -4416,10 +4450,10 @@ class FormActivity : AppCompatActivity() {
                                     callback(true)
                                 }
 
-//                                withContext(Dispatchers.Main) {
-//                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-//                                    navigateToScreen()
-//                                }
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                }
                             }
                         }
                         else {
@@ -4812,10 +4846,12 @@ class FormActivity : AppCompatActivity() {
 //        })
 //    }
     private fun validateInput(component: Component): List<String> {
+        Log.d ("Validate", "Masuk function")
         val container = findViewById<LinearLayout>(R.id.menu_container)
         val editText = container.findViewWithTag<EditText>(component.id)
 
         if (editText == null) {
+            Log.d ("Validate", "Tidak ada edit text")
             return listOf("Input field for ${component.label} tidak ditemukan.")
         }
 
@@ -4837,8 +4873,8 @@ class FormActivity : AppCompatActivity() {
 
         when (conType) {
             0 -> {
-                if (!inputValue.matches(Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]*$"))) {
-                    characterTypeErrors.add("dan mengandung huruf besar, huruf kecil, serta angka")
+                if (!inputValue.matches(Regex("^[\\w\\W]+$"))) {
+                    characterTypeErrors.add("Input harus berupa string, bisa huruf, angka, atau simbol.")
                 }
             }
             1 -> {
@@ -4870,7 +4906,12 @@ class FormActivity : AppCompatActivity() {
         }
 
         if (lengthError || characterTypeErrors.isNotEmpty()) {
-            val lengthErrorMessage = "${component.label} harus terdiri dari $minLength - $maxLength karakter"
+            var lengthErrorMessage = ""
+            if(minLength == maxLength){
+                lengthErrorMessage = "${component.label} harus terdiri dari $maxLength karakter"
+            }else{
+                lengthErrorMessage = "${component.label} harus terdiri dari $minLength - $maxLength karakter"
+            }
             val combinedErrors = if (characterTypeErrors.isNotEmpty()) {
                 "$lengthErrorMessage ${characterTypeErrors.joinToString()}"
             } else {

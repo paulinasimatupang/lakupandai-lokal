@@ -3637,6 +3637,7 @@ class FormActivity : AppCompatActivity() {
                 val messageBody = screen?.let { createMessageBody(it) }
                 val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
                 val sendPengaduan = screen?.comp?.find { it.id == "G0002" }
+                val prodid = screen?.comp?.find { it.id == "PD001" }
                 Log.d("Form", "Send Pengaduan : $sendPengaduan")
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                 if(sendPengaduan != null){
@@ -3644,7 +3645,7 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "Create Message Pengaduan $bodyPengaduan")
 
                     bodyPengaduan?.let { sendPengaduanToApi(it) }
-                }else if (messageBody != null) {
+                } else if (messageBody != null) {
                     Log.d("FormActivity", "Message Body: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                         responseBody?.let { body ->
@@ -3654,243 +3655,328 @@ class FormActivity : AppCompatActivity() {
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                 Log.e("FormActivity", "SCREEN ${screen.id} ")
                                 Log.e("FormActivity", "NEW SCREEN BUKAN OTP ${newScreen.id} ")
-                                if(sendOTPComponent != null) {
-                                    var pinScreen = "P000001"
-                                    var formValue =
-                                        StorageImpl(applicationContext).fetchForm(pinScreen)
-                                    if (formValue.isNullOrEmpty()) {
-                                        formValue = withContext(Dispatchers.IO) {
-                                            ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                pinScreen
+                                Log.e("FormActivity", "NEW SCREEN ${newScreen} ")
+                                val prodIDComponent = newScreen?.comp?.find { it.id == "PD001" }
+                                // Pengecekkan Rekening BSA
+                                if (prodIDComponent != null) {
+                                    Log.e("FormActivity", "ADA PRODID ")
+                                    val prodIDvalue = prodIDComponent.compValues?.compValue?.firstOrNull()?.value
+                                    Log.d("FormActivity", "Value of PROID: $prodIDvalue")
+                                    when (screen.id) {
+                                        // Setor Tunai
+                                        "ST001", "PRP0006" -> {
+                                            if(prodIDvalue != "36"){
+                                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                    putExtra("MESSAGE_BODY", "Rekening yang digunakan harus rekening BSA.")
+                                                    putExtra("RETURN_TO_ROOT", false)
+                                                }
+                                                startActivity(intentPopup)
+                                            }else{
+                                                handleScreenType(newScreen)
+                                            }
+                                        }
+                                        // Setor Tunai Sekolah
+                                        "STS0001" ->{
+                                            if(prodIDvalue != "34"){
+                                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                    putExtra("MESSAGE_BODY", "Rekening yang digunakan harus rekening sekolah.")
+                                                    putExtra("RETURN_TO_ROOT", false)
+                                                }
+                                                startActivity(intentPopup)
+                                            }else{
+                                                handleScreenType(newScreen)
+                                            }
+                                        }
+                                        else -> {
+                                            handleScreenType(newScreen)
+                                        }
+                                    }
+                                }else{
+                                    Log.e("FormActivity", "GAK ADA PRODID ")
+                                    if(sendOTPComponent != null) {
+                                        var pinScreen = "P000001"
+                                        var formValue =
+                                            StorageImpl(applicationContext).fetchForm(pinScreen)
+                                        if (formValue.isNullOrEmpty()) {
+                                            formValue = withContext(Dispatchers.IO) {
+                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                    pinScreen
+                                                )
+                                            }
+                                            Log.i("FormActivity", "Fetched pinValue: $formValue")
+                                        }
+                                        val url = "http://108.137.154.8:8080/ARRest/fileupload"
+                                        if(fileFotoOrang != null){
+                                            // Mengunggah foto orang
+                                            fileFotoOrang?.let { file ->
+                                                uploadImageFile(file, url)
+                                                Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
+                                            }
+                                        }else{
+                                            Log.d("Foto", "Foto Orang Kosong")
+                                        }
+                                        if(fileFotoKTP != null){
+                                            // Mengunggah KTP
+                                            fileFotoKTP?.let { file ->
+                                                uploadImageFile(file, url)
+                                                Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                            }
+                                        }else{
+                                            Log.d("Foto", "Foto KTP Kosong")
+                                        }
+                                        if(signatureFile != null){
+                                            // Mengunggah tanda tangan
+                                            signatureFile?.let { file ->
+                                                uploadImageFile(file, url)
+                                                Log.d("Foto", "Signature Ada : $signatureFile")
+                                            }
+                                        }else{
+                                            Log.d("Foto", "Tanda Tangan Kosong")
+                                        }
+                                        setupScreen(formValue)
+
+                                        otpScreen = newScreen
+                                    }else {
+                                        if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                            val message = newScreen?.comp?.find { it.id == "0000A" }
+                                                ?.compValues?.compValue?.firstOrNull()?.value
+                                                ?: "Unknown error"
+                                            newScreen.id = "RCCIF02"
+                                            var newScreenId = newScreen.id
+                                            var formValue =
+                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                            if (formValue.isNullOrEmpty()) {
+                                                formValue = withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                            }
+                                            setupScreen(formValue)
+                                            val intent = Intent(
+                                                this@FormActivity,
+                                                PopupActivity::class.java
+                                            ).apply {
+                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                putExtra("MESSAGE_BODY", message)
+                                                putExtra("RETURN_TO_ROOT", false)
+                                            }
+                                            startActivity(intent)
+                                        } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                            newScreen.id = "CCIF001"
+                                            var newScreenId = newScreen.id
+                                            var formValue =
+                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                            if (formValue.isNullOrEmpty()) {
+                                                formValue = withContext(Dispatchers.IO) {
+                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                        newScreenId
+                                                    )
+                                                }
+                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                            }
+                                            setupScreen(formValue)
+                                        } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                            val intent =
+                                                Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                    putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                                }
+                                            startActivity(intent)
+                                        } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
+                                            val intent =
+                                                Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                    putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                                }
+                                            startActivity(intent)
+                                        } else if (screen.id == "TF00003" && newScreen.id != "000000F") {
+                                            val intent =
+                                                Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                    putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                                }
+                                            startActivity(intent)
+                                        } else if (screen.id == "BR001" && newScreen.id != "000000F") {
+                                            val intent =
+                                                Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                    putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                                }
+                                            startActivity(intent)
+                                        } else if (screen.id == "BS001" && newScreen.id != "000000F") {
+                                            val intent =
+                                                Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                    putExtra("MESSAGE_BODY", "Pesan sudah teririm")
+                                                }
+                                            startActivity(intent)
+                                        } else if (newScreen.id == "PRP0007") {
+                                            Log.e("FormActivity", "Masuk PRP0007")
+
+                                            var nomorRekening: String? = null
+                                            var namaRekening: String? = null
+                                            var nomorHP: String? = null
+
+                                            // Loop melalui komponen untuk menemukan Nomor Rekening dan Nama Rekening
+                                            for (component in newScreen.comp) {
+                                                when (component.id) {
+                                                    "NR006" -> { // Untuk Nomor Rekening
+                                                        nomorRekening =
+                                                            component.compValues?.compValue?.firstOrNull()?.value
+                                                        Log.e(
+                                                            "FormActivity",
+                                                            "Nomor Rekening Biller: $nomorRekening"
+                                                        )
+                                                    }
+
+                                                    "UNF04" -> { // Untuk Nama Rekening
+                                                        namaRekening =
+                                                            component.compValues?.compValue?.firstOrNull()?.value
+                                                        Log.e(
+                                                            "FormActivity",
+                                                            "Nama Rekening Biller: $namaRekening"
+                                                        )
+                                                    }
+
+                                                    "CIF45" -> { // Untuk Nomor
+                                                        nomorHP =
+                                                            component.compValues?.compValue?.firstOrNull()?.value
+                                                        Log.e(
+                                                            "FormActivity",
+                                                            "Nomor Biller: $nomorHP"
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            // Jika kedua nilai sudah ditemukan, simpan ke SharedPreferences
+                                            val sharedPreferences = getSharedPreferences(
+                                                "MyAppPreferences",
+                                                Context.MODE_PRIVATE
                                             )
-                                        }
-                                        Log.i("FormActivity", "Fetched pinValue: $formValue")
-                                    }
-                                    val url = "http://108.137.154.8:8080/ARRest/fileupload"
-                                    if(fileFotoOrang != null){
-                                        // Mengunggah foto orang
-                                        fileFotoOrang?.let { file ->
-                                            uploadImageFile(file, url)
-                                            Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
-                                        }
-                                    }else{
-                                        Log.d("Foto", "Foto Orang Kosong")
-                                    }
-                                    if(fileFotoKTP != null){
-                                        // Mengunggah KTP
-                                        fileFotoKTP?.let { file ->
-                                            uploadImageFile(file, url)
-                                            Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
-                                        }
-                                    }else{
-                                        Log.d("Foto", "Foto KTP Kosong")
-                                    }
-                                    if(signatureFile != null){
-                                        // Mengunggah tanda tangan
-                                        signatureFile?.let { file ->
-                                            uploadImageFile(file, url)
-                                            Log.d("Foto", "Signature Ada : $signatureFile")
-                                        }
-                                    }else{
-                                        Log.d("Foto", "Tanda Tangan Kosong")
-                                    }
-                                    setupScreen(formValue)
-
-                                    otpScreen = newScreen
-                                }else {
-                                    if (screen.id == "CCIF003" && newScreen.id == "000000D") {
-                                        val message = newScreen?.comp?.find { it.id == "0000A" }
-                                            ?.compValues?.compValue?.firstOrNull()?.value
-                                            ?: "Unknown error"
-                                        newScreen.id = "RCCIF02"
-                                        var newScreenId = newScreen.id
-                                        var formValue =
-                                            StorageImpl(applicationContext).fetchForm(newScreenId)
-                                        if (formValue.isNullOrEmpty()) {
-                                            formValue = withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                    newScreenId
-                                                )
+                                            if (nomorRekening != null && namaRekening != null) {
+                                                val editor = sharedPreferences.edit()
+                                                editor.putString("norek_biller", nomorRekening)
+                                                editor.putString("namarek_biller", namaRekening)
+                                                editor.putString("nomor_biller", nomorHP)
+                                                editor.apply()
                                             }
-                                            Log.i("FormActivity", "Fetched formValue: $formValue")
-                                        }
-                                        setupScreen(formValue)
-                                        val intent = Intent(
-                                            this@FormActivity,
-                                            PopupActivity::class.java
-                                        ).apply {
-                                            putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                            putExtra("MESSAGE_BODY", message)
-                                            putExtra("RETURN_TO_ROOT", false)
-                                        }
-                                        startActivity(intent)
-                                    } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
-                                        newScreen.id = "CCIF001"
-                                        var newScreenId = newScreen.id
-                                        var formValue =
-                                            StorageImpl(applicationContext).fetchForm(newScreenId)
-                                        if (formValue.isNullOrEmpty()) {
-                                            formValue = withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                    newScreenId
-                                                )
-                                            }
-                                            Log.i("FormActivity", "Fetched formValue: $formValue")
-                                        }
-                                        setupScreen(formValue)
-                                    } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                        val intent =
-                                            Intent(
-                                                this@FormActivity,
-                                                PopupActivity::class.java
-                                            ).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                                putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
-                                            }
-                                        startActivity(intent)
-                                    } else if (screen.id == "RCS0001" && newScreen.id != "000000F") {
-                                        val intent =
-                                            Intent(
-                                                this@FormActivity,
-                                                PopupActivity::class.java
-                                            ).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                            }
-                                        startActivity(intent)
-                                    } else if (screen.id == "TF00003" && newScreen.id != "000000F") {
-                                        val intent =
-                                            Intent(
-                                                this@FormActivity,
-                                                PopupActivity::class.java
-                                            ).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                            }
-                                        startActivity(intent)
-                                    } else if (screen.id == "BR001" && newScreen.id != "000000F") {
-                                        val intent =
-                                            Intent(
-                                                this@FormActivity,
-                                                PopupActivity::class.java
-                                            ).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                            }
-                                        startActivity(intent)
-                                    } else if (screen.id == "BS001" && newScreen.id != "000000F") {
-                                        val intent =
-                                            Intent(
-                                                this@FormActivity,
-                                                PopupActivity::class.java
-                                            ).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                                putExtra("MESSAGE_BODY", "Pesan sudah teririm")
-                                            }
-                                        startActivity(intent)
-                                    } else if (newScreen.id == "PRP0007") {
-                                        Log.e("FormActivity", "Masuk PRP0007")
-
-                                        var nomorRekening: String? = null
-                                        var namaRekening: String? = null
-                                        var nomorHP: String? = null
-
-                                        // Loop melalui komponen untuk menemukan Nomor Rekening dan Nama Rekening
-                                        for (component in newScreen.comp) {
-                                            when (component.id) {
-                                                "NR006" -> { // Untuk Nomor Rekening
-                                                    nomorRekening =
-                                                        component.compValues?.compValue?.firstOrNull()?.value
-                                                    Log.e(
+                                            otpDialog?.dismiss()
+                                            val gson = Gson()
+                                            val screenJson =
+                                                sharedPreferences.getString("screen_biller", null)
+                                            val screenBiller: Screen =
+                                                gson.fromJson(screenJson, Screen::class.java)
+                                            handleScreenType(screenBiller)
+                                            // BILLER
+                                        } else if (isSvcBiller == true) {
+                                            Log.e("FormActivity", "Masuk Service Biller")
+                                            if (newScreen.id != "000000F") {
+                                                Log.e("FormActivity", "Debit Berhasil")
+                                                val messageBody = createMessageBody(newScreen)
+                                                if (messageBody != null) {
+                                                    Log.d(
                                                         "FormActivity",
-                                                        "Nomor Rekening Biller: $nomorRekening"
+                                                        "Message Body Biller: $messageBody"
                                                     )
-                                                }
-
-                                                "UNF04" -> { // Untuk Nama Rekening
-                                                    namaRekening =
-                                                        component.compValues?.compValue?.firstOrNull()?.value
-                                                    Log.e(
+                                                    Log.d("FormActivity", "MAU NEW SCREEN: $newScreen")
+                                                    Log.d(
                                                         "FormActivity",
-                                                        "Nama Rekening Biller: $namaRekening"
+                                                        "MAU NEW SCREEN.ID: ${newScreen.id}"
                                                     )
-                                                }
-
-                                                "CIF45" -> { // Untuk Nomor
-                                                    nomorHP =
-                                                        component.compValues?.compValue?.firstOrNull()?.value
-                                                    Log.e(
-                                                        "FormActivity",
-                                                        "Nomor Biller: $nomorHP"
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        // Jika kedua nilai sudah ditemukan, simpan ke SharedPreferences
-                                        val sharedPreferences = getSharedPreferences(
-                                            "MyAppPreferences",
-                                            Context.MODE_PRIVATE
-                                        )
-                                        if (nomorRekening != null && namaRekening != null) {
-                                            val editor = sharedPreferences.edit()
-                                            editor.putString("norek_biller", nomorRekening)
-                                            editor.putString("namarek_biller", namaRekening)
-                                            editor.putString("nomor_biller", nomorHP)
-                                            editor.apply()
-                                        }
-                                        otpDialog?.dismiss()
-                                        val gson = Gson()
-                                        val screenJson = sharedPreferences.getString("screen_biller", null)
-                                        val screenBiller: Screen = gson.fromJson(screenJson, Screen::class.java)
-                                        handleScreenType(screenBiller)
-                                        // BILLER
-                                    } else if (isSvcBiller == true){
-                                        Log.e("FormActivity", "Masuk Service Biller")
-                                        if(newScreen.id != "000000F"){
-                                            Log.e("FormActivity", "Debit Berhasil")
-                                            val messageBody = createMessageBody(newScreen)
-                                            if (messageBody != null) {
-                                                Log.d("FormActivity", "Message Body Biller: $messageBody")
-                                                Log.d("FormActivity", "MAU NEW SCREEN: $newScreen")
-                                                Log.d("FormActivity", "MAU NEW SCREEN.ID: ${newScreen.id}")
-                                                var billerScreen = newScreen
-                                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                    responseBody?.let { body ->
-                                                        lifecycleScope.launch {
-                                                            val screenJson = JSONObject(body)
-                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                            Log.e("FormActivity", "SCREEN Biller ${screen.id} ")
-                                                            Log.e("FormActivity", "NEW SCREEN Biller ${newScreen.id} ")
-                                                            if(newScreen.id == "000000F"){
-                                                                Log.e("FormActivity", "Biller gagal, reversal")
-                                                                Log.e("FormActivity", "Screen Reversal:${screen.id}")
-                                                                Log.e("FormActivity", "IS Reversal:$isReversal")
-                                                                isReversal = true
-                                                                Log.e("FormActivity", "After IS Reversal:$isReversal")
-                                                                Log.e("FormActivity", "Biller Screen:${billerScreen.id}")
-                                                                val messageBody = createMessageBody(billerScreen)
-                                                                if (messageBody != null) {
-                                                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                                        responseBody?.let { body ->
-                                                                            lifecycleScope.launch {
-                                                                                val screenJson = JSONObject(body)
-                                                                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                                Log.e("FormActivity", "NEW SCREEN Biller ${newScreen.id} ")
-                                                                                handleScreenType(newScreen)
+                                                    var billerScreen = newScreen
+                                                    ArrestCallerImpl(OkHttpClient()).requestPost(
+                                                        messageBody
+                                                    ) { responseBody ->
+                                                        responseBody?.let { body ->
+                                                            lifecycleScope.launch {
+                                                                val screenJson = JSONObject(body)
+                                                                val newScreen: Screen =
+                                                                    ScreenParser.parseJSON(screenJson)
+                                                                Log.e(
+                                                                    "FormActivity",
+                                                                    "SCREEN Biller ${screen.id} "
+                                                                )
+                                                                Log.e(
+                                                                    "FormActivity",
+                                                                    "NEW SCREEN Biller ${newScreen.id} "
+                                                                )
+                                                                if (newScreen.id == "000000F") {
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "Biller gagal, reversal"
+                                                                    )
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "Screen Reversal:${screen.id}"
+                                                                    )
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "IS Reversal:$isReversal"
+                                                                    )
+                                                                    isReversal = true
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "After IS Reversal:$isReversal"
+                                                                    )
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "Biller Screen:${billerScreen.id}"
+                                                                    )
+                                                                    val messageBody =
+                                                                        createMessageBody(billerScreen)
+                                                                    if (messageBody != null) {
+                                                                        ArrestCallerImpl(OkHttpClient()).requestPost(
+                                                                            messageBody
+                                                                        ) { responseBody ->
+                                                                            responseBody?.let { body ->
+                                                                                lifecycleScope.launch {
+                                                                                    val screenJson =
+                                                                                        JSONObject(body)
+                                                                                    val newScreen: Screen =
+                                                                                        ScreenParser.parseJSON(
+                                                                                            screenJson
+                                                                                        )
+                                                                                    Log.e(
+                                                                                        "FormActivity",
+                                                                                        "NEW SCREEN Biller ${newScreen.id} "
+                                                                                    )
+                                                                                    handleScreenType(
+                                                                                        newScreen
+                                                                                    )
+                                                                                }
                                                                             }
                                                                         }
                                                                     }
+                                                                } else {
+                                                                    handleScreenType(newScreen)
                                                                 }
-                                                            }else{
-                                                                handleScreenType(newScreen)
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
+                                        } else {
+                                            handleScreenType(newScreen)
                                         }
-                                    } else{
-                                        handleScreenType(newScreen)
                                     }
                                 }
                             }

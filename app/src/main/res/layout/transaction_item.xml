@@ -1,66 +1,84 @@
 <!-- transaction_item.xml -->
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingBottom="8dp"
-    android:paddingStart="5dp"
-    android:layout_marginTop="10dp"
-    android:paddingEnd="5dp"
-    android:gravity="center_vertical">
+    android:layout_margin="8dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="4dp"
+    android:padding="0dp"
+    android:backgroundTint="@android:color/white">
 
-    <!-- Section 1: Description -->
-    <TextView
-        android:id="@+id/tv_description"
-        android:layout_width="114dp"
-        android:layout_height="62dp"
-        android:layout_gravity="center"
-        android:layout_weight="1"
-        android:ellipsize="end"
-        android:gravity="center|left"
-        android:maxLines="3"
-        android:text="Bayar Buku"
-        android:textColor="#000000"
-        android:textSize="16sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tv_transaction_type"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="0.2"
-        android:gravity="start"
-        android:text="CR"
-        android:textColor="#555555"
-        android:textSize="17sp"
-        android:textStyle="bold" />
-
-    <!-- Section 3: Amount and Time -->
     <LinearLayout
-        android:layout_width="80dp"
-        android:layout_height="match_parent"
-        android:layout_weight="0.4"
-        android:gravity="start|center_vertical"
-        android:orientation="vertical">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        android:padding="2dp"
+        android:gravity="center_vertical">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:gravity="center_vertical">
+
+        <!-- Section 1: Description -->
+        <TextView
+            android:id="@+id/tv_description"
+            android:layout_width="325dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center|left"
+            android:text="Bayar Buku"
+            android:textColor="#000000"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <!-- Section 3: Amount and Time -->
+        <LinearLayout
+            android:layout_width="80dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.4"
+            android:gravity="start|center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_transaction_type"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center|right"
+                android:text="CR"
+                android:textColor="#555555"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center|right"
+                android:text="13:29:24"
+                android:textColor="#777777"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
         <TextView
             android:id="@+id/tv_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center|right"
+            android:gravity="center|left"
             android:text="Rp 50.000"
             android:textSize="17sp"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="20dp"
             android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_time"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:gravity="center|right"
-            android:text="13:29:24"
-            android:textColor="#777777"
-            android:textSize="12sp" />
     </LinearLayout>
-</LinearLayout>
+
+</androidx.cardview.widget.CardView>

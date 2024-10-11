@@ -94,6 +94,7 @@ import android.media.MediaDrm
 import android.text.InputFilter
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import com.airbnb.lottie.LottieAnimationView
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.Executor
@@ -144,6 +145,7 @@ class FormActivity : AppCompatActivity() {
 
     private lateinit var executor: Executor
     private val webCallerImpl = WebCallerImpl()
+    private var lottieLoading: LottieAnimationView? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -784,6 +786,7 @@ class FormActivity : AppCompatActivity() {
         var buttonContainer = containerView?.findViewById<LinearLayout>(R.id.button_type_7_container) ?: null
         val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
 
+        lottieLoading = findViewById(R.id.lottie_loading) ?: null
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -815,7 +818,7 @@ class FormActivity : AppCompatActivity() {
                     namaDepan = fullName?.split(" ")?.firstOrNull()?.take(1) ?: ""
                 }
             }
-            if (screen.title.contains("Transfer") && component.id == "ST003") {
+            if (screen.title.contains("Transfer") && (component.id == "ST003" || component.id == "STS01")) {
                 val transaksiBerhasilTextView = findViewById<TextView>(R.id.success)
                 val dateTransferTextView = findViewById<TextView>(R.id.dateTransfer)
                 val timeTransferTextView = findViewById<TextView>(R.id.timeTransfer)
@@ -824,8 +827,18 @@ class FormActivity : AppCompatActivity() {
                 transaksiBerhasilTextView?.let {
                     val newText = getComponentValue(component)
                     if (!newText.isNullOrEmpty()) {
-                        it.text = newText
-                        titleTransactionView?.text = getTransactionTitle(screen.id)
+                        if(component.id == "STS01"){
+                            it.text = "TRANSAKSI BERHASIL"
+                        }else{
+                            it.text = newText
+                        }
+                        titleTransactionView?.let { titleView ->
+                            if (screen.title.contains("Transfer", ignoreCase = true)) {
+                                titleView.text = screen.title.replace("Transfer", "", ignoreCase = true).trim()
+                            } else {
+                                titleView.text = screen.title
+                            }
+                        } ?: Log.e("FormActivity", "TextView with ID titleTransaction not found")
                         dateTransferTextView?.text = getCurrentDate()
                         timeTransferTextView?.text = getCurrentTime()
                     } else {
@@ -888,7 +901,7 @@ class FormActivity : AppCompatActivity() {
 
             if (component.id == "TRF27" || component.id == "TFR24" || (component.id == "AG001" && screen.title.contains("Form")) || (component.id == "NAG02" && screen.title.contains("Form")) ||
                 (component.id == "AG002" && screen.title.contains("Form")) || component.id == "TRF26" || (component.id == "AG005" && screen.title.contains("Form")) ||
-                (component.id == "ST003" && screen.title.contains("Transfer")) || component.id == "D1004"
+                (((component.id == "ST003" || component.id == "STS01")) && screen.title.contains("Transfer")) || component.id == "D1004"
             ) continue
 
             if (component.id == "MSG03") {
@@ -2265,6 +2278,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Screen Button Form: $formId")
                         setBackground(background)
                         setOnClickListener {
+                            lottieLoading?.visibility = View.VISIBLE
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             val sharedPreferences =
                                 getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
@@ -3046,6 +3060,7 @@ class FormActivity : AppCompatActivity() {
             Log.d("FormActivity", "Message Body Login: $messageBody")
 
             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                
                 responseBody?.let { body ->
                     Log.d("FormActivity", "Response POST: $body")
 
@@ -3240,13 +3255,21 @@ class FormActivity : AppCompatActivity() {
                 }
             }
             if (allErrors.isNotEmpty()) {
+                lottieLoading?.visibility = View.GONE
                 return
             }
+        }
+
+        if (lottieLoading == null) {
+            Log.d("FormActivity", "PROGRESS NULL")
+        }else{
+            Log.d("FormActivity", "PROGRESS NOT NULL")
         }
 
         if (formId == "AU00001" && component.id != "OTP10") {
             loginUser { isSuccess ->
                 if (!isSuccess) {
+                    lottieLoading?.visibility = View.GONE
                     return@loginUser
                 }
             }
@@ -3474,8 +3497,10 @@ class FormActivity : AppCompatActivity() {
                         if (messageBody != null) {
                             Log.d("FormActivity", "Message Body: $messageBody")
                             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                
                                 responseBody?.let { body ->
                                     lifecycleScope.launch {
+                                        lottieLoading?.visibility = View.GONE
                                         val screenJson = JSONObject(body)
                                         val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                         Log.e("FormActivity", "SCREEN ${screen.id} ")
@@ -3569,6 +3594,7 @@ class FormActivity : AppCompatActivity() {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                                                         responseBody?.let { body ->
                                                             lifecycleScope.launch {
+                                                                lottieLoading?.visibility = View.GONE
                                                                 val screenJson = JSONObject(body)
                                                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                                 Log.e("FormActivity", "SCREEN Biller ${screen.id} ")
@@ -3583,8 +3609,10 @@ class FormActivity : AppCompatActivity() {
                                                                     val messageBody = createMessageBody(billerScreen)
                                                                     if (messageBody != null) {
                                                                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                                            
                                                                             responseBody?.let { body ->
                                                                                 lifecycleScope.launch {
+                                                                                    lottieLoading?.visibility = View.GONE
                                                                                     val screenJson = JSONObject(body)
                                                                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                                                     Log.e("FormActivity", "NEW SCREEN Biller ${newScreen.id} ")
@@ -3637,7 +3665,6 @@ class FormActivity : AppCompatActivity() {
                 val messageBody = screen?.let { createMessageBody(it) }
                 val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
                 val sendPengaduan = screen?.comp?.find { it.id == "G0002" }
-                val prodid = screen?.comp?.find { it.id == "PD001" }
                 Log.d("Form", "Send Pengaduan : $sendPengaduan")
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                 if(sendPengaduan != null){
@@ -3648,8 +3675,10 @@ class FormActivity : AppCompatActivity() {
                 } else if (messageBody != null) {
                     Log.d("FormActivity", "Message Body: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                        
                         responseBody?.let { body ->
                             lifecycleScope.launch {
+                                lottieLoading?.visibility = View.GONE
                                 Log.e("FormActivity", "")
                                 val screenJson = JSONObject(body)
                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
@@ -3664,7 +3693,7 @@ class FormActivity : AppCompatActivity() {
                                     Log.d("FormActivity", "Value of PROID: $prodIDvalue")
                                     when (screen.id) {
                                         // Setor Tunai
-                                        "ST001", "PRP0006" -> {
+                                        "ST001" -> {
                                             if(prodIDvalue != "36"){
                                                 val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                                     putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
@@ -3687,6 +3716,90 @@ class FormActivity : AppCompatActivity() {
                                                 startActivity(intentPopup)
                                             }else{
                                                 handleScreenType(newScreen)
+                                            }
+                                        }
+                                        // No Rek Nasabah Biller
+                                        "PRP0006" -> {
+                                            if(prodIDvalue != "36"){
+                                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                    putExtra("MESSAGE_BODY", "Rekening yang digunakan harus rekening BSA.")
+                                                    putExtra("RETURN_TO_ROOT", false)
+                                                }
+                                                startActivity(intentPopup)
+                                            }else{
+                                                if (newScreen.id == "PRP0007") {
+                                                    Log.e("FormActivity", "Masuk PRP0007")
+
+                                                    var nomorRekening: String? = null
+                                                    var namaRekening: String? = null
+                                                    var nomorHP: String? = null
+
+                                                    // Loop melalui komponen untuk menemukan Nomor Rekening dan Nama Rekening
+                                                    for (component in newScreen.comp) {
+                                                        when (component.id) {
+                                                            "NR006" -> { // Untuk Nomor Rekening
+                                                                nomorRekening =
+                                                                    component.compValues?.compValue?.firstOrNull()?.value
+                                                                Log.e(
+                                                                    "FormActivity",
+                                                                    "Nomor Rekening Biller: $nomorRekening"
+                                                                )
+                                                            }
+
+                                                            "UNF04" -> { // Untuk Nama Rekening
+                                                                namaRekening =
+                                                                    component.compValues?.compValue?.firstOrNull()?.value
+                                                                Log.e(
+                                                                    "FormActivity",
+                                                                    "Nama Rekening Biller: $namaRekening"
+                                                                )
+                                                            }
+
+                                                            "CIF45" -> { // Untuk Nomor
+                                                                nomorHP =
+                                                                    component.compValues?.compValue?.firstOrNull()?.value
+                                                                Log.e(
+                                                                    "FormActivity",
+                                                                    "Nomor Biller: $nomorHP"
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    // Jika kedua nilai sudah ditemukan, simpan ke SharedPreferences
+                                                    val sharedPreferences = getSharedPreferences(
+                                                        "MyAppPreferences",
+                                                        Context.MODE_PRIVATE
+                                                    )
+                                                    if (nomorRekening != null && namaRekening != null) {
+                                                        val editor = sharedPreferences.edit()
+                                                        editor.putString(
+                                                            "norek_biller",
+                                                            nomorRekening
+                                                        )
+                                                        editor.putString(
+                                                            "namarek_biller",
+                                                            namaRekening
+                                                        )
+                                                        editor.putString("nomor_biller", nomorHP)
+                                                        editor.apply()
+                                                    }
+                                                    otpDialog?.dismiss()
+                                                    val gson = Gson()
+                                                    val screenJson =
+                                                        sharedPreferences.getString(
+                                                            "screen_biller",
+                                                            null
+                                                        )
+                                                    val screenBiller: Screen =
+                                                        gson.fromJson(
+                                                            screenJson,
+                                                            Screen::class.java
+                                                        )
+                                                    handleScreenType(screenBiller)
+                                                }else{
+                                                    handleScreenType(newScreen)
+                                                }
                                             }
                                         }
                                         else -> {
@@ -3829,64 +3942,7 @@ class FormActivity : AppCompatActivity() {
                                                     putExtra("MESSAGE_BODY", "Pesan sudah teririm")
                                                 }
                                             startActivity(intent)
-                                        } else if (newScreen.id == "PRP0007") {
-                                            Log.e("FormActivity", "Masuk PRP0007")
-
-                                            var nomorRekening: String? = null
-                                            var namaRekening: String? = null
-                                            var nomorHP: String? = null
-
-                                            // Loop melalui komponen untuk menemukan Nomor Rekening dan Nama Rekening
-                                            for (component in newScreen.comp) {
-                                                when (component.id) {
-                                                    "NR006" -> { // Untuk Nomor Rekening
-                                                        nomorRekening =
-                                                            component.compValues?.compValue?.firstOrNull()?.value
-                                                        Log.e(
-                                                            "FormActivity",
-                                                            "Nomor Rekening Biller: $nomorRekening"
-                                                        )
-                                                    }
-
-                                                    "UNF04" -> { // Untuk Nama Rekening
-                                                        namaRekening =
-                                                            component.compValues?.compValue?.firstOrNull()?.value
-                                                        Log.e(
-                                                            "FormActivity",
-                                                            "Nama Rekening Biller: $namaRekening"
-                                                        )
-                                                    }
-
-                                                    "CIF45" -> { // Untuk Nomor
-                                                        nomorHP =
-                                                            component.compValues?.compValue?.firstOrNull()?.value
-                                                        Log.e(
-                                                            "FormActivity",
-                                                            "Nomor Biller: $nomorHP"
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            // Jika kedua nilai sudah ditemukan, simpan ke SharedPreferences
-                                            val sharedPreferences = getSharedPreferences(
-                                                "MyAppPreferences",
-                                                Context.MODE_PRIVATE
-                                            )
-                                            if (nomorRekening != null && namaRekening != null) {
-                                                val editor = sharedPreferences.edit()
-                                                editor.putString("norek_biller", nomorRekening)
-                                                editor.putString("namarek_biller", namaRekening)
-                                                editor.putString("nomor_biller", nomorHP)
-                                                editor.apply()
-                                            }
-                                            otpDialog?.dismiss()
-                                            val gson = Gson()
-                                            val screenJson =
-                                                sharedPreferences.getString("screen_biller", null)
-                                            val screenBiller: Screen =
-                                                gson.fromJson(screenJson, Screen::class.java)
-                                            handleScreenType(screenBiller)
-                                            // BILLER
+                                        // BILLER
                                         } else if (isSvcBiller == true) {
                                             Log.e("FormActivity", "Masuk Service Biller")
                                             if (newScreen.id != "000000F") {
@@ -3906,8 +3962,10 @@ class FormActivity : AppCompatActivity() {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(
                                                         messageBody
                                                     ) { responseBody ->
+                                                        
                                                         responseBody?.let { body ->
                                                             lifecycleScope.launch {
+                                                                lottieLoading?.visibility = View.GONE
                                                                 val screenJson = JSONObject(body)
                                                                 val newScreen: Screen =
                                                                     ScreenParser.parseJSON(screenJson)
@@ -3947,8 +4005,10 @@ class FormActivity : AppCompatActivity() {
                                                                         ArrestCallerImpl(OkHttpClient()).requestPost(
                                                                             messageBody
                                                                         ) { responseBody ->
+                                                                            
                                                                             responseBody?.let { body ->
                                                                                 lifecycleScope.launch {
+                                                                                    lottieLoading?.visibility = View.GONE
                                                                                     val screenJson =
                                                                                         JSONObject(body)
                                                                                     val newScreen: Screen =
@@ -3973,6 +4033,8 @@ class FormActivity : AppCompatActivity() {
                                                         }
                                                     }
                                                 }
+                                            }else{
+                                                handleScreenType(newScreen)
                                             }
                                         } else {
                                             handleScreenType(newScreen)
@@ -4490,8 +4552,10 @@ class FormActivity : AppCompatActivity() {
                                         lifecycleScope.launch {
                                             withContext(Dispatchers.IO) {
                                                 ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                    
                                                     responseBody?.let { body ->
                                                         lifecycleScope.launch {
+                                                            lottieLoading?.visibility = View.GONE
                                                             val screenJson = JSONObject(body)
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                             handleScreenType(newScreen)
@@ -4940,8 +5004,10 @@ class FormActivity : AppCompatActivity() {
                     if (messageBody != null) {
                         Log.d("FormActivity", "Message Body OTP: $messageBody")
                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            
                             responseBody?.let { body ->
                                 lifecycleScope.launch {
+                                    lottieLoading?.visibility = View.GONE
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
 
@@ -5269,8 +5335,10 @@ class FormActivity : AppCompatActivity() {
             Log.d("FORM", "LAST MESSAGE : $messageBody")
             if (messageBody != null) {
                 ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                    
                     responseBody?.let { body ->
                         lifecycleScope.launch {
+                            lottieLoading?.visibility = View.GONE
                             val screenJson = JSONObject(body)
                             Log.d("FormActivity", "Response POST: $body")
                             Log.d("FormActivity", "SCREEN JSON: $screenJson")

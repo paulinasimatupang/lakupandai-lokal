@@ -52,6 +52,7 @@ class MutationAdapter(private val mutations: List<Mutation>) :
             val totalDebit = transactions.filter { it.transactionType == "DEBIT" }
                 .sumOf { it.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0 }
 
+
             val netMutation = totalCredit - totalDebit
             holder.bind(date, transactions, netMutation)
         } else if (holder is ArchiveNumberViewHolder) {
@@ -89,14 +90,22 @@ class MutationAdapter(private val mutations: List<Mutation>) :
                 descriptionTextView.text = mutation.description
                 amountTextView.text = formatRupiah(mutation.amount.replace(",", "").replace("Rp", "").toDoubleOrNull() ?: 0.0)
                 timeTextView.text = mutation.time
-                transactionTypeTextView.text = if (mutation.transactionType == "DEBIT") "DB" else "CR"
+                val transactionType = if (mutation.transactionType == "DEBIT") {
+                    transactionTypeTextView.text = "DB"
+                    // Set text color to red for DEBIT
+                    transactionTypeTextView.setTextColor(itemView.context.getColor(android.R.color.holo_red_dark))
+                } else {
+                    transactionTypeTextView.text = "CR"
+                    // Set text color to blue for CREDIT
+                    transactionTypeTextView.setTextColor(itemView.context.getColor(android.R.color.holo_green_light))
+                }
 
-                // Set text color based on transaction type
+                // Set amount text color based on transaction type
                 amountTextView.setTextColor(
                     if (mutation.transactionType == "DEBIT")
                         itemView.context.getColor(android.R.color.holo_red_dark)
                     else
-                        itemView.context.getColor(android.R.color.holo_blue_dark)
+                        itemView.context.getColor(android.R.color.holo_green_light)
                 )
 
                 transactionContainer.addView(transactionView)

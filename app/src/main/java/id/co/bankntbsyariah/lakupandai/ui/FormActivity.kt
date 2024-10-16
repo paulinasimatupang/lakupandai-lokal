@@ -145,7 +145,7 @@ class FormActivity : AppCompatActivity() {
 
     private lateinit var executor: Executor
     private val webCallerImpl = WebCallerImpl()
-    private var lottieLoading: LottieAnimationView? = null
+    public var lottieLoading: LottieAnimationView? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -575,6 +575,17 @@ class FormActivity : AppCompatActivity() {
                             putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                             putExtra("MESSAGE_BODY", failureMessage)
                             putExtra("RETURN_TO_ROOT", false)
+                        }
+                        startActivity(intent)
+                    }
+                    "PR00011" -> {
+                        // Handle failure case
+                        val failureMessage = screen.comp.firstOrNull { it.id == "0000B" }
+                            ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
+                        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                            putExtra("MESSAGE_BODY", failureMessage)
+                            putExtra("RETURN_TO_ROOT", true)
                         }
                         startActivity(intent)
                     }
@@ -2295,12 +2306,12 @@ class FormActivity : AppCompatActivity() {
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
-                                    } else if (otpAttempts.size > 0 && otpAttempts.size < 3) {
-                                        resendOtp()
+                                    } else if (otpAttempts.size > 0 && otpAttempts.size < 2) {
+                                        resendOtp(screen)
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
-                                    }else if (otpAttempts.size == 3) {
+                                    }else if (otpAttempts.size == 2) {
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
@@ -2310,16 +2321,17 @@ class FormActivity : AppCompatActivity() {
                                         val remainingTime = remainingMillis
 
                                         if (remainingTime > 0) {
-                                            if (okButtonPressCount >= 3 || otpAttempts.size >= 3) {
+                                            if (okButtonPressCount >= 2 || otpAttempts.size >= 2) {
                                                 val minutesRemaining = remainingTime / 60000
                                                 val secondsRemaining =
                                                     (remainingTime % 60000) / 1000
-
-                                                Toast.makeText(
-                                                    this@FormActivity,
-                                                    "Please wait $minutesRemaining minutes and $secondsRemaining seconds before requesting OTP again.",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
+                                                lottieLoading?.visibility = View.GONE
+                                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_warning)
+                                                    putExtra("MESSAGE_BODY", "Anda sudah melebihi batas limit pengiriman OTP! Mohon tunggu $minutesRemaining menit dan $secondsRemaining detik sebelum mengirim OTP kembali.")
+                                                    putExtra("RETURN_TO_ROOT", false)
+                                                }
+                                                startActivity(intentPopup)
                                             }
                                         } else {
                                             otpAttempts.clear()
@@ -2392,6 +2404,23 @@ class FormActivity : AppCompatActivity() {
                         "ON001" -> {
                             messageOTP.text = "OTP Berhasil terkirim kepada Agen"
                         }
+                        "WS0001" -> {
+                            val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
+                            val savedNoAgen = sharedPreferences.getString("merchant_phone", "") ?: ""
+
+                            val displayNumber = when {
+                                savedNoAgen.length < 4 -> savedNoAgen
+                                else -> {
+                                    val startDigits = savedNoAgen.substring(0, 3)
+                                    val endDigits = savedNoAgen.substring(savedNoAgen.length - 2)
+                                    val middleLength = savedNoAgen.length - 4
+                                    val middleStars = "*".repeat(middleLength)
+                                    "$startDigits$middleStars$endDigits"
+                                }
+                            }
+
+                            messageOTP.text = "OTP Berhasil Terkirim ke Nomor $displayNumber"
+                        }
                         else -> {
                             messageOTP.text = ""
                         }
@@ -2402,14 +2431,14 @@ class FormActivity : AppCompatActivity() {
                         it.setOnClickListener {
                             Log.d("FormActivity", "OTP attempts2 : ${otpAttempts.size}")
                             if (otpAttempts.size < 3) {
-                                resendOtp()
+                                resendOtp(screen)
                                 resetTimer(120000)
                             } else if (otpAttempts.size == 3) {
                                 otpAttempts.add(System.currentTimeMillis())
-                                Toast.makeText(this@FormActivity, "OTP send limit exceeded. Please wait 30 minutes.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@FormActivity, "Anda sudah melebihi batas limit OTP. Mohon tunggu 30 menit.", Toast.LENGTH_LONG).show()
                                 resetTimer(30 * 60 * 1000)
                             } else {
-                                Toast.makeText(this@FormActivity, "Please wait until time ends", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@FormActivity, "Mohon tunggu hingga waktu limit berakhir.", Toast.LENGTH_LONG).show()
                             }
                         }
 
@@ -2420,7 +2449,8 @@ class FormActivity : AppCompatActivity() {
                         it.text = spannable
                     }
 
-                    if (otpAttempts.size < 3) {
+                    Log.e("FormActivity", "OTP ATTEMPTS RESET : ${otpAttempts.size}")
+                    if (otpAttempts.size < 4) {
                         resetTimer(120000)
                     } else {
                         resetTimer(30 * 60 * 1000)
@@ -3301,6 +3331,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Difference in Days: $diffInDays")
 
                         if (diffInDays > 7) {
+                            lottieLoading?.visibility = View.GONE
                             Toast.makeText(
                                 this,
                                 "Maksimal Periode Tanggal 7 hari",
@@ -3454,7 +3485,6 @@ class FormActivity : AppCompatActivity() {
                                 }
                             }
                         }
-
                     }else if (screen.id == "P000003"){
                         lifecycleScope.launch {
                             try {
@@ -3664,6 +3694,7 @@ class FormActivity : AppCompatActivity() {
             } else {
                 val messageBody = screen?.let { createMessageBody(it) }
                 val sendOTPComponent = screen?.comp?.find { it.id == "OTP09" }
+                val sendPIN = screen?.comp?.find { it.id == "P0005" }
                 val sendPengaduan = screen?.comp?.find { it.id == "G0002" }
                 Log.d("Form", "Send Pengaduan : $sendPengaduan")
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -3705,7 +3736,7 @@ class FormActivity : AppCompatActivity() {
                                                 handleScreenType(newScreen)
                                             }
                                         }
-                                        // Setor Tunai Sekolah
+//                                         Setor Tunai Sekolah
                                         "STS0001" ->{
                                             if(prodIDvalue != "34"){
                                                 val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
@@ -3808,7 +3839,7 @@ class FormActivity : AppCompatActivity() {
                                     }
                                 }else{
                                     Log.e("FormActivity", "GAK ADA PRODID ")
-                                    if(sendOTPComponent != null) {
+                                    if(sendOTPComponent != null || sendPIN != null) {
                                         var pinScreen = "P000001"
                                         var formValue =
                                             StorageImpl(applicationContext).fetchForm(pinScreen)
@@ -4089,7 +4120,9 @@ class FormActivity : AppCompatActivity() {
             val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
+
             val savedBranchid = sharedPreferences.getString("merchant_branchid", "")?: ""
+
             val savedAkad = sharedPreferences.getString("akad", "") ?: ""
             val savedToken = sharedPreferences.getString("token", "") ?: ""
             val savedNoAgen = sharedPreferences.getString("merchant_phone", "") ?: ""
@@ -4427,6 +4460,7 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun loginUser(callback: (Boolean) -> Unit){
+        lottieLoading?.visibility = View.VISIBLE
         lifecycleScope.launch(Dispatchers.IO) {
             val formBodyBuilder = FormBody.Builder()
             var username: String? = null
@@ -4481,6 +4515,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d(TAG, "Terminal array: $terminalArray")
 
                         // Check user status
+
                         when (userStatus) {
                             "0" -> {
                                 withContext(Dispatchers.Main) {
@@ -4545,32 +4580,167 @@ class FormActivity : AppCompatActivity() {
                             Log.e("status", "STATUS LOGIN : $status")
                             if (terminalArray == null || terminalArray.length() == 0 || status == true) {
                                 Log.d(TAG, "Terminal array is empty or null. Attempting to create terminal.")
-                                createOTP { messageBody ->
-                                    Log.d("LOGIN OTP", "Create OTP: $messageBody")
-                                    if (messageBody != null) {
-                                        Log.d("FormActivity", "Message Body OTP: $messageBody")
-                                        lifecycleScope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                    
-                                                    responseBody?.let { body ->
-                                                        lifecycleScope.launch {
-                                                            lottieLoading?.visibility = View.GONE
-                                                            val screenJson = JSONObject(body)
-                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                            handleScreenType(newScreen)
-                                                        }
-                                                    } ?: run {
-                                                        Log.e("FormActivity", "Failed to fetch response body")
-                                                    }
-                                                }
-                                            }
+                                    Log.d("FormActivity", "OTP attempts LOGIN: ${otpAttempts.size}")
+                                if (otpAttempts.size >= 2) {
+                                    val currentTime = System.currentTimeMillis()
+                                    val timeSinceLastAttempt = currentTime - otpAttempts.last()
+
+                                    // Jika attempt ke-4 dan lebih harus reset waktu ke 30 menit
+                                    if (otpAttempts.size == 3) {
+                                        otpAttempts.add(System.currentTimeMillis())
+                                        remainingMillis = 30 * 60 * 1000 // Set ke 30 menit
+                                        Log.d("FormActivity", "Reset remainingMillis to 30 minutes")
+                                        lifecycleScope.launch(Dispatchers.Main) {
+                                            resetTimer(remainingMillis) // Jika Anda memiliki metode resetTimer
                                         }
-                                    } else {
-                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                                    }
+
+                                    // Jika attempt ke-5 atau lebih lanjutkan waktu tanpa reset
+                                    if (otpAttempts.size > 4) {
+                                        if (timeSinceLastAttempt < remainingMillis) {
+                                            // Jika masih dalam batas waktu
+                                            Log.d("FormActivity", "Timer still running for attempts: ${otpAttempts.size}")
+                                        }
                                     }
                                 }
+                                if (otpAttempts.size == 0) {
+                                        otpAttempts.add(System.currentTimeMillis())
+                                            createOTP { messageBody ->
+                                                Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                                                if (messageBody != null) {
+                                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                                    lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            lottieLoading?.visibility = View.GONE
+                                                        }
+                                                        withContext(Dispatchers.IO) {
+                                                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                                responseBody?.let { body ->
+                                                                    lifecycleScope.launch {
+                                                                        val screenJson = JSONObject(body)
+                                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                                        handleScreenType(newScreen)
+                                                                    }
+                                                                } ?: run {
+                                                                    Log.e("FormActivity", "Failed to fetch response body")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                                                }
+                                            }
+                                            Log.e("FormActivity", "Error create OTP")
+                                    } else if (otpAttempts.size > 0 && otpAttempts.size < 2) {
+                                        otpAttempts.add(System.currentTimeMillis())
+                                            createOTP { messageBody ->
+                                                Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                                                if (messageBody != null) {
+                                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                                    lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            lottieLoading?.visibility = View.GONE
+                                                        }
+                                                        withContext(Dispatchers.IO) {
+                                                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
 
+                                                                responseBody?.let { body ->
+                                                                    lifecycleScope.launch {
+                                                                        val screenJson = JSONObject(body)
+                                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                                        handleScreenType(newScreen)
+                                                                    }
+                                                                } ?: run {
+                                                                    Log.e("FormActivity", "Failed to fetch response body")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                                                }
+                                            }
+
+                                    }else if (otpAttempts.size == 2) {
+                                        otpAttempts.add(System.currentTimeMillis())
+                                            createOTP { messageBody ->
+                                                Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                                                if (messageBody != null) {
+                                                    Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                                    lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            lottieLoading?.visibility = View.GONE
+                                                        }
+                                                        withContext(Dispatchers.IO) {
+                                                            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+
+                                                                responseBody?.let { body ->
+                                                                    lifecycleScope.launch {
+                                                                        val screenJson = JSONObject(body)
+                                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                                        handleScreenType(newScreen)
+                                                                    }
+                                                                } ?: run {
+                                                                    Log.e("FormActivity", "Failed to fetch response body")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    Log.e("FormActivity", "Failed to create message body, request not sent")
+                                                }
+                                            }
+                                    } else {
+                                    Log.d("FormActivity", "REMAINING MILS : $remainingMillis")
+                                        if (remainingMillis  > 0) {
+                                            Log.d("FormActivity", "Masuk Remaining time")
+                                            if (okButtonPressCount >= 3 || otpAttempts.size >= 3) {
+                                                Log.d("FormActivity", "Masuk IF REMAINING time")
+                                                val minutesRemaining = remainingMillis  / 60000
+                                                val secondsRemaining = (remainingMillis % 60000) / 1000
+                                                withContext(Dispatchers.Main) {
+                                                    lottieLoading?.visibility = View.GONE
+                                                }
+                                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_warning)
+                                                    putExtra("MESSAGE_BODY", "Anda sudah melebihi batas limit pengiriman OTP! Mohon tunggu $minutesRemaining menit dan $secondsRemaining detik sebelum mengirim OTP kembali.")
+                                                    putExtra("RETURN_TO_ROOT", false)
+                                                }
+                                                startActivity(intentPopup)
+                                            }
+                                        } else {
+                                            Log.d("LOGIN OTP", "OTP Lebih 3: ${otpAttempts.size}")
+                                            otpAttempts.clear()
+                                            otpAttempts.add(System.currentTimeMillis())
+                                                createOTP { messageBody ->
+                                                    Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                                                    if (messageBody != null) {
+                                                        Log.d("FormActivity", "Message Body OTP: $messageBody")
+                                                        lifecycleScope.launch {
+                                                            withContext(Dispatchers.Main) {
+                                                                lottieLoading?.visibility = View.GONE
+                                                            }
+                                                            withContext(Dispatchers.IO) {
+                                                                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                                    responseBody?.let { body ->
+                                                                        lifecycleScope.launch {
+                                                                            val screenJson = JSONObject(body)
+                                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                                            handleScreenType(newScreen)
+                                                                        }
+                                                                    } ?: run {
+                                                                        Log.e("FormActivity", "Failed to fetch response body")
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    } else {
+                                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                                                    }
+                                                }
+                                        }
+                                    }
                             } else {
                                 Log.d(TAG, "Terminal already exists.")
                                 val terminalData = terminalArray.getJSONObject(0)
@@ -4593,48 +4763,25 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-//
-//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
-//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-//                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-//                                        putExtra("RETURN_TO_ROOT", false)
-//                                    }
-//                                    startActivity(intentPopup)
-//                                }else{
-//                                    fun retrieveAuthToken(): String {
-//                                        // Return the stored auth token
-//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
-//                                    }
-//
-//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//                                        if (!task.isSuccessful) {
-//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-//                                            return@addOnCompleteListener
-//                                        }
-//
-//                                        val fcmToken = task.result
-//                                        Log.d("FCM", "FCM Token: $fcmToken")
-//
-//                                        // Send FCM token and user_id to server
-//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
-//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-//                                    }
-//
-//                                    withContext(Dispatchers.Main) {
-//                                        Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-//                                        navigateToScreen()
-//                                    }
-//                                }
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 
-//                                ini di comment nanti kalo mau berdasarkan perangkat
-                                fun retrieveAuthToken(): String {
+                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
+                                    startActivity(intentPopup)
+                                }else{
+                                    fun retrieveAuthToken(): String {
                                         // Return the stored auth token
                                         return "auth_token" // Replace this with the actual logic to retrieve the token
-                                }
+                                    }
 
                                     FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                                         if (!task.isSuccessful) {
@@ -4650,16 +4797,42 @@ class FormActivity : AppCompatActivity() {
                                         MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
                                     }
 
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
-                                    callback(true)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+                                        navigateToScreen()
+                                    }
                                 }
 
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
-                                }
+//                                ini di comment nanti kalo mau berdasarkan perangkat
+//                                fun retrieveAuthToken(): String {
+//                                        // Return the stored auth token
+//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
+//                                }
+//
+//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//                                        if (!task.isSuccessful) {
+//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                            return@addOnCompleteListener
+//                                        }
+//
+//                                        val fcmToken = task.result
+//                                        Log.d("FCM", "FCM Token: $fcmToken")
+//
+//                                        // Send FCM token and user_id to server
+//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+//                                    }
+//
+//                                withContext(Dispatchers.Main) {
+//                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+//                                    navigateToScreen()
+//                                    callback(true)
+//                                }
+//
+//                                withContext(Dispatchers.Main) {
+//                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
+//                                    navigateToScreen()
+//                                }
                             }
                         }
                         else {
@@ -5007,7 +5180,6 @@ class FormActivity : AppCompatActivity() {
                             
                             responseBody?.let { body ->
                                 lifecycleScope.launch {
-                                    lottieLoading?.visibility = View.GONE
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
 
@@ -5310,7 +5482,6 @@ class FormActivity : AppCompatActivity() {
             override fun onTick(millisUntilFinished: Long) {
                 // You can show the remaining time to the user if needed
             }
-
             override fun onFinish() {
                 msg03Value = null
                 Log.d("FormActivity", "OTP expired and cleared.")
@@ -5328,71 +5499,141 @@ class FormActivity : AppCompatActivity() {
         cancelOtpTimer() // Cancel the timer if activity is destroyed
     }
 
-    private fun resendOtp() {
+    private fun resendOtp(screen: Screen?) {
         if (otpAttempts.size < 3) {
             otpAttempts.add(System.currentTimeMillis())
-            val messageBody = lastMessageBody
-            Log.d("FORM", "LAST MESSAGE : $messageBody")
-            if (messageBody != null) {
-                ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                    
-                    responseBody?.let { body ->
-                        lifecycleScope.launch {
-                            lottieLoading?.visibility = View.GONE
-                            val screenJson = JSONObject(body)
-                            Log.d("FormActivity", "Response POST: $body")
-                            Log.d("FormActivity", "SCREEN JSON: $screenJson")
+            if (screen != null) {
+                if(screen.id != "WS0001"){
+                    val messageBody = lastMessageBody
+                    Log.d("FORM", "LAST MESSAGE : $messageBody")
+                    if (messageBody != null) {
+                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                            responseBody?.let { body ->
+                                lifecycleScope.launch {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                    val screenJson = JSONObject(body)
+                                    Log.d("FormActivity", "Response POST: $body")
+                                    Log.d("FormActivity", "SCREEN JSON: $screenJson")
 
-                            // Mendapatkan array komponen dari JSON
-                            val compArray =
-                                screenJson.getJSONObject("screen").getJSONObject("comps")
-                                    .getJSONArray("comp")
+                                    // Mendapatkan array komponen dari JSON
+                                    val compArray =
+                                        screenJson.getJSONObject("screen").getJSONObject("comps")
+                                            .getJSONArray("comp")
 
-                            // Mencari komponen dengan ID "MSG03"
-                            var newMsg03Value: String? = null
-                            for (i in 0 until compArray.length()) {
-                                val compObject = compArray.getJSONObject(i)
-                                if (compObject.getString("comp_id") == "MSG03") {
-                                    newMsg03Value = compObject.getJSONObject("comp_values")
-                                        .getJSONArray("comp_value")
-                                        .getJSONObject(0)
-                                        .optString("value")
-                                    break
+                                    // Mencari komponen dengan ID "MSG03"
+                                    var newMsg03Value: String? = null
+                                    for (i in 0 until compArray.length()) {
+                                        val compObject = compArray.getJSONObject(i)
+                                        if (compObject.getString("comp_id") == "MSG03") {
+                                            newMsg03Value = compObject.getJSONObject("comp_values")
+                                                .getJSONArray("comp_value")
+                                                .getJSONObject(0)
+                                                .optString("value")
+                                            break
+                                        }
+                                    }
+
+                                    if (newMsg03Value != null) {
+                                        msg03Value = newMsg03Value
+                                        Log.d("FormActivity", "NEW MSG03 : $msg03Value")
+                                        Toast.makeText(
+                                            this@FormActivity,
+                                            "OTP baru telah dikirim",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        cancelOtpTimer()
+                                        startOtpTimer()
+                                    } else {
+                                        Toast.makeText(
+                                            this@FormActivity,
+                                            "Gagal mendapatkan OTP baru",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
-                            }
-
-                            if (newMsg03Value != null) {
-                                msg03Value = newMsg03Value
-                                Log.d("FormActivity", "NEW MSG03 : $msg03Value")
+                            } ?: run {
+                                Log.e("FormActivity", "Failed to fetch response body")
                                 Toast.makeText(
                                     this@FormActivity,
-                                    "OTP baru telah dikirim",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                cancelOtpTimer()
-                                startOtpTimer()
-                            } else {
-                                Toast.makeText(
-                                    this@FormActivity,
-                                    "Gagal mendapatkan OTP baru",
+                                    "Gagal melakukan request ulang OTP",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         }
-                    } ?: run {
-                        Log.e("FormActivity", "Failed to fetch response body")
-                        Toast.makeText(
-                            this@FormActivity,
-                            "Gagal melakukan request ulang OTP",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    } else {
+                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                        Toast.makeText(this@FormActivity, "Request body gagal dibuat", Toast.LENGTH_SHORT)
+                            .show()
                     }
+                }else{
+                    createOTP { messageBody ->
+                        Log.d("LOGIN OTP", "Create OTP: $messageBody")
+                        if (messageBody != null) {
+                            Log.d("FormActivity", "Message Body OTP: $messageBody")
+                            lifecycleScope.launch {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
+                                withContext(Dispatchers.IO) {
+                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                        responseBody?.let { body ->
+                                            lifecycleScope.launch {
+                                                val screenJson = JSONObject(body)
+                                                Log.d("FormActivity", "Response POST: $body")
+                                                Log.d("FormActivity", "SCREEN JSON: $screenJson")
+
+                                                // Mendapatkan array komponen dari JSON
+                                                val compArray =
+                                                    screenJson.getJSONObject("screen").getJSONObject("comps")
+                                                        .getJSONArray("comp")
+
+                                                // Mencari komponen dengan ID "MSG03"
+                                                var newMsg03Value: String? = null
+                                                for (i in 0 until compArray.length()) {
+                                                    val compObject = compArray.getJSONObject(i)
+                                                    if (compObject.getString("comp_id") == "MSG03") {
+                                                        newMsg03Value = compObject.getJSONObject("comp_values")
+                                                            .getJSONArray("comp_value")
+                                                            .getJSONObject(0)
+                                                            .optString("value")
+                                                        break
+                                                    }
+                                                }
+
+                                                if (newMsg03Value != null) {
+                                                    msg03Value = newMsg03Value
+                                                    Log.d("FormActivity", "NEW MSG03 : $msg03Value")
+                                                    Toast.makeText(
+                                                        this@FormActivity,
+                                                        "OTP baru telah dikirim",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+
+                                                    cancelOtpTimer()
+                                                    startOtpTimer()
+                                                } else {
+                                                    Toast.makeText(
+                                                        this@FormActivity,
+                                                        "Gagal mendapatkan OTP baru",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        } ?: run {
+                                            Log.e("FormActivity", "Failed to fetch response body")
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Log.e("FormActivity", "Failed to create message body, request not sent")
+                        }
+                    }
+                    Log.e("FormActivity", "Error create OTP")
                 }
-            } else {
-                Log.e("FormActivity", "Failed to create message body, request not sent")
-                Toast.makeText(this@FormActivity, "Request body gagal dibuat", Toast.LENGTH_SHORT)
-                    .show()
             }
         }else {
             val lastAttemptTime = otpAttempts.last()
@@ -5400,23 +5641,25 @@ class FormActivity : AppCompatActivity() {
             if (currentTime - lastAttemptTime < otpCooldownTime) {
                 Toast.makeText(
                     this@FormActivity,
-                    "OTP send limit exceeded. Please wait 30 minutes.",
+                    "Anda sudah melebihi batas pengiriman OTP. Silahkan tunggu selama 30 menit.",
                     Toast.LENGTH_LONG
                 ).show()
             } else {
                 otpAttempts.clear()
                 otpAttempts.add(System.currentTimeMillis())
-                resendOtp()
+                resendOtp(screen)
             }
         }
     }
 
     private fun createOTP(callback: (JSONObject?) -> Unit) {
         lifecycleScope.launch {
+            lottieLoading?.visibility = View.GONE
             try {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
                 val usernameLogin = sharedPreferences.getString("username", "") ?: ""
+                val username = "lakupandai"
                 val newPassword = sharedPreferences.getString("new_password", null)
 
                 Log.d("FormActivity", "Saved New Password: $newPassword")
@@ -5450,7 +5693,7 @@ class FormActivity : AppCompatActivity() {
                                 val msgUi = imei
                                 val msgId = msgUi + timestamp
                                 val msgSi = "SV0001"
-                                val msgDt = "$usernameLogin|$merchantPhone"
+                                val msgDt = "$username|$merchantPhone"
 
                                 val msgObject = JSONObject().apply {
                                     put("msg_id", msgId)
@@ -5487,7 +5730,7 @@ class FormActivity : AppCompatActivity() {
                     val msgUi = imei
                     val msgId = msgUi + timestamp
                     val msgSi = "SV0001"
-                    val msgDt = "$usernameLogin|$merchantPhone"
+                    val msgDt = "$username|$merchantPhone"
 
                     val msgObject = JSONObject().apply {
                         put("msg_id", msgId)
@@ -5514,15 +5757,20 @@ class FormActivity : AppCompatActivity() {
         val token = sharedPreferences.getString("token", "")
         val imei = getUniqueID()
 
-        Log.d(TAG, "Starting terminal creation process. IMEI: $imei, MID: $midTerminal")
+        Log.d(TAG, "Starting terminal creation process. IMEI: $imei, MID: $midTerminal, Token : $token")
 
         if (imei != null && midTerminal != null) {
-            val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create/$imei/$midTerminal"
+            val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create"
             Log.d(TAG, "Create terminal URL: $createTerminalUrl")
+
+            val requestBody = FormBody.Builder()
+                .add("imei", imei)
+                .add("merchant_id", midTerminal)
+                .build()
 
             val createTerminalRequest = Request.Builder()
                 .url(createTerminalUrl)
-                .post(FormBody.Builder().build())
+                .post(requestBody)
                 .addHeader("Authorization", "Bearer $token")
                 .build()
 
@@ -5550,6 +5798,9 @@ class FormActivity : AppCompatActivity() {
 
                             val storedImeiTerminal = sharedPreferences.getString("imei", null)
                             if (imei != null && imei != storedImeiTerminal) {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
                                 val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                     putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                                     putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
@@ -5610,7 +5861,6 @@ class FormActivity : AppCompatActivity() {
                 .addHeader("Authorization", "Bearer $token")
                 .addHeader("Content-Type", "application/json") // Pastikan menambahkan header Content-Type
                 .build()
-
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val response = client.newCall(updateImeiRequest).execute()
@@ -5634,6 +5884,9 @@ class FormActivity : AppCompatActivity() {
 //                                comment dulu biar bisa login
                             val storedImeiTerminal = sharedPreferences.getString("imei", null)
                             if (imei != null && imei != storedImeiTerminal) {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
                                 val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                     putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
                                     putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")

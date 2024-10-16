@@ -65,6 +65,8 @@ class MenuActivity : AppCompatActivity() {
     private lateinit var imageSlider: ViewPager2
     private lateinit var sliderAdapter: ImageSliderAdapter
     private var isSaldoVisible = false
+    private var pembelianList = mutableListOf<MenuItem>()
+    private var pembayaranList = mutableListOf<MenuItem>()
 
     private val NOTIFICATION_PERMISSION_CODE = 1001
 
@@ -446,10 +448,12 @@ class MenuActivity : AppCompatActivity() {
             menuId == "PR00000" || menuId == "VCG0000",  // List Biller
             menuId == "KOM0000",
             menuId == "PKOM001"
-        )
+        ){position ->
+        // Define what happens on item click here
+        onMenuItemClick(position)
+        }
         menuContainer?.adapter = menuAdapter
-
-        screen.comp.forEach { comp ->
+            screen.comp.forEach { comp ->
             if (!comp.visible) return@forEach
             if (screen.id == "PP00001") {
                 when (comp.label) {
@@ -460,6 +464,9 @@ class MenuActivity : AppCompatActivity() {
                     else -> menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
                 }
             } else {
+                val cleanedLabel = comp.label
+                    .split(" ", limit = 2)
+                    .let { if (it.size > 1) it[1] else it[0] }
                 menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
             }
         }
@@ -478,35 +485,52 @@ class MenuActivity : AppCompatActivity() {
     }
 
     fun onMenuItemClick(position: Int) {
-        if (position > menuList.size) {
-            Log.e("MenuActivity", "Invalid menu item click. Position: $position, MenuList size: ${menuList.size}")
-            return
-        }
+        // Check if the click is within menuList bounds
+        if (position < menuList.size) {
+            val targetScreenId = menuList[position].value
+            Log.d("Menu", "Clicked menu item with ID: $targetScreenId")
 
-        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-        val screenAwal = sharedPreferences.getString("screen_awal", null)
-
-        val targetScreenId = menuList[position].value
-        Log.d("Menu", "Value = $targetScreenId")
-        if (targetScreenId.isNullOrEmpty()) {
-            return
+            // Handle logic for menuList clicks
+            if (targetScreenId.isNullOrEmpty()) {
+                return
+            }
+            when (targetScreenId) {
+                "LOG0001" -> showLogoutPopup()
+                "MN00002" -> showMenuInBottomSheet("MN00002")
+                "MN00001" -> showMenuInBottomSheet("MN00001")
+                else -> {
+                    finish()
+                    navigateToScreen(targetScreenId)
+                }
+            }
         }
-        if(targetScreenId == "LOG0001"){
-            showLogoutPopup()
-        }else if(targetScreenId == "MN00002") {
-            showMenuInBottomSheet("MN00002")
-        }else if(targetScreenId == "MN00001") {
-            showMenuInBottomSheet("MN00001")
-        }else if(screenAwal == "PKOM001"){
-            val editor = sharedPreferences.edit()
-            editor.putString("kategori", menuList[position].title)
-            editor.apply()
-            Log.d("Menu", "Title Target = ${menuList[position].title}")
+        // Check if the click is within pembelianList bounds
+        else if (position < menuList.size + pembelianList.size) {
+            val pembelianPosition = position - menuList.size
+            val targetScreenId = pembelianList[pembelianPosition].value
+            Log.d("Pembelian", "Clicked pembelian item with ID: $targetScreenId")
+
+            // Handle logic for pembelianList clicks
+            if (targetScreenId.isNullOrEmpty()) {
+                return
+            }
+            // Implement your logic for pembelianList here
             finish()
-            navigateToScreen(targetScreenId)
-        }else{
+            navigateToScreen(targetScreenId) // Example logic
+        }
+        // Check if the click is within pembayaranList bounds
+        else {
+            val pembayaranPosition = position - menuList.size - pembelianList.size
+            val targetScreenId = pembayaranList[pembayaranPosition].value
+            Log.d("Pembayaran", "Clicked pembayaran item with ID: $targetScreenId")
+
+            // Handle logic for pembayaranList clicks
+            if (targetScreenId.isNullOrEmpty()) {
+                return
+            }
+            // Implement your logic for pembayaranList here
             finish()
-            navigateToScreen(targetScreenId)
+            navigateToScreen(targetScreenId) // Example logic
         }
     }
 
@@ -520,7 +544,7 @@ class MenuActivity : AppCompatActivity() {
         menuList.clear()
         val menuContainer = bottomSheetView.findViewById<RecyclerView>(R.id.menu_container)
         menuContainer?.let {
-            setupMenuRecyclerViewForBottomSheet(menuId, it)
+            setupMenuRecyclerViewForBottomSheet(menuId, it, bottomSheetView)
         }
 
         bottomSheetDialog.setOnDismissListener {
@@ -534,7 +558,7 @@ class MenuActivity : AppCompatActivity() {
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun setupMenuRecyclerViewForBottomSheet(menuId: String, recyclerView: RecyclerView) {
+    private fun setupMenuRecyclerViewForBottomSheet(menuId: String, recyclerView: RecyclerView, bottomSheetView: View) {
         lifecycleScope.launch {
             try {
                 var menuValue: String? = StorageImpl(applicationContext).fetchMenu(menuId)
@@ -553,20 +577,79 @@ class MenuActivity : AppCompatActivity() {
                 Log.d("BOTTOM1", "Parsed screen object: ${screen.toString()}")
 
                 menuList.clear()
-                screen.comp.forEach { comp ->
-                    if (comp.visible) {
-                        menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
-                    }
+
+                val titleLainnya = bottomSheetView.findViewById<TextView>(R.id.titleLainnya)
+                when (menuId) {
+                    "MN00001" -> titleLainnya.text = "Biller"
+                    "MN00002" -> titleLainnya.text = "Lakupandai"
+                    else -> titleLainnya.text = "Lainnya"
                 }
 
-                Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
+                if(screen.id == "MN00001"){
+                    screen.comp.forEach { comp ->
+                        if (comp.visible) {
+                            val cleanedLabel = comp.label
+                                .split(" ", limit = 2) // Memecah hanya pada spasi pertama
+                                .let { if (it.size > 1) it[1] else it[0] } // Ambil kata setelah kata pertama, atau kata itu sendiri jika hanya satu kata
 
-                val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false, isKomplain=false, isKomplain2 = false)
-                recyclerView.adapter = menuAdapter
+                            if (comp.label.startsWith("PL", true)) {
+                                pembelianList.add(
+                                    MenuItem(comp.icon, cleanedLabel, cleanedLabel, comp.desc, comp.action)
+                                )
+                            } else if (comp.label.startsWith("PB", true)) {
+                                pembayaranList.add(
+                                    MenuItem(comp.icon, cleanedLabel, cleanedLabel, comp.desc, comp.action)
+                                )
+                            }
+                        }
+                    }
 
-                menuAdapter.notifyDataSetChanged()
-                Log.d("BOTTOM1", "Loaded ${menuList.size} menu items into BottomSheet RecyclerView")
+                    // Atur visibilitas dan isi subtitle
+                    val recyclerPembelian = bottomSheetView.findViewById<RecyclerView>(R.id.recyclerPembelian)
+                    val recyclerPembayaran = bottomSheetView.findViewById<RecyclerView>(R.id.recyclerPembayaran)
+                    val titlePembelian = bottomSheetView.findViewById<TextView>(R.id.titlePembelian)
+                    val titlePembayaran = bottomSheetView.findViewById<TextView>(R.id.titlePembayaran)
 
+                    if (pembelianList.isNotEmpty()) {
+                        titlePembelian.visibility = View.VISIBLE
+                        recyclerPembelian.visibility = View.VISIBLE
+                        val pembelianAdapter = RecyclerViewMenuAdapter(pembelianList, this@MenuActivity, false, false, false, false, false){ position ->
+                            // Handle click event for pembelianList
+                            onMenuItemClick(position)
+                        }
+                        recyclerPembelian.adapter = pembelianAdapter
+                        pembelianAdapter.notifyDataSetChanged()
+                    }
+
+                    if (pembayaranList.isNotEmpty()) {
+                        titlePembayaran.visibility = View.VISIBLE
+                        recyclerPembayaran.visibility = View.VISIBLE
+                        val pembayaranAdapter = RecyclerViewMenuAdapter(pembayaranList, this@MenuActivity, false, false, false, false, false){ position ->
+                            // Handle click event for pembelianList
+                            onMenuItemClick(position)
+                        }
+                        recyclerPembayaran.adapter = pembayaranAdapter
+                        pembayaranAdapter.notifyDataSetChanged()
+                    }
+                }else{
+                    screen.comp.forEach { comp ->
+                        if (comp.visible) {
+                            menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                        }
+                    }
+
+                    Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
+
+                    val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false, isKomplain=false, isKomplain2 = false){position ->
+                        // Define what happens on item click here
+                        onMenuItemClick(position)
+                    }
+                    recyclerView.adapter = menuAdapter
+
+                    menuAdapter.notifyDataSetChanged()
+                    Log.d("BOTTOM1", "Loaded ${menuList.size} menu items into BottomSheet RecyclerView")
+
+                }
             } catch (e: JSONException) {
                 Log.e("BOTTOM1", "Error parsing menu JSON: ${e.message}", e)
             } catch (e: Exception) {

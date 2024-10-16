@@ -18,7 +18,7 @@
         <ImageView
             android:layout_width="70dp"
             android:layout_height="70dp"
-            android:src="@mipmap/gagal"/>
+            android:src="@mipmap/sad"/>
 
         <TextView
             android:id="@+id/title_message"
@@ -27,7 +27,7 @@
             android:layout_marginTop="10dp"
             android:text="ERROR"
             android:textSize="18sp"
-            android:textColor="#FF1A1A"
+            android:textColor="#fbcb04"
             android:gravity="center"
             android:textStyle="bold"/>
 
@@ -46,7 +46,7 @@
             android:layout_width="wrap_content"
             android:layout_height="50dp"
             android:layout_marginTop="20dp"
-            android:background="#FF1A1A"
+            android:background="#fbcb04"
             android:text="OK"/>
     </LinearLayout>
 

@@ -25,14 +25,14 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
 class RecyclerViewMenuAdapter(
-    private val menuList: ArrayList<MenuItem>,
+    private val menuList: MutableList<MenuItem>,
     private val context: Context,
     private val isHamburger: Boolean,
     private val isProfile: Boolean,
     private val isList: Boolean,
     private val isKomplain: Boolean,
-    private val isKomplain2: Boolean
-
+    private val isKomplain2: Boolean,
+    private val onItemClick: (Int) -> Unit
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
     val TAG: String  // Define a tag for logging
         get() = "ImageFetcher"
@@ -133,65 +133,6 @@ class RecyclerViewMenuAdapter(
             }
         }
     }
-
-    // Mock database query function
-    fun isIconNameInCompIcon(iconName: String): Boolean {
-        // Example mapping from component to icon
-        val compIconMapping = mapOf(
-            "Lupa pin" to "lupa_pin.png",
-            "lupa sandi" to "lupa_sandi.png",
-            "pdam" to "pdam.png",
-            "ppob" to "lainnya.png",
-            "transaksi" to "lainnya.png",
-            "Gopay" to "Gopay.png",
-            "OVO" to "OVO.png",
-            "accounting" to "accounting.png",
-            "atm" to "atm.png",
-            "bank" to "bank.png",
-            "bberhasil" to "berhasil.png",
-            "bpjs" to "bpjs.png",
-            "bpjs_form" to "bpjs_form.png",
-            "catatan aktivitas" to "catatan_aktivitas.png",
-            "cek saldo" to "cek_saldo.png",
-            "cicilan" to "cicilan.png",
-            "contact" to "contact.png",
-            "faq" to "faq.png",
-            "history" to "history.png",
-            "internet" to "internet.png",
-            "kembali" to "kembali.png",
-            "komplain" to "komplain.png",
-            "lainnya" to "lainnya.png",
-            "logon" to "logon.png",
-            "logout" to "logout.png",
-            "mutasi" to "mutasi.png",
-            "paket data" to "paket_data.png",
-            "pdam form" to "pdam_form.png",
-            "pemindahan bukuan" to "pemindahan_bukuan.png",
-            "pengaturan printer" to "pengaturan_printer.png",
-            "pengaturan profil" to "pengaturan_profil.png",
-            "pulsa pascabayar form" to "pulsa_pascabayar_form.png",
-            "pulsa pascabayar" to "pulsa_pascabayar.png",
-            "pulsa regular" to "pulsa_regular.png",
-            "setor tabungan" to "setor_tabungan.png",
-            "shopeepay" to "shopeepay.png",
-            "tarik tunai" to "tarik_tunai.png",
-            "tiket" to "tiket.png",
-            "transfer antar bank" to "transfer_antar_bank.png",
-            "voucher game" to "voucher_game.png",
-            "pln pascabayar" to "pln_pascabayar.png",
-            "pln prabayar" to "pln_prabayar.png",
-            "reversal" to "reversal.png",
-            "create cif" to "create_cif.png",
-            "create rekening" to "create_rekening.png",
-            "profile_username" to "profile_username.png",
-            "profile_agen" to "profile_agen.png",
-            "profile_phone" to "profile_phone.png",
-            "profile_email" to "profile_email.png",
-        )
-        // Check if the icon name exists in the mapping
-        return compIconMapping.containsValue(iconName)
-    }
-
 
     override fun getItemCount(): Int {
         return menuList.size

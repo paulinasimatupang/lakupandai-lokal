@@ -124,7 +124,22 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:padding="16dp">
 
-        <!-- Lottie Animation View -->
+        <TextView
+            android:id="@+id/pesan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Pendaftaran Biometrik untuk Login"
+            android:textColor="@color/black"
+            android:layout_marginBottom="1dp"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:shadowDx="0"
+            android:shadowDy="7"
+            android:shadowColor="#031f13"
+            android:letterSpacing="0.05"
+            android:padding="8dp" />
+
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottie_loading"
             android:layout_width="80dp"
@@ -133,6 +148,16 @@
             app:lottie_rawRes="@raw/loading"
             app:lottie_autoPlay="true"
             app:lottie_loop="true" />
+        <TextView
+            android:id="@+id/text_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/dark_grey"
+            android:paddingBottom="90dp"
+            android:gravity="center"
+            android:layout_marginBottom="230dp"
+            android:text="Login yang aman dan praktis dengan biometrik perangkat Anda. Tidak perlu password lagi!"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

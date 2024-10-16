@@ -106,8 +106,9 @@
 
         <Button
             android:id="@+id/fingerprintRegisterButton"
-            android:layout_width="223dp"
-            android:layout_height="77dp"
+            android:layout_width="286dp"
+            android:layout_height="60dp"
+            android:background="@color/yellow"
             android:onClick="registerFingerprint"
             android:text="Register Fingerprint" />
     </LinearLayout>

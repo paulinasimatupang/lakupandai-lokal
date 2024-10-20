@@ -1484,18 +1484,18 @@ class FormActivity : AppCompatActivity() {
                         val notificationDbHelper = NotificationDatabaseHelper(this)
 
                         // Simpan notifikasi untuk tes insert
-                        val testTitle = "Contoh Notifikasi"
-                        val testMessage = "Ini adalah pesan notifikasi untuk pengujian"
-                        val testTimestamp = System.currentTimeMillis()
+//                        val testTitle = "Contoh Notifikasi"
+//                        val testMessage = "Ini adalah pesan notifikasi untuk pengujian"
+//                        val testTimestamp = System.currentTimeMillis()
+//
+//                        Log.d("InsertNotification", "Menyimpan notifikasi: Title: $testTitle, Message: $testMessage")
+//                        val insertResult = notificationDbHelper.insertNotification(testTitle, testMessage, testTimestamp)
 
-                        Log.d("InsertNotification", "Menyimpan notifikasi: Title: $testTitle, Message: $testMessage")
-                        val insertResult = notificationDbHelper.insertNotification(testTitle, testMessage, testTimestamp)
-
-                        if (insertResult) {
-                            Log.d("InsertNotification", "Notifikasi berhasil disimpan")
-                        } else {
-                            Log.e("InsertNotification", "Gagal menyimpan notifikasi")
-                        }
+//                        if (insertResult) {
+//                            Log.d("InsertNotification", "Notifikasi berhasil disimpan")
+//                        } else {
+//                            Log.e("InsertNotification", "Gagal menyimpan notifikasi")
+//                        }
 
                         // Mengambil data notifikasi dari database
                         val notifications = notificationDbHelper.getAllNotifications()

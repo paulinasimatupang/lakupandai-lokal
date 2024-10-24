@@ -761,7 +761,10 @@ class FormActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
+                remainingMillis = 0
+                msg03Value = null
                 timerTextView.text = "00:00"
+                Log.e("Timer", "Waktu habis. msg03Value di-set null.")
             }
         }
 
@@ -2303,6 +2306,7 @@ class FormActivity : AppCompatActivity() {
                                     Log.d("FormActivity", "OTP attempts: ${otpAttempts.size}")
                                     if (otpAttempts.size == 0) {
                                         otpAttempts.add(System.currentTimeMillis())
+                                        startOtpTimer()
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
@@ -3084,32 +3088,6 @@ class FormActivity : AppCompatActivity() {
     }
 
 
-    private fun requestAndHandleKodeCabang(screen: Screen, callback: (String?) -> Unit) {
-        val messageBody = createMessageBody(screen)
-        if (messageBody != null) {
-            Log.d("FormActivity", "Message Body Login: $messageBody")
-
-            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                
-                responseBody?.let { body ->
-                    Log.d("FormActivity", "Response POST: $body")
-
-                    val kodeCabangResult = parseKodeCabangFromResponse(body)
-                    Log.d("FormActivity", "Kode Cabang: $kodeCabangResult")
-
-                    // Call the callback with the updated kodeCabang
-                    callback(kodeCabangResult)
-                } ?: run {
-                    Log.e("FormActivity", "Failed to fetch response body")
-                    callback(null)
-                }
-            }
-        } else {
-            callback(null)
-        }
-    }
-
-
     private fun getCurrentTime(): String {
         val timeFormat = SimpleDateFormat("h:mm:ss a", Locale.getDefault())
         return timeFormat.format(Date())
@@ -3393,10 +3371,19 @@ class FormActivity : AppCompatActivity() {
         }
         else {
             val otpComponent = screen?.comp?.find { it.id == "OTP01" }
+            val verifComponent = screen?.comp?.find { it.id == "OTP10" }
             if (otpComponent != null) {
                 val otpValue = inputValues["OTP"]
                 Log.e("OTP", "OTP: $otpValue")
                 Log.e("MSG", "MSG: $msg03Value")
+                val currentTime = System.currentTimeMillis()
+                Log.e("Time Check", "Current Time: $currentTime")
+                val remainingTime = remainingMillis
+                Log.e("Time Check", "Remaining Time: $remainingTime")
+                if (remainingTime <= 0) {
+                    Log.e("Time Check", "Waktu habis. msg03Value di-set null.")
+                    msg03Value = null
+                }
                 if (msg03Value != null && msg03Value == otpValue) {
                     otpAttempts.clear()
                     isOtpValidated = true
@@ -3413,7 +3400,9 @@ class FormActivity : AppCompatActivity() {
 
                         // Ambil newPassword dari sharedPreferences
                         val newPassword = sharedPreferences.getString("new_password", null)
+                        val uid = getUniqueID()
                         Log.d("FormActivity", "Saved New Password: $newPassword")
+                        Log.d("FormActivity", "Saved uid: $uid")
 
                         // Periksa newPassword terlebih dahulu
                         if (!newPassword.isNullOrEmpty()) {
@@ -3428,7 +3417,8 @@ class FormActivity : AppCompatActivity() {
                                         // Call forgotPassword asynchronously
                                         WebCallerImpl().forgotPassword(
                                             username,
-                                            newPassword
+                                            newPassword,
+                                            uid
                                         ) { response ->
                                             lifecycleScope.launch {
                                                 if (response != null) {
@@ -3527,147 +3517,237 @@ class FormActivity : AppCompatActivity() {
                         if (messageBody != null) {
                             Log.d("FormActivity", "Message Body: $messageBody")
                             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                
                                 responseBody?.let { body ->
                                     lifecycleScope.launch {
                                         lottieLoading?.visibility = View.GONE
-                                        val screenJson = JSONObject(body)
-                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                        Log.e("FormActivity", "SCREEN ${screen.id} ")
-                                        Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
-                                        if (screen.id == "CCIF003" && newScreen.id == "000000D") {
-                                            val message = newScreen?.comp?.find { it.id == "0000A" }
-                                                ?.compValues?.compValue?.firstOrNull()?.value ?: "Unknown error"
-                                            newScreen.id = "RCCIF02"
-                                            var newScreenId = newScreen.id
-                                            var formValue =
-                                                StorageImpl(applicationContext).fetchForm(newScreenId)
-                                            if (formValue.isNullOrEmpty()) {
-                                                formValue = withContext(Dispatchers.IO) {
-                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
+
+                                            val screenJson = JSONObject(body)
+                                            val newScreen: Screen =
+                                                ScreenParser.parseJSON(screenJson)
+                                            Log.e("FormActivity", "SCREEN ${screen.id} ")
+                                            Log.e("FormActivity", "NEW SCREEN ${newScreen.id} ")
+                                            if (screen.id == "CCIF003" && newScreen.id == "000000D") {
+                                                val message =
+                                                    newScreen?.comp?.find { it.id == "0000A" }
+                                                        ?.compValues?.compValue?.firstOrNull()?.value
+                                                        ?: "Unknown error"
+                                                newScreen.id = "RCCIF02"
+                                                var newScreenId = newScreen.id
+                                                var formValue =
+                                                    StorageImpl(applicationContext).fetchForm(
                                                         newScreenId
                                                     )
-                                                }
-                                                Log.i("FormActivity", "Fetched formValue: $formValue")
-                                            }
-                                            val url = "http://108.137.154.8:8080/ARRest/fileupload"
-                                            if(fileFotoOrang != null){
-                                                // Mengunggah foto orang
-                                                fileFotoOrang?.let { file ->
-                                                    uploadImageFile(file, url)
-                                                    Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
-                                                }
-                                            }else{
-                                                Log.d("Foto", "Foto Orang Kosong")
-                                            }
-                                            if(fileFotoKTP != null){
-                                                // Mengunggah KTP
-                                                fileFotoKTP?.let { file ->
-                                                    uploadImageFile(file, url)
-                                                    Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
-                                                }
-                                            }else{
-                                                Log.d("Foto", "Foto KTP Kosong")
-                                            }
-                                            if(signatureFile != null){
-                                                // Mengunggah tanda tangan
-                                                signatureFile?.let { file ->
-                                                    uploadImageFile(file, url)
-                                                    Log.d("Foto", "Signature Ada : $signatureFile")
-                                                }
-                                            }else{
-                                                Log.d("Foto", "Tanda Tangan Kosong")
-                                            }
-                                            setupScreen(formValue)
-
-                                            val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                                putExtra("MESSAGE_BODY", message)
-                                                putExtra("RETURN_TO_ROOT", false)
-                                            }
-                                            startActivity(intent)
-                                        } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
-                                            newScreen.id = "CCIF001"
-                                            var newScreenId = newScreen.id
-                                            var formValue =
-                                                StorageImpl(applicationContext).fetchForm(newScreenId)
-                                            if (formValue.isNullOrEmpty()) {
-                                                formValue = withContext(Dispatchers.IO) {
-                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                        newScreenId
+                                                if (formValue.isNullOrEmpty()) {
+                                                    formValue = withContext(Dispatchers.IO) {
+                                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                            newScreenId
+                                                        )
+                                                    }
+                                                    Log.i(
+                                                        "FormActivity",
+                                                        "Fetched formValue: $formValue"
                                                     )
                                                 }
-                                                Log.i("FormActivity", "Fetched formValue: $formValue")
-                                            }
-                                            setupScreen(formValue)
+                                                val url =
+                                                    "http://108.137.154.8:8080/ARRest/fileupload"
+                                                if (fileFotoOrang != null) {
+                                                    // Mengunggah foto orang
+                                                    fileFotoOrang?.let { file ->
+                                                        uploadImageFile(file, url)
+                                                        Log.d(
+                                                            "Foto",
+                                                            "Foto Orang Ada : $fileFotoOrang"
+                                                        )
+                                                    }
+                                                } else {
+                                                    Log.d("Foto", "Foto Orang Kosong")
+                                                }
+                                                if (fileFotoKTP != null) {
+                                                    // Mengunggah KTP
+                                                    fileFotoKTP?.let { file ->
+                                                        uploadImageFile(file, url)
+                                                        Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
+                                                    }
+                                                } else {
+                                                    Log.d("Foto", "Foto KTP Kosong")
+                                                }
+                                                if (signatureFile != null) {
+                                                    // Mengunggah tanda tangan
+                                                    signatureFile?.let { file ->
+                                                        uploadImageFile(file, url)
+                                                        Log.d(
+                                                            "Foto",
+                                                            "Signature Ada : $signatureFile"
+                                                        )
+                                                    }
+                                                } else {
+                                                    Log.d("Foto", "Tanda Tangan Kosong")
+                                                }
+                                                setupScreen(formValue)
 
-                                        } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
-                                            // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
-                                            val intent = Intent(
-                                                this@FormActivity,
-                                                PopupActivity::class.java
-                                            ).apply {
-                                                putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                                putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
-                                            }
-                                            startActivity(intent)
-                                        }else if (isSvcBiller == true){
-                                            Log.e("FormActivity", "Masuk Service Biller")
-                                            if(newScreen.id != "000000F"){
-                                                Log.e("FormActivity", "Debit Berhasil")
-                                                val messageBody = createMessageBody(newScreen)
-                                                if (messageBody != null) {
-                                                    Log.d("FormActivity", "Message Body Biller: $messageBody")
-                                                    Log.d("FormActivity", "MAU NEW SCREEN: $newScreen")
-                                                    Log.d("FormActivity", "MAU NEW SCREEN.ID: ${newScreen.id}")
-                                                    var billerScreen = newScreen
-                                                    ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                        responseBody?.let { body ->
-                                                            lifecycleScope.launch {
-                                                                lottieLoading?.visibility = View.GONE
-                                                                val screenJson = JSONObject(body)
-                                                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                Log.e("FormActivity", "SCREEN Biller ${screen.id} ")
-                                                                Log.e("FormActivity", "NEW SCREEN Biller ${newScreen.id} ")
-                                                                if(newScreen.id == "000000F"){
-                                                                    Log.e("FormActivity", "Biller gagal, reversal")
-                                                                    Log.e("FormActivity", "Screen Reversal:${screen.id}")
-                                                                    Log.e("FormActivity", "IS Reversal:$isReversal")
-                                                                    isReversal = true
-                                                                    Log.e("FormActivity", "After IS Reversal:$isReversal")
-                                                                    Log.e("FormActivity", "Biller Screen:${billerScreen.id}")
-                                                                    val messageBody = createMessageBody(billerScreen)
-                                                                    if (messageBody != null) {
-                                                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                                                            
-                                                                            responseBody?.let { body ->
-                                                                                lifecycleScope.launch {
-                                                                                    lottieLoading?.visibility = View.GONE
-                                                                                    val screenJson = JSONObject(body)
-                                                                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                                    Log.e("FormActivity", "NEW SCREEN Biller ${newScreen.id} ")
-                                                                                    handleScreenType(newScreen)
+                                                val intent = Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                    putExtra("MESSAGE_BODY", message)
+                                                    putExtra("RETURN_TO_ROOT", false)
+                                                }
+                                                startActivity(intent)
+                                            } else if (screen.id == "CCIF000" && newScreen.id == "000000F") {
+                                                newScreen.id = "CCIF001"
+                                                var newScreenId = newScreen.id
+                                                var formValue =
+                                                    StorageImpl(applicationContext).fetchForm(
+                                                        newScreenId
+                                                    )
+                                                if (formValue.isNullOrEmpty()) {
+                                                    formValue = withContext(Dispatchers.IO) {
+                                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                                            newScreenId
+                                                        )
+                                                    }
+                                                    Log.i(
+                                                        "FormActivity",
+                                                        "Fetched formValue: $formValue"
+                                                    )
+                                                }
+                                                setupScreen(formValue)
+
+                                            } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
+                                                // Menampilkan pop-up gagal dengan pesan "NIK sudah terdaftar"
+                                                val intent = Intent(
+                                                    this@FormActivity,
+                                                    PopupActivity::class.java
+                                                ).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                                    putExtra("MESSAGE_BODY", "NIK sudah terdaftar")
+                                                }
+                                                startActivity(intent)
+                                            } else if (isSvcBiller == true) {
+                                                Log.e("FormActivity", "Masuk Service Biller")
+                                                if (newScreen.id != "000000F") {
+                                                    Log.e("FormActivity", "Debit Berhasil")
+                                                    val messageBody = createMessageBody(newScreen)
+                                                    if (messageBody != null) {
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Message Body Biller: $messageBody"
+                                                        )
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "MAU NEW SCREEN: $newScreen"
+                                                        )
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "MAU NEW SCREEN.ID: ${newScreen.id}"
+                                                        )
+                                                        var billerScreen = newScreen
+                                                        ArrestCallerImpl(OkHttpClient()).requestPost(
+                                                            messageBody
+                                                        ) { responseBody ->
+                                                            responseBody?.let { body ->
+                                                                lifecycleScope.launch {
+                                                                    lottieLoading?.visibility =
+                                                                        View.GONE
+                                                                    val screenJson =
+                                                                        JSONObject(body)
+                                                                    val newScreen: Screen =
+                                                                        ScreenParser.parseJSON(
+                                                                            screenJson
+                                                                        )
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "SCREEN Biller ${screen.id} "
+                                                                    )
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "NEW SCREEN Biller ${newScreen.id} "
+                                                                    )
+                                                                    if (newScreen.id == "000000F") {
+                                                                        Log.e(
+                                                                            "FormActivity",
+                                                                            "Biller gagal, reversal"
+                                                                        )
+                                                                        Log.e(
+                                                                            "FormActivity",
+                                                                            "Screen Reversal:${screen.id}"
+                                                                        )
+                                                                        Log.e(
+                                                                            "FormActivity",
+                                                                            "IS Reversal:$isReversal"
+                                                                        )
+                                                                        isReversal = true
+                                                                        Log.e(
+                                                                            "FormActivity",
+                                                                            "After IS Reversal:$isReversal"
+                                                                        )
+                                                                        Log.e(
+                                                                            "FormActivity",
+                                                                            "Biller Screen:${billerScreen.id}"
+                                                                        )
+                                                                        val messageBody =
+                                                                            createMessageBody(
+                                                                                billerScreen
+                                                                            )
+                                                                        if (messageBody != null) {
+                                                                            ArrestCallerImpl(
+                                                                                OkHttpClient()
+                                                                            ).requestPost(
+                                                                                messageBody
+                                                                            ) { responseBody ->
+
+                                                                                responseBody?.let { body ->
+                                                                                    lifecycleScope.launch {
+                                                                                        lottieLoading?.visibility =
+                                                                                            View.GONE
+                                                                                        val screenJson =
+                                                                                            JSONObject(
+                                                                                                body
+                                                                                            )
+                                                                                        val newScreen: Screen =
+                                                                                            ScreenParser.parseJSON(
+                                                                                                screenJson
+                                                                                            )
+                                                                                        Log.e(
+                                                                                            "FormActivity",
+                                                                                            "NEW SCREEN Biller ${newScreen.id} "
+                                                                                        )
+                                                                                        handleScreenType(
+                                                                                            newScreen
+                                                                                        )
+                                                                                    }
                                                                                 }
                                                                             }
                                                                         }
+                                                                    } else {
+                                                                        handleScreenType(newScreen)
                                                                     }
-                                                                }else{
-                                                                    handleScreenType(newScreen)
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 }
+                                            } else {
+                                                handleScreenType(newScreen)
                                             }
-                                        } else {
-                                            handleScreenType(newScreen)
-                                        }
                                     }
                                 } ?: run {
+                                    showPopupGagal(
+                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                    )
                                     Log.e("FormActivity", "Failed to fetch response body")
                                 }
                             }
                         } else {
+                            lifecycleScope.launch {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
+                            }
+                            showPopupGagal(
+                                "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                            )
                             Log.e("FormActivity", "Failed to create message body, request not sent")
                         }
                     }
@@ -3706,7 +3786,6 @@ class FormActivity : AppCompatActivity() {
                 } else if (messageBody != null) {
                     Log.d("FormActivity", "Message Body: $messageBody")
                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                        
                         responseBody?.let { body ->
                             lifecycleScope.launch {
                                 lottieLoading?.visibility = View.GONE
@@ -3837,9 +3916,9 @@ class FormActivity : AppCompatActivity() {
                                             handleScreenType(newScreen)
                                         }
                                     }
-                                }else{
+                                }else {
                                     Log.e("FormActivity", "GAK ADA PRODID ")
-                                    if(sendOTPComponent != null || sendPIN != null) {
+                                    if (sendOTPComponent != null || sendPIN != null) {
                                         var pinScreen = "P000001"
                                         var formValue =
                                             StorageImpl(applicationContext).fetchForm(pinScreen)
@@ -3852,37 +3931,37 @@ class FormActivity : AppCompatActivity() {
                                             Log.i("FormActivity", "Fetched pinValue: $formValue")
                                         }
                                         val url = "http://108.137.154.8:8080/ARRest/fileupload"
-                                        if(fileFotoOrang != null){
+                                        if (fileFotoOrang != null) {
                                             // Mengunggah foto orang
                                             fileFotoOrang?.let { file ->
                                                 uploadImageFile(file, url)
                                                 Log.d("Foto", "Foto Orang Ada : $fileFotoOrang")
                                             }
-                                        }else{
+                                        } else {
                                             Log.d("Foto", "Foto Orang Kosong")
                                         }
-                                        if(fileFotoKTP != null){
+                                        if (fileFotoKTP != null) {
                                             // Mengunggah KTP
                                             fileFotoKTP?.let { file ->
                                                 uploadImageFile(file, url)
                                                 Log.d("Foto", "Foto KTP Ada : $fileFotoKTP")
                                             }
-                                        }else{
+                                        } else {
                                             Log.d("Foto", "Foto KTP Kosong")
                                         }
-                                        if(signatureFile != null){
+                                        if (signatureFile != null) {
                                             // Mengunggah tanda tangan
                                             signatureFile?.let { file ->
                                                 uploadImageFile(file, url)
                                                 Log.d("Foto", "Signature Ada : $signatureFile")
                                             }
-                                        }else{
+                                        } else {
                                             Log.d("Foto", "Tanda Tangan Kosong")
                                         }
                                         setupScreen(formValue)
 
                                         otpScreen = newScreen
-                                    }else {
+                                    } else {
                                         if (screen.id == "CCIF003" && newScreen.id == "000000D") {
                                             val message = newScreen?.comp?.find { it.id == "0000A" }
                                                 ?.compValues?.compValue?.firstOrNull()?.value
@@ -3890,14 +3969,19 @@ class FormActivity : AppCompatActivity() {
                                             newScreen.id = "RCCIF02"
                                             var newScreenId = newScreen.id
                                             var formValue =
-                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                                StorageImpl(applicationContext).fetchForm(
+                                                    newScreenId
+                                                )
                                             if (formValue.isNullOrEmpty()) {
                                                 formValue = withContext(Dispatchers.IO) {
                                                     ArrestCallerImpl(OkHttpClient()).fetchScreen(
                                                         newScreenId
                                                     )
                                                 }
-                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                                Log.i(
+                                                    "FormActivity",
+                                                    "Fetched formValue: $formValue"
+                                                )
                                             }
                                             setupScreen(formValue)
                                             val intent = Intent(
@@ -3913,14 +3997,19 @@ class FormActivity : AppCompatActivity() {
                                             newScreen.id = "CCIF001"
                                             var newScreenId = newScreen.id
                                             var formValue =
-                                                StorageImpl(applicationContext).fetchForm(newScreenId)
+                                                StorageImpl(applicationContext).fetchForm(
+                                                    newScreenId
+                                                )
                                             if (formValue.isNullOrEmpty()) {
                                                 formValue = withContext(Dispatchers.IO) {
                                                     ArrestCallerImpl(OkHttpClient()).fetchScreen(
                                                         newScreenId
                                                     )
                                                 }
-                                                Log.i("FormActivity", "Fetched formValue: $formValue")
+                                                Log.i(
+                                                    "FormActivity",
+                                                    "Fetched formValue: $formValue"
+                                                )
                                             }
                                             setupScreen(formValue)
                                         } else if (screen.id == "CCIF000" && newScreen.id != "000000F") {
@@ -3973,7 +4062,7 @@ class FormActivity : AppCompatActivity() {
                                                     putExtra("MESSAGE_BODY", "Pesan sudah teririm")
                                                 }
                                             startActivity(intent)
-                                        // BILLER
+                                            // BILLER
                                         } else if (isSvcBiller == true) {
                                             Log.e("FormActivity", "Masuk Service Biller")
                                             if (newScreen.id != "000000F") {
@@ -3984,7 +4073,10 @@ class FormActivity : AppCompatActivity() {
                                                         "FormActivity",
                                                         "Message Body Biller: $messageBody"
                                                     )
-                                                    Log.d("FormActivity", "MAU NEW SCREEN: $newScreen")
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "MAU NEW SCREEN: $newScreen"
+                                                    )
                                                     Log.d(
                                                         "FormActivity",
                                                         "MAU NEW SCREEN.ID: ${newScreen.id}"
@@ -3993,13 +4085,16 @@ class FormActivity : AppCompatActivity() {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(
                                                         messageBody
                                                     ) { responseBody ->
-                                                        
+
                                                         responseBody?.let { body ->
                                                             lifecycleScope.launch {
-                                                                lottieLoading?.visibility = View.GONE
+                                                                lottieLoading?.visibility =
+                                                                    View.GONE
                                                                 val screenJson = JSONObject(body)
                                                                 val newScreen: Screen =
-                                                                    ScreenParser.parseJSON(screenJson)
+                                                                    ScreenParser.parseJSON(
+                                                                        screenJson
+                                                                    )
                                                                 Log.e(
                                                                     "FormActivity",
                                                                     "SCREEN Biller ${screen.id} "
@@ -4031,17 +4126,24 @@ class FormActivity : AppCompatActivity() {
                                                                         "Biller Screen:${billerScreen.id}"
                                                                     )
                                                                     val messageBody =
-                                                                        createMessageBody(billerScreen)
+                                                                        createMessageBody(
+                                                                            billerScreen
+                                                                        )
                                                                     if (messageBody != null) {
-                                                                        ArrestCallerImpl(OkHttpClient()).requestPost(
+                                                                        ArrestCallerImpl(
+                                                                            OkHttpClient()
+                                                                        ).requestPost(
                                                                             messageBody
                                                                         ) { responseBody ->
-                                                                            
+
                                                                             responseBody?.let { body ->
                                                                                 lifecycleScope.launch {
-                                                                                    lottieLoading?.visibility = View.GONE
+                                                                                    lottieLoading?.visibility =
+                                                                                        View.GONE
                                                                                     val screenJson =
-                                                                                        JSONObject(body)
+                                                                                        JSONObject(
+                                                                                            body
+                                                                                        )
                                                                                     val newScreen: Screen =
                                                                                         ScreenParser.parseJSON(
                                                                                             screenJson
@@ -4064,7 +4166,7 @@ class FormActivity : AppCompatActivity() {
                                                         }
                                                     }
                                                 }
-                                            }else{
+                                            } else {
                                                 handleScreenType(newScreen)
                                             }
                                         } else {
@@ -4074,10 +4176,21 @@ class FormActivity : AppCompatActivity() {
                                 }
                             }
                         } ?: run {
+                            showPopupGagal(
+                                "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                            )
                             Log.e("FormActivity", "Failed to fetch response body")
                         }
                     }
                 } else {
+                    lifecycleScope.launch {
+                        withContext(Dispatchers.Main) {
+                            lottieLoading?.visibility = View.GONE
+                        }
+                    }
+                    showPopupGagal(
+                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                    )
                     Log.e("FormActivity", "Failed to create message body, request not sent")
                 }
             }
@@ -4519,17 +4632,26 @@ class FormActivity : AppCompatActivity() {
                         when (userStatus) {
                             "0" -> {
                                 withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
+                                withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
                                 }
                                 return@launch
                             }
                             "2" -> {
                                 withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
+                                withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
                                 }
                                 return@launch
                             }
                             "3" -> {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Akun Anda terblokir", Toast.LENGTH_SHORT).show()
                                 }
@@ -4617,17 +4739,35 @@ class FormActivity : AppCompatActivity() {
                                                             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                                                                 responseBody?.let { body ->
                                                                     lifecycleScope.launch {
-                                                                        val screenJson = JSONObject(body)
-                                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                        handleScreenType(newScreen)
+
+                                                                            val screenJson =
+                                                                                JSONObject(body)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(
+                                                                                newScreen
+                                                                            )
                                                                     }
                                                                 } ?: run {
+                                                                    showPopupGagal(
+                                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                                    )
                                                                     Log.e("FormActivity", "Failed to fetch response body")
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 } else {
+                                                    lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            lottieLoading?.visibility = View.GONE
+                                                        }
+                                                    }
+                                                    showPopupGagal(
+                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                    )
                                                     Log.e("FormActivity", "Failed to create message body, request not sent")
                                                 }
                                             }
@@ -4644,20 +4784,37 @@ class FormActivity : AppCompatActivity() {
                                                         }
                                                         withContext(Dispatchers.IO) {
                                                             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-
                                                                 responseBody?.let { body ->
                                                                     lifecycleScope.launch {
-                                                                        val screenJson = JSONObject(body)
-                                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                        handleScreenType(newScreen)
+
+                                                                            val screenJson =
+                                                                                JSONObject(body)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(
+                                                                                newScreen
+                                                                            )
                                                                     }
                                                                 } ?: run {
+                                                                    showPopupGagal(
+                                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                                    )
                                                                     Log.e("FormActivity", "Failed to fetch response body")
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 } else {
+                                                    lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            lottieLoading?.visibility = View.GONE
+                                                        }
+                                                    }
+                                                    showPopupGagal(
+                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                    )
                                                     Log.e("FormActivity", "Failed to create message body, request not sent")
                                                 }
                                             }
@@ -4674,20 +4831,37 @@ class FormActivity : AppCompatActivity() {
                                                         }
                                                         withContext(Dispatchers.IO) {
                                                             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-
                                                                 responseBody?.let { body ->
                                                                     lifecycleScope.launch {
-                                                                        val screenJson = JSONObject(body)
-                                                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                        handleScreenType(newScreen)
+
+                                                                            val screenJson =
+                                                                                JSONObject(body)
+                                                                            val newScreen: Screen =
+                                                                                ScreenParser.parseJSON(
+                                                                                    screenJson
+                                                                                )
+                                                                            handleScreenType(
+                                                                                newScreen
+                                                                            )
                                                                     }
                                                                 } ?: run {
+                                                                    showPopupGagal(
+                                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                                    )
                                                                     Log.e("FormActivity", "Failed to fetch response body")
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 } else {
+                                                    lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            lottieLoading?.visibility = View.GONE
+                                                        }
+                                                    }
+                                                    showPopupGagal(
+                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                    )
                                                     Log.e("FormActivity", "Failed to create message body, request not sent")
                                                 }
                                             }
@@ -4725,17 +4899,35 @@ class FormActivity : AppCompatActivity() {
                                                                 ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                                                                     responseBody?.let { body ->
                                                                         lifecycleScope.launch {
-                                                                            val screenJson = JSONObject(body)
-                                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-                                                                            handleScreenType(newScreen)
+
+                                                                                val screenJson =
+                                                                                    JSONObject(body)
+                                                                                val newScreen: Screen =
+                                                                                    ScreenParser.parseJSON(
+                                                                                        screenJson
+                                                                                    )
+                                                                                handleScreenType(
+                                                                                    newScreen
+                                                                                )
                                                                         }
                                                                     } ?: run {
+                                                                        showPopupGagal(
+                                                                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                                        )
                                                                         Log.e("FormActivity", "Failed to fetch response body")
                                                                     }
                                                                 }
                                                             }
                                                         }
                                                     } else {
+                                                        lifecycleScope.launch {
+                                                            withContext(Dispatchers.Main) {
+                                                                lottieLoading?.visibility = View.GONE
+                                                            }
+                                                        }
+                                                        showPopupGagal(
+                                                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                        )
                                                         Log.e("FormActivity", "Failed to create message body, request not sent")
                                                     }
                                                 }
@@ -4796,12 +4988,52 @@ class FormActivity : AppCompatActivity() {
 //                                        val authToken = sharedPreferences.getString("token", "") ?: ""
 //                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
 //                                    }
-//
-//                                    withContext(Dispatchers.Main) {
-//                                        Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-//                                        navigateToScreen()
+
+//                                createCheckSaldo { messageBody ->
+//                                    if (messageBody != null) {
+//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+//                                            responseBody?.let {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        Toast.makeText(
+//                                                            this@FormActivity,
+//                                                            "Login berhasil",
+//                                                            Toast.LENGTH_SHORT
+//                                                        ).show()
+//                                                        navigateToScreen()
+//                                                        callback(true)
+//                                                    }
+//                                                }
+//                                            } ?: run {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        lottieLoading?.visibility = View.GONE
+//                                                    }
+//                                                }
+//                                                showPopupGagal(
+//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                                )
+//                                                Log.e("FormActivity", "Failed to fetch response body")
+//                                            }
+//                                        }
+//                                    } else {
+//                                        lifecycleScope.launch {
+//                                            withContext(Dispatchers.Main) {
+//                                                lottieLoading?.visibility = View.GONE
+//                                            }
+//                                        }
+//                                        showPopupGagal(
+//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                        )
+//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
 //                                    }
 //                                }
+//
+//
+//                                }
+
+
 
 //                                ini di comment nanti kalo mau berdasarkan perangkat
                                 fun retrieveAuthToken(): String {
@@ -4823,15 +5055,45 @@ class FormActivity : AppCompatActivity() {
                                         MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
                                     }
 
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
-                                    callback(true)
-                                }
-
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
+                                createCheckSaldo { messageBody ->
+                                    if (messageBody != null) {
+                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                            responseBody?.let {
+                                                lifecycleScope.launch {
+                                                        withContext(Dispatchers.Main) {
+                                                            Toast.makeText(
+                                                                this@FormActivity,
+                                                                "Login berhasil",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                            navigateToScreen()
+                                                            callback(true)
+                                                        }
+                                                }
+                                            } ?: run {
+                                                lifecycleScope.launch {
+                                                    withContext(Dispatchers.Main) {
+                                                        lottieLoading?.visibility = View.GONE
+                                                    }
+                                                }
+                                                showPopupGagal(
+                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+                                                )
+                                                Log.e("FormActivity", "Failed to fetch response body")
+                                            }
+                                        }
+                                    } else {
+                                        lifecycleScope.launch {
+                                            withContext(Dispatchers.Main) {
+                                                lottieLoading?.visibility = View.GONE
+                                            }
+                                        }
+                                        showPopupGagal(
+                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+                                        )
+                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                                    }
                                 }
                             }
                         }
@@ -4915,6 +5177,9 @@ class FormActivity : AppCompatActivity() {
             if (username_input != null) {
                 blockUserAccountLogin(username_input)
                 withContext(Dispatchers.Main) {
+                    lottieLoading?.visibility = View.GONE
+                }
+                withContext(Dispatchers.Main) {
                     Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -4922,6 +5187,9 @@ class FormActivity : AppCompatActivity() {
             editor.putInt("login_attempts", currentAttempts + 1)
             editor.apply()
             val attemptsLeft = maxLoginAttempt - (currentAttempts + 1)
+            withContext(Dispatchers.Main) {
+                lottieLoading?.visibility = View.GONE
+            }
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@FormActivity, "Username atau password salah. Kesalahan ke-${currentAttempts + 1}. Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
             }
@@ -5177,23 +5445,34 @@ class FormActivity : AppCompatActivity() {
                     if (messageBody != null) {
                         Log.d("FormActivity", "Message Body OTP: $messageBody")
                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                            
                             responseBody?.let { body ->
                                 lifecycleScope.launch {
-                                    val screenJson = JSONObject(body)
-                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                        val screenJson = JSONObject(body)
+                                        val newScreen: Screen = ScreenParser.parseJSON(screenJson)
 
-                                    // Jika OTP berhasil dibuat, arahkan ke halaman OTP
-                                    handleScreenType(newScreen)
+                                        // Jika OTP berhasil dibuat, arahkan ke halaman OTP
+                                        handleScreenType(newScreen)
                                 }
                             } ?: run {
+                                showPopupGagal(
+                                    "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                )
                                 Log.e("FormActivity", "Failed to fetch response body")
                             }
                         }
                     } else {
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.Main) {
+                                lottieLoading?.visibility = View.GONE
+                            }
+                        }
+                        showPopupGagal(
+                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                        )
                         Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
                 }
+
             } catch (e: Exception) {
                 Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
                 withContext(Dispatchers.Main) {
@@ -5513,60 +5792,67 @@ class FormActivity : AppCompatActivity() {
                                     withContext(Dispatchers.Main) {
                                         lottieLoading?.visibility = View.GONE
                                     }
-                                    val screenJson = JSONObject(body)
-                                    Log.d("FormActivity", "Response POST: $body")
-                                    Log.d("FormActivity", "SCREEN JSON: $screenJson")
 
-                                    // Mendapatkan array komponen dari JSON
-                                    val compArray =
-                                        screenJson.getJSONObject("screen").getJSONObject("comps")
-                                            .getJSONArray("comp")
+                                        val screenJson = JSONObject(body)
+                                        Log.d("FormActivity", "Response POST: $body")
+                                        Log.d("FormActivity", "SCREEN JSON: $screenJson")
 
-                                    // Mencari komponen dengan ID "MSG03"
-                                    var newMsg03Value: String? = null
-                                    for (i in 0 until compArray.length()) {
-                                        val compObject = compArray.getJSONObject(i)
-                                        if (compObject.getString("comp_id") == "MSG03") {
-                                            newMsg03Value = compObject.getJSONObject("comp_values")
-                                                .getJSONArray("comp_value")
-                                                .getJSONObject(0)
-                                                .optString("value")
-                                            break
+                                        // Mendapatkan array komponen dari JSON
+                                        val compArray =
+                                            screenJson.getJSONObject("screen")
+                                                .getJSONObject("comps")
+                                                .getJSONArray("comp")
+
+                                        // Mencari komponen dengan ID "MSG03"
+                                        var newMsg03Value: String? = null
+                                        for (i in 0 until compArray.length()) {
+                                            val compObject = compArray.getJSONObject(i)
+                                            if (compObject.getString("comp_id") == "MSG03") {
+                                                newMsg03Value =
+                                                    compObject.getJSONObject("comp_values")
+                                                        .getJSONArray("comp_value")
+                                                        .getJSONObject(0)
+                                                        .optString("value")
+                                                break
+                                            }
                                         }
-                                    }
 
-                                    if (newMsg03Value != null) {
-                                        msg03Value = newMsg03Value
-                                        Log.d("FormActivity", "NEW MSG03 : $msg03Value")
-                                        Toast.makeText(
-                                            this@FormActivity,
-                                            "OTP baru telah dikirim",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        if (newMsg03Value != null) {
+                                            msg03Value = newMsg03Value
+                                            Log.d("FormActivity", "NEW MSG03 : $msg03Value")
+                                            Toast.makeText(
+                                                this@FormActivity,
+                                                "OTP baru telah dikirim",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
 
-                                        cancelOtpTimer()
-                                        startOtpTimer()
-                                    } else {
-                                        Toast.makeText(
-                                            this@FormActivity,
-                                            "Gagal mendapatkan OTP baru",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                            cancelOtpTimer()
+                                            startOtpTimer()
+                                        } else {
+                                            Toast.makeText(
+                                                this@FormActivity,
+                                                "Gagal mendapatkan OTP baru",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                 }
                             } ?: run {
                                 Log.e("FormActivity", "Failed to fetch response body")
-                                Toast.makeText(
-                                    this@FormActivity,
-                                    "Gagal melakukan request ulang OTP",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                showPopupGagal(
+                                    "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                )
                             }
                         }
                     } else {
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.Main) {
+                                lottieLoading?.visibility = View.GONE
+                            }
+                        }
                         Log.e("FormActivity", "Failed to create message body, request not sent")
-                        Toast.makeText(this@FormActivity, "Request body gagal dibuat", Toast.LENGTH_SHORT)
-                            .show()
+                        showPopupGagal(
+                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                        )
                     }
                 }else{
                     createOTP { messageBody ->
@@ -5581,54 +5867,74 @@ class FormActivity : AppCompatActivity() {
                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                                         responseBody?.let { body ->
                                             lifecycleScope.launch {
-                                                val screenJson = JSONObject(body)
-                                                Log.d("FormActivity", "Response POST: $body")
-                                                Log.d("FormActivity", "SCREEN JSON: $screenJson")
 
-                                                // Mendapatkan array komponen dari JSON
-                                                val compArray =
-                                                    screenJson.getJSONObject("screen").getJSONObject("comps")
-                                                        .getJSONArray("comp")
+                                                    val screenJson = JSONObject(body)
+                                                    Log.d("FormActivity", "Response POST: $body")
+                                                    Log.d(
+                                                        "FormActivity",
+                                                        "SCREEN JSON: $screenJson"
+                                                    )
 
-                                                // Mencari komponen dengan ID "MSG03"
-                                                var newMsg03Value: String? = null
-                                                for (i in 0 until compArray.length()) {
-                                                    val compObject = compArray.getJSONObject(i)
-                                                    if (compObject.getString("comp_id") == "MSG03") {
-                                                        newMsg03Value = compObject.getJSONObject("comp_values")
-                                                            .getJSONArray("comp_value")
-                                                            .getJSONObject(0)
-                                                            .optString("value")
-                                                        break
+                                                    // Mendapatkan array komponen dari JSON
+                                                    val compArray =
+                                                        screenJson.getJSONObject("screen")
+                                                            .getJSONObject("comps")
+                                                            .getJSONArray("comp")
+
+                                                    // Mencari komponen dengan ID "MSG03"
+                                                    var newMsg03Value: String? = null
+                                                    for (i in 0 until compArray.length()) {
+                                                        val compObject = compArray.getJSONObject(i)
+                                                        if (compObject.getString("comp_id") == "MSG03") {
+                                                            newMsg03Value =
+                                                                compObject.getJSONObject("comp_values")
+                                                                    .getJSONArray("comp_value")
+                                                                    .getJSONObject(0)
+                                                                    .optString("value")
+                                                            break
+                                                        }
                                                     }
-                                                }
 
-                                                if (newMsg03Value != null) {
-                                                    msg03Value = newMsg03Value
-                                                    Log.d("FormActivity", "NEW MSG03 : $msg03Value")
-                                                    Toast.makeText(
-                                                        this@FormActivity,
-                                                        "OTP baru telah dikirim",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    if (newMsg03Value != null) {
+                                                        msg03Value = newMsg03Value
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "NEW MSG03 : $msg03Value"
+                                                        )
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "OTP baru telah dikirim",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
 
-                                                    cancelOtpTimer()
-                                                    startOtpTimer()
-                                                } else {
-                                                    Toast.makeText(
-                                                        this@FormActivity,
-                                                        "Gagal mendapatkan OTP baru",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
+                                                        cancelOtpTimer()
+                                                        startOtpTimer()
+                                                    } else {
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "Gagal mendapatkan OTP baru",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
                                             }
                                         } ?: run {
+                                            showPopupGagal(
+                                                "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                            )
                                             Log.e("FormActivity", "Failed to fetch response body")
                                         }
                                     }
                                 }
                             }
                         } else {
+                            lifecycleScope.launch {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
+                            }
+                            showPopupGagal(
+                                "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                            )
                             Log.e("FormActivity", "Failed to create message body, request not sent")
                         }
                     }
@@ -5757,12 +6063,10 @@ class FormActivity : AppCompatActivity() {
         val token = sharedPreferences.getString("token", "")
         val imei = getUniqueID()
 
-        Log.d(TAG, "Starting terminal creation process. IMEI: $imei, MID: $midTerminal, Token : $token")
+        Log.d(TAG, "Starting terminal creation process. IMEI: $imei, MID: $midTerminal, Token: $token")
 
         if (imei != null && midTerminal != null) {
             val createTerminalUrl = "http://reportntbs.selada.id/api/terminal/create"
-            Log.d(TAG, "Create terminal URL: $createTerminalUrl")
-
             val requestBody = FormBody.Builder()
                 .add("imei", imei)
                 .add("merchant_id", midTerminal)
@@ -5777,58 +6081,83 @@ class FormActivity : AppCompatActivity() {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val terminalResponse = client.newCall(createTerminalRequest).execute()
-                    val terminalResponseData = terminalResponse.body?.string()
+                    val responseData = terminalResponse.body?.string()
 
-                    Log.d(TAG, "Terminal response received. Status code: ${terminalResponse.code}, Message: ${terminalResponse.message}")
+                    // Check if response is JSON
+                    if (terminalResponse.isSuccessful && responseData != null) {
+                        if (isValidJson(responseData)) {
+                            val jsonResponse = JSONObject(responseData)
+                            val success = jsonResponse.optBoolean("success", false)
 
-                    if (terminalResponse.isSuccessful && terminalResponseData != null) {
-                        Log.d(TAG, "Terminal response body: $terminalResponseData")
-
-                        val terminalJsonResponse = JSONObject(terminalResponseData)
-                        val terminalStatus = terminalJsonResponse.optBoolean("success", false)
-
-                        if (terminalStatus) {
-                            Log.d(TAG, "Terminal berhasil dibuat")
-
-                            saveTerminalData(terminalJsonResponse)
-
-                            val editor = sharedPreferences.edit()
-                            editor.putInt("login_attempts", 0)
-                            editor.apply()
-
-                            val storedImeiTerminal = sharedPreferences.getString("imei", null)
-                            if (imei != null && imei != storedImeiTerminal) {
+                            if (success) {
+                                Log.d(TAG, "Terminal created successfully")
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@FormActivity, "Terminal created", Toast.LENGTH_SHORT).show()
+                                    navigateToScreen()
+                                }
+                            } else {
+                                val message = jsonResponse.optString("message", "Gagal membuat terminal.")
                                 withContext(Dispatchers.Main) {
                                     lottieLoading?.visibility = View.GONE
                                 }
-                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                    putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-                                    putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-                                    putExtra("RETURN_TO_ROOT", false)
-                                }
-                                startActivity(intentPopup)
-                            }else{
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@FormActivity, "Login berhasil", Toast.LENGTH_SHORT).show()
-                                    navigateToScreen()
-                                }
+                                showPopupGagal(message)
                             }
                         } else {
-                            Log.d(TAG, "Gagal Membuat Terminal Baru")
+                            withContext(Dispatchers.Main) {
+                                lottieLoading?.visibility = View.GONE
+                            }
+                            showPopupGagal("Unauthorized: Server response is not in JSON format.")
                         }
                     } else {
-                        Log.d(TAG, "Gagal membuat terminal. HTTP Status Code: ${terminalResponse.code}, Message: ${terminalResponse.message}")
+                        val message = parseErrorMessage(responseData)
+                        withContext(Dispatchers.Main) {
+                            lottieLoading?.visibility = View.GONE
+                        }
+                        showPopupGagal(message)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error occurred while creating terminal", e)
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                        lottieLoading?.visibility = View.GONE
+                        showPopupGagal("Terjadi kesalahan: ${e.message}")
                     }
                 }
             }
         } else {
-            Log.d(TAG, "IMEI or MID is null. IMEI: $imei, MID: $midTerminal. Cannot create terminal.")
+            Log.d(TAG, "IMEI or MID is null. Cannot create terminal.")
         }
+    }
+
+    private fun isValidJson(string: String): Boolean {
+        return try {
+            JSONObject(string)
+            true
+        } catch (e: JSONException) {
+            try {
+                JSONArray(string)
+                true
+            } catch (e: JSONException) {
+                false
+            }
+        }
+    }
+
+    private fun parseErrorMessage(responseData: String?): String {
+        return try {
+            val jsonResponse = responseData?.let { JSONObject(it) }
+            jsonResponse?.optString("message", "Terjadi kesalahan yang tidak diketahui.") ?: "Server tidak merespons."
+        } catch (e: JSONException) {
+            "Gagal memproses respons dari server."
+        }
+    }
+
+    private fun showPopupGagal(message: String) {
+        val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {
+            putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+            putExtra("MESSAGE_BODY", message)
+            putExtra("RETURN_TO_ROOT", false)
+        }
+        startActivity(intent)
     }
 
     private fun updateImei() {
@@ -6176,4 +6505,145 @@ class FormActivity : AppCompatActivity() {
             }
         })
     }
+
+    fun checkSaldo(onSaldoFetched: (String?, String?, String?) -> Unit) {
+        val messageBody = createCekSaldo() // Misalnya, Anda sudah memiliki fungsi untuk membuat body request
+        if (messageBody != null) {
+            ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                responseBody?.let {
+                    try {
+                        val jsonResponse = JSONObject(it)
+                        val msgObject = jsonResponse.optJSONObject("screen")
+                        if (msgObject != null) {
+                            val comps = msgObject.optJSONObject("comps")
+                            val compArray = comps?.optJSONArray("comp")
+                            if (compArray != null) {
+                                var accountNumber: String? = null
+                                var saldo: String? = null
+
+                                for (i in 0 until compArray.length()) {
+                                    val comp = compArray.getJSONObject(i)
+                                    val label = comp.optString("comp_lbl")
+                                    val value = comp.optJSONObject("comp_values")
+                                        ?.optJSONArray("comp_value")?.optJSONObject(0)
+                                        ?.optString("value")
+
+                                    if (label == "No Rekening") {
+                                        accountNumber = value
+                                    } else if (label == "Saldo Akhir") {
+                                        saldo = value
+                                        saldo = saldo?.replace("-", "")?.replace(",", "")
+                                        saldo = formatRupiah(saldo?.toDoubleOrNull() ?: 0.0)
+                                    }
+                                }
+                                // Mengirimkan hasil saldo dan nomor rekening
+                                onSaldoFetched(accountNumber, saldo, null)
+                            } else {
+                                // Jika compArray null, kirimkan error
+                                onSaldoFetched(null, null, "Komponen saldo tidak ditemukan.")
+                            }
+                        } else {
+                            onSaldoFetched(null, null, "Objek screen tidak ditemukan.")
+                        }
+                    } catch (e: Exception) {
+                        onSaldoFetched(null, null, "Gagal mem-parsing response: ${e.message}")
+                    }
+                } ?: run {
+                    onSaldoFetched(null, null, "Response body adalah null.")
+                }
+            }
+        } else {
+            onSaldoFetched(null, null, "Gagal membuat body request.")
+        }
+    }
+
+    private fun createCekSaldo(): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val norekening = sharedPreferences.getString("norekening", "") ?: ""
+            val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
+            val username = "lakupandai"
+            val msg = JSONObject()
+
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val msgUi = imei
+//            val msgUi = "353471045058692"
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = msgUi + timestamp
+
+            val msgSi = "N00001"
+            val accountNumber = norekening
+            val name = merchant_name
+            val msgDt = "$username|$accountNumber|$name|null"
+
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi)
+                put("msg_dt", msgDt)
+            }
+
+            msg.put("msg", msgObject)
+
+            // Logging the JSON message details
+            Log.d("MenuActivity", "Message ID: $msgId")
+            Log.d("MenuActivity", "Message UI: $msgUi")
+            Log.d("MenuActivity", "Message SI: $msgSi")
+            Log.d("MenuActivity", "Message DT: $msgDt")
+            Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
+            msg
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
+        }
+    }
+
+    private fun createCheckSaldo(callback: (JSONObject?) -> Unit) {
+        lifecycleScope.launch {
+            try {
+
+                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                val norekening = sharedPreferences.getString("norekening", "") ?: ""
+                val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
+                val username = "lakupandai"
+
+                val imei = sharedPreferences.getString("imei", "")?: ""
+                Log.e("FormActivity", "Saved Imei: $imei")
+                val msgUi = imei
+//            val msgUi = "353471045058692"
+                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                val msgId = msgUi + timestamp
+
+                val msgSi = "N00001"
+                val accountNumber = norekening
+                val name = merchant_name
+                val msgDt = "$username|$accountNumber|$name|null"
+
+
+                    val msgObject = JSONObject().apply {
+                        put("msg_id", msgId)
+                        put("msg_ui", msgUi)
+                        put("msg_si", msgSi)
+                        put("msg_dt", msgDt)
+                    }
+
+                    val msg = JSONObject().apply {
+                        put("msg", msgObject)
+                    }
+                    callback(msg) // Return the message object
+            } catch (e: Exception) {
+                Log.e("MenuActivity", "Failed to create message body", e)
+                callback(null) // Return null on any other exception
+            }
+        }
+    }
+
+    fun formatRupiah(amount: Double): String {
+        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        format.minimumFractionDigits = 0
+        format.maximumFractionDigits = 0
+        return format.format(amount)
+    }
+
 }

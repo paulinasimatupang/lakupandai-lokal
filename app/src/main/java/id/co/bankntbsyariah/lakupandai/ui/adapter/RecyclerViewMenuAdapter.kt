@@ -63,26 +63,6 @@ class RecyclerViewMenuAdapter(
         Log.d(TAG, "Binding view holder for position $position")
 
         (context as MenuActivity).lifecycleScope.launch {
-//            val iconName = "${menuList[position].image}.png"
-//            Log.i(TAG, "Fetching Icon image with ID: $iconName")
-//            val imgBitmap: Bitmap = try {
-//                withContext(Dispatchers.IO) {
-//                    Log.d(TAG, "Fetching image for component with comp_icon: $iconName")
-//
-//                    val fetchedBitmap = ArrestCallerImpl(okHttpClient).fetchImage(iconName)
-//
-//                    if (fetchedBitmap != null && isIconNameInCompIcon(iconName)) {
-//                        Log.d(TAG, "Image for component with comp_icon: $iconName fetched successfully")
-//                        fetchedBitmap
-//                    } else {
-//                        Log.d(TAG, "Image for component with comp_icon: $iconName not found on server")
-//                        BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                Log.e(TAG, "Exception occurred while fetching image for component with comp_icon: $iconName", e)
-//                BitmapFactory.decodeResource(context.resources, R.mipmap.logo_aja_ntbs)
-//            }
 
             val menuItem = menuList[position]
             val iconName = "${menuItem.image}.png"
@@ -129,7 +109,13 @@ class RecyclerViewMenuAdapter(
             }
             holder.itemView.setOnClickListener {
                 Log.d(TAG, "Menu item with comp_icon: $iconName clicked")
-                (context as MenuActivity).onMenuItemClick(position)
+                Log.d(TAG, "Menu item with title: ${menuItem.title} clicked")
+                val itemType = when {
+                    menuItem.originalLabel.startsWith("PL", true) && !menuItem.originalLabel.equals("PLN", true) -> "pembelian"
+                    menuItem.originalLabel.startsWith("PB", true) -> "pembayaran"
+                    else -> "menu"
+                }
+                (context as MenuActivity).onMenuItemClick(position, itemType)
             }
         }
     }

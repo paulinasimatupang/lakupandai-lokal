@@ -450,24 +450,24 @@ class MenuActivity : AppCompatActivity() {
             menuId == "PKOM001"
         ){position ->
         // Define what happens on item click here
-        onMenuItemClick(position)
+            onMenuItemClick(position, "menu")
         }
         menuContainer?.adapter = menuAdapter
             screen.comp.forEach { comp ->
             if (!comp.visible) return@forEach
             if (screen.id == "PP00001") {
                 when (comp.label) {
-                    "username" -> menuList.add(MenuItem(comp.icon, username ?: comp.label, comp.label, comp.desc, comp.action))
-                    "mid" -> menuList.add(MenuItem(comp.icon, mid ?: comp.label, comp.label, comp.desc, comp.action))
-                    "email" -> menuList.add(MenuItem(comp.icon, email ?: comp.label, comp.label, comp.desc, comp.action))
-                    "phone" -> menuList.add(MenuItem(comp.icon, phone ?: comp.label, comp.label, comp.desc, comp.action))
-                    else -> menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                    "username" -> menuList.add(MenuItem(comp.icon, username ?: comp.label, comp.label, comp.label, comp.desc, comp.action))
+                    "mid" -> menuList.add(MenuItem(comp.icon, mid ?: comp.label, comp.label,comp.label, comp.desc, comp.action))
+                    "email" -> menuList.add(MenuItem(comp.icon, email ?: comp.label, comp.label,comp.label, comp.desc, comp.action))
+                    "phone" -> menuList.add(MenuItem(comp.icon, phone ?: comp.label, comp.label,comp.label, comp.desc, comp.action))
+                    else -> menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.label, comp.desc, comp.action))
                 }
             } else {
                 val cleanedLabel = comp.label
                     .split(" ", limit = 2)
                     .let { if (it.size > 1) it[1] else it[0] }
-                menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.label, comp.desc, comp.action))
             }
         }
         Log.d("MenuActivity", "Menu item count: ${menuList.size}")
@@ -484,55 +484,58 @@ class MenuActivity : AppCompatActivity() {
         })
     }
 
-    fun onMenuItemClick(position: Int) {
-        // Check if the click is within menuList bounds
-        if (position < menuList.size) {
-            val targetScreenId = menuList[position].value
-            Log.d("Menu", "Clicked menu item with ID: $targetScreenId")
+    fun onMenuItemClick(position: Int, itemType: String) {
+        Log.d("Menu", "Position: $position")
+        when(itemType) {
+            "menu" -> {
+                if (position < menuList.size) { // Check if position is valid
+                    val targetScreenId = menuList[position].value
+                    Log.d("Menu", "Clicked menu item with ID: $targetScreenId")
 
-            // Handle logic for menuList clicks
-            if (targetScreenId.isNullOrEmpty()) {
-                return
+                    if (!targetScreenId.isNullOrEmpty()) {
+                        when (targetScreenId) {
+                            "LOG0001" -> showLogoutPopup()
+                            "MN00002" -> showMenuInBottomSheet("MN00002")
+                            "MN00001" -> showMenuInBottomSheet("MN00001")
+                            else -> {
+                                finish()
+                                navigateToScreen(targetScreenId)
+                            }
+                        }
+                    }
+                } else {
+                    Log.e("Menu", "Invalid position for menuList: $position (size: ${menuList.size})")
+                }
             }
-            when (targetScreenId) {
-                "LOG0001" -> showLogoutPopup()
-                "MN00002" -> showMenuInBottomSheet("MN00002")
-                "MN00001" -> showMenuInBottomSheet("MN00001")
-                else -> {
-                    finish()
-                    navigateToScreen(targetScreenId)
+            "pembelian" -> {
+                if (position < pembelianList.size) { // Check if position is valid
+                    val targetScreenId = pembelianList[position].value
+                    Log.d("Pembelian", "Clicked pembelian item with ID: $targetScreenId")
+
+                    if (!targetScreenId.isNullOrEmpty()) {
+                        finish()
+                        navigateToScreen(targetScreenId) // Logic for navigation for pembelian
+                    }
+                } else {
+                    Log.e("Pembelian", "Invalid position for pembelianList: $position (size: ${pembelianList.size})")
+                }
+            }
+            "pembayaran" -> {
+                if (position < pembayaranList.size) { // Check if position is valid
+                    val targetScreenId = pembayaranList[position].value
+                    Log.d("Pembayaran", "Clicked pembayaran item with ID: $targetScreenId")
+
+                    if (!targetScreenId.isNullOrEmpty()) {
+                        finish()
+                        navigateToScreen(targetScreenId) // Logic for navigation for pembayaran
+                    }
+                } else {
+                    Log.e("Pembayaran", "Invalid position for pembayaranList: $position (size: ${pembayaranList.size})")
                 }
             }
         }
-        // Check if the click is within pembelianList bounds
-        else if (position < menuList.size + pembelianList.size) {
-            val pembelianPosition = position - menuList.size
-            val targetScreenId = pembelianList[pembelianPosition].value
-            Log.d("Pembelian", "Clicked pembelian item with ID: $targetScreenId")
-
-            // Handle logic for pembelianList clicks
-            if (targetScreenId.isNullOrEmpty()) {
-                return
-            }
-            // Implement your logic for pembelianList here
-            finish()
-            navigateToScreen(targetScreenId) // Example logic
-        }
-        // Check if the click is within pembayaranList bounds
-        else {
-            val pembayaranPosition = position - menuList.size - pembelianList.size
-            val targetScreenId = pembayaranList[pembayaranPosition].value
-            Log.d("Pembayaran", "Clicked pembayaran item with ID: $targetScreenId")
-
-            // Handle logic for pembayaranList clicks
-            if (targetScreenId.isNullOrEmpty()) {
-                return
-            }
-            // Implement your logic for pembayaranList here
-            finish()
-            navigateToScreen(targetScreenId) // Example logic
-        }
     }
+
 
     private fun showMenuInBottomSheet(menuId: String) {
         val bottomSheetDialog = BottomSheetDialog(this)
@@ -594,15 +597,18 @@ class MenuActivity : AppCompatActivity() {
 
                             if (comp.label.startsWith("PL", true)) {
                                 pembelianList.add(
-                                    MenuItem(comp.icon, cleanedLabel, cleanedLabel, comp.desc, comp.action)
+                                    MenuItem(comp.icon, cleanedLabel, cleanedLabel, comp.label, comp.desc, comp.action)
                                 )
                             } else if (comp.label.startsWith("PB", true)) {
                                 pembayaranList.add(
-                                    MenuItem(comp.icon, cleanedLabel, cleanedLabel, comp.desc, comp.action)
+                                    MenuItem(comp.icon, cleanedLabel, cleanedLabel, comp.label, comp.desc, comp.action)
                                 )
                             }
                         }
                     }
+
+                    Log.d("BOTTOM AWAL", "Pembelian size : ${pembelianList.size}, Pembayaran size : ${pembayaranList.size}, Menu size : ${menuList.size},")
+                    Log.d("BOTTOM AWAL", "Pembelian size : ${pembelianList.size}, Pembayaran size : ${pembayaranList.size}, Menu size : ${menuList.size},")
 
                     // Atur visibilitas dan isi subtitle
                     val recyclerPembelian = bottomSheetView.findViewById<RecyclerView>(R.id.recyclerPembelian)
@@ -615,7 +621,7 @@ class MenuActivity : AppCompatActivity() {
                         recyclerPembelian.visibility = View.VISIBLE
                         val pembelianAdapter = RecyclerViewMenuAdapter(pembelianList, this@MenuActivity, false, false, false, false, false){ position ->
                             // Handle click event for pembelianList
-                            onMenuItemClick(position)
+                            onMenuItemClick(position, "pembelian")
                         }
                         recyclerPembelian.adapter = pembelianAdapter
                         pembelianAdapter.notifyDataSetChanged()
@@ -626,15 +632,17 @@ class MenuActivity : AppCompatActivity() {
                         recyclerPembayaran.visibility = View.VISIBLE
                         val pembayaranAdapter = RecyclerViewMenuAdapter(pembayaranList, this@MenuActivity, false, false, false, false, false){ position ->
                             // Handle click event for pembelianList
-                            onMenuItemClick(position)
+                            onMenuItemClick(position, "pembayaran")
                         }
                         recyclerPembayaran.adapter = pembayaranAdapter
                         pembayaranAdapter.notifyDataSetChanged()
                     }
+
+                    Log.d("BOTTOM", "Pembelian size : ${pembelianList.size}, Pembayaran size : ${pembayaranList.size}, Menu size : ${menuList.size},")
                 }else{
                     screen.comp.forEach { comp ->
                         if (comp.visible) {
-                            menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.desc, comp.action))
+                            menuList.add(MenuItem(comp.icon, comp.label, comp.label, comp.label, comp.desc, comp.action))
                         }
                     }
 
@@ -642,7 +650,7 @@ class MenuActivity : AppCompatActivity() {
 
                     val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false, isKomplain=false, isKomplain2 = false){position ->
                         // Define what happens on item click here
-                        onMenuItemClick(position)
+                        onMenuItemClick(position, "menu")
                     }
                     recyclerView.adapter = menuAdapter
 
@@ -702,53 +710,115 @@ class MenuActivity : AppCompatActivity() {
         })
     }
 
-    private fun createMessageBody(): JSONObject? {
-        return try {
-            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
-            val norekening = sharedPreferences.getString("norekening", "") ?: ""
-            val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-            val username = "lakupandai"
-            val msg = JSONObject()
-
-            val imei = sharedPreferences.getString("imei", "")?: ""
-            Log.e("FormActivity", "Saved Imei: $imei")
-            val msgUi = imei
-//            val msgUi = "353471045058692"
-            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-            val msgId = msgUi + timestamp
-
-            val msgSi = "N00001"
-            val accountNumber = norekening
-            val name = merchant_name
-            val msgDt = "$username|$accountNumber|$name|null"
-
-            val msgObject = JSONObject().apply {
-                put("msg_id", msgId)
-                put("msg_ui", msgUi)
-                put("msg_si", msgSi)
-                put("msg_dt", msgDt)
-            }
-
-            msg.put("msg", msgObject)
-
-            // Logging the JSON message details
-            Log.d("MenuActivity", "Message ID: $msgId")
-            Log.d("MenuActivity", "Message UI: $msgUi")
-            Log.d("MenuActivity", "Message SI: $msgSi")
-            Log.d("MenuActivity", "Message DT: $msgDt")
-            Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
-            msg
-        } catch (e: Exception) {
-            Log.e("MenuActivity", "Failed to create message body", e)
-            null
-        }
-    }
-
     fun formatRupiah(amount: Double): String {
         val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
         format.minimumFractionDigits = 0
         format.maximumFractionDigits = 0
         return format.format(amount)
+    }
+
+    private fun showSaldoOnScreen(accountNumber: String?, saldo: String?) {
+        runOnUiThread {
+            // Menampilkan nomor rekening secara langsung
+            findViewById<TextView>(R.id.account_number_text)?.text = accountNumber ?: ""
+            Log.d("MenuActivity", "Updated No Rekening text: $accountNumber")
+
+            // Tambahkan click listener untuk tombol saldo
+            val checkSaldoButton = findViewById<ImageButton>(R.id.check_saldo_button)
+            val saldoTextView = findViewById<TextView>(R.id.saldo_text)
+
+            checkSaldoButton?.setOnClickListener {
+                isSaldoVisible = !isSaldoVisible
+
+                // Tampilkan atau sembunyikan saldo
+                saldoTextView?.text = if (isSaldoVisible) saldo ?: "" else "XXXXXXXXX"
+
+                // Ganti ikon berdasarkan status saldo
+                checkSaldoButton.setImageResource(
+                    if (isSaldoVisible) R.drawable.eye_open else R.drawable.eye_closed
+                )
+
+                Log.d(
+                    "MenuActivity",
+                    "Updated Saldo text: ${if (isSaldoVisible) saldo else "XXXXXXXXX"}, isSaldoVisible: $isSaldoVisible"
+                )
+            }
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Jika izin belum diberikan, minta izin
+                Log.d("MenuActivity", "Izin notifikasi belum diberikan. Meminta izin...")
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_CODE
+                )
+            } else {
+                Log.d("MenuActivity", "Izin notifikasi sudah diberikan.")
+            }
+        } else {
+            // Tidak memerlukan izin untuk versi Android di bawah TIRAMISU
+            Log.d("MenuActivity", "Tidak memerlukan izin untuk Android versi di bawah 13.")
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("MenuActivity", "Izin notifikasi telah diberikan.")
+                Toast.makeText(this, "Izin notifikasi diberikan", Toast.LENGTH_SHORT).show()
+
+                // Panggil fungsi untuk mengirim notifikasi jika diperlukan
+                sendNotification("Notifikasi Diberikan", "Izin telah diberikan, dan ini notifikasi contoh.")
+            } else {
+                Log.e("MenuActivity", "Izin notifikasi ditolak.")
+                Toast.makeText(this, "Izin notifikasi ditolak", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @SuppressLint("ServiceCast")
+    private fun sendNotification(title: String, message: String) {
+        val intent = Intent(this, MenuActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, "notification_channel")
+            .setSmallIcon(R.mipmap.logo_aja_ntbs)
+            .setAutoCancel(true)
+            .setVibrate(longArrayOf(1000, 1000, 1000, 1000))
+            .setContentIntent(pendingIntent)
+            .setContentTitle(title)
+            .setContentText(message)
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "notification_channel",
+                "id.co.bankntbsyariah.lakupandai",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
     }
 
     private fun checkSaldo() {
@@ -843,78 +913,45 @@ class MenuActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // Jika izin belum diberikan, minta izin
-                Log.d("MenuActivity", "Izin notifikasi belum diberikan. Meminta izin...")
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_CODE
-                )
-            } else {
-                Log.d("MenuActivity", "Izin notifikasi sudah diberikan.")
+    private fun createMessageBody(): JSONObject? {
+        return try {
+            val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+            val norekening = sharedPreferences.getString("norekening", "") ?: ""
+            val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
+            val username = "lakupandai"
+            val msg = JSONObject()
+
+            val imei = sharedPreferences.getString("imei", "")?: ""
+            Log.e("FormActivity", "Saved Imei: $imei")
+            val msgUi = imei
+//            val msgUi = "353471045058692"
+            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+            val msgId = msgUi + timestamp
+
+            val msgSi = "N00001"
+            val accountNumber = norekening
+            val name = merchant_name
+            val msgDt = "$username|$accountNumber|$name|null"
+
+            val msgObject = JSONObject().apply {
+                put("msg_id", msgId)
+                put("msg_ui", msgUi)
+                put("msg_si", msgSi)
+                put("msg_dt", msgDt)
             }
-        } else {
-            // Tidak memerlukan izin untuk versi Android di bawah TIRAMISU
-            Log.d("MenuActivity", "Tidak memerlukan izin untuk Android versi di bawah 13.")
+
+            msg.put("msg", msgObject)
+
+            // Logging the JSON message details
+            Log.d("MenuActivity", "Message ID: $msgId")
+            Log.d("MenuActivity", "Message UI: $msgUi")
+            Log.d("MenuActivity", "Message SI: $msgSi")
+            Log.d("MenuActivity", "Message DT: $msgDt")
+            Log.d("MenuActivity", "Message JSON: ${msg.toString()}")
+            msg
+        } catch (e: Exception) {
+            Log.e("MenuActivity", "Failed to create message body", e)
+            null
         }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == NOTIFICATION_PERMISSION_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d("MenuActivity", "Izin notifikasi telah diberikan.")
-                Toast.makeText(this, "Izin notifikasi diberikan", Toast.LENGTH_SHORT).show()
-
-                // Panggil fungsi untuk mengirim notifikasi jika diperlukan
-                sendNotification("Notifikasi Diberikan", "Izin telah diberikan, dan ini notifikasi contoh.")
-            } else {
-                Log.e("MenuActivity", "Izin notifikasi ditolak.")
-                Toast.makeText(this, "Izin notifikasi ditolak", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    @SuppressLint("ServiceCast")
-    private fun sendNotification(title: String, message: String) {
-        val intent = Intent(this, MenuActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val builder = NotificationCompat.Builder(this, "notification_channel")
-            .setSmallIcon(R.mipmap.logo_aja_ntbs)
-            .setAutoCancel(true)
-            .setVibrate(longArrayOf(1000, 1000, 1000, 1000))
-            .setContentIntent(pendingIntent)
-            .setContentTitle(title)
-            .setContentText(message)
-
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "notification_channel",
-                "id.co.bankntbsyariah.lakupandai",
-                NotificationManager.IMPORTANCE_HIGH
-            )
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
     }
 }

@@ -2618,10 +2618,12 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 18 -> {
-                    val cameraView = layoutInflater.inflate(R.layout.camera_preview, null, false)
-                    val imageViewPreview = cameraView.findViewById<ImageView>(R.id.imageViewPreview)
-                    val buttonCapture = cameraView.findViewById<Button>(R.id.buttonCapture)
-                    val titleCapture = cameraView.findViewById<TextView>(R.id.JudulFoto)
+
+                    val cameraDevice = layoutInflater.inflate(R.layout.camera_preview, null, false) //inisiasi kamera
+                    val titleCapture = cameraDevice.findViewById<TextView>(R.id.JudulFoto)
+
+                    val imageViewPreview = cameraDevice.findViewById<ImageView>(R.id.imageViewPreview)
+                    val buttonCapture = cameraDevice.findViewById<Button>(R.id.buttonCapture)
 
                     if (component.id == "SIG02" || component.id == "SIG03") {
                         // Mengatur teks button
@@ -2664,7 +2666,7 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
 
-                    container.addView(cameraView)
+                    container.addView(cameraDevice)
                 }
 
                 19 -> {

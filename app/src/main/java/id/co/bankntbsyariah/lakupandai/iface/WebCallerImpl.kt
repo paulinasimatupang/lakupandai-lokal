@@ -139,18 +139,18 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
                     response.body
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception occurred while changing password", e)
-            null
-        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Exception occurred while changing password", e)
+        null
     }
+}
 
-    override fun forgotPassword(username: String, newPassword: String, uid:String, callback: (ResponseBody?) -> Unit) {
-        // Build the request body
-        val formBody = FormBody.Builder()
+override fun forgotPassword(username: String, newPassword: String, uid:String, callback: (ResponseBody?) -> Unit) {
+    // Build the request body
+    val formBody = FormBody.Builder()
             .add("username", username)
             .add("new_password", newPassword)
-            .add("uid", newPassword)
+            .add("uid", uid)
             .build()
 
         // Create the request

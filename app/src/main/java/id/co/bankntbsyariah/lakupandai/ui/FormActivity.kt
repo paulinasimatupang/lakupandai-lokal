@@ -142,6 +142,7 @@ class FormActivity : AppCompatActivity() {
     private var remainingMillis: Long = 0
     private var okButtonPressCount = 0
     lateinit var timerTextView: TextView
+    lateinit var resendOtpTextView: TextView
 
     private lateinit var executor: Executor
     private val webCallerImpl = WebCallerImpl()
@@ -783,11 +784,23 @@ class FormActivity : AppCompatActivity() {
         timerTextView.text = ""
         countDownTimer?.cancel()
 
-        val minutes = timeInMillis / 60000
-        val seconds = (timeInMillis % 60000) / 1000
-        val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+        countDownTimer = object : CountDownTimer(timeInMillis, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val minutes = millisUntilFinished / 60000
+                val seconds = (millisUntilFinished % 60000) / 1000
+                val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+                timerTextView.text = timeFormatted
 
-        timerTextView.text = timeFormatted
+                // Sembunyikan "Resend OTP" saat timer berjalan
+                resendOtpTextView.visibility = View.GONE
+            }
+
+            override fun onFinish() {
+                // Ketika timer habis (00:00), tampilkan "Resend OTP"
+                timerTextView.text = "00:00"
+                resendOtpTextView.visibility = View.VISIBLE
+            }
+        }.start()
 
         countDownTimer = startTimer(timeInMillis)
         return countDownTimer!!
@@ -2398,7 +2411,7 @@ class FormActivity : AppCompatActivity() {
                     val inflater = layoutInflater
                     val otpView = inflater.inflate(R.layout.pop_up_otp, container, false)
                     timerTextView = otpView.findViewById<TextView>(R.id.timerTextView)
-                    val resendOtpTextView = otpView.findViewById<TextView>(R.id.tv_resend_otp)
+                    resendOtpTextView  = otpView.findViewById<TextView>(R.id.tv_resend_otp)
                     val messageOTP = otpView.findViewById<TextView>(R.id.messageOTP)
 
                     when (screen.id) {

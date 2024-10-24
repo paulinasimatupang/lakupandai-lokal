@@ -2619,9 +2619,8 @@ class FormActivity : AppCompatActivity() {
                 }
                 18 -> {
 
-                    val cameraDevice = layoutInflater.inflate(R.layout.camera_preview, null, false) //inisiasi kamera
+                    val cameraDevice = layoutInflater.inflate(R.layout.camera_preview, null, false) // Inisiasi kamera
                     val titleCapture = cameraDevice.findViewById<TextView>(R.id.JudulFoto)
-
                     val imageViewPreview = cameraDevice.findViewById<ImageView>(R.id.imageViewPreview)
                     val buttonCapture = cameraDevice.findViewById<Button>(R.id.buttonCapture)
 
@@ -2642,6 +2641,7 @@ class FormActivity : AppCompatActivity() {
                     }
 
                     buttonCapture.setOnClickListener {
+                        // Tentukan nama file berdasarkan photoCounter
                         val fileName = if (photoCounter == 0) {
                             "FOTO_${nikValue ?: "unknown"}.png" // Nama file untuk foto Orang
                         } else {
@@ -2659,10 +2659,11 @@ class FormActivity : AppCompatActivity() {
                         currentImageView = imageViewPreview
                         Log.d("PhotoApp", "Current ImageView Updated: ${currentImageView != null}")
 
+                        // Cek izin kamera
                         if (checkCameraPermission()) {
                             openCameraIntent()
                         } else {
-                            requestCameraPermission()
+                            requestCameraPermission() // Minta izin jika belum diberikan
                         }
                     }
 
@@ -5702,6 +5703,14 @@ class FormActivity : AppCompatActivity() {
         )
     }
 
+    private fun openCameraIntent() {
+        if (checkCameraPermission()) {
+            openCamera()
+        } else {
+            requestCameraPermission()
+        }
+    }
+
     private fun openCamera() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         if (cameraIntent.resolveActivity(packageManager) != null) {
@@ -5711,34 +5720,33 @@ class FormActivity : AppCompatActivity() {
         }
     }
 
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == CAMERA_PERMISSION_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                openCamera()
-            } else {
-                // Handle permission denial
+        when (requestCode) {
+            CAMERA_PERMISSION_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    openCamera()
+                } else {
+                    // Tampilkan pesan kepada pengguna bahwa izin diperlukan
+                    Toast.makeText(this, "Izin kamera diperlukan untuk mengambil foto", Toast.LENGTH_SHORT).show()
+                }
             }
         }
-    }
-
-    private fun openCameraIntent() {
-        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
             val photo = data?.extras?.get("data") as? Bitmap
-            currentImageView?.setImageBitmap(photo)  // Update the correct ImageView
+            currentImageView?.setImageBitmap(photo)
 
             // Simpan gambar ke file setelah foto diambil
-            val fileName = if (photoCounter == 1) {
+            val fileName = if (photoCounter == 0) {
                 "FOTO_${nikValue ?: "unknown"}.png" // Foto Orang
             } else {
                 "KTP_${nikValue ?: "unknown"}.png" // Foto KTP
@@ -5746,13 +5754,15 @@ class FormActivity : AppCompatActivity() {
 
             currentImageView?.let { imageView ->
                 saveImageToFile(photo!!, fileName)?.let { file ->
-                    if (photoCounter == 1) {
+                    if (photoCounter == 0) {
                         fileFotoOrang = file
                     } else {
                         fileFotoKTP = file
                     }
                 }
             }
+        } else {
+            Log.e("FormActivity", "Pengambilan foto gagal atau dibatalkan")
         }
     }
 

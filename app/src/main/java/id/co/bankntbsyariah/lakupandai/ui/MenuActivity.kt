@@ -423,7 +423,7 @@ class MenuActivity : AppCompatActivity() {
         finish() // Close MenuActivity
     }
 
-    @SuppressLint("NotifyDataSetChanged")
+    @SuppressLint("NotifyDataSetChanged", "SuspiciousIndentation")
     private fun setupMenuRecyclerView(screen: Screen) {
         val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
         val editor = sharedPreferences.edit()

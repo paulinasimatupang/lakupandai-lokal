@@ -129,7 +129,9 @@ class FormActivity : AppCompatActivity() {
     private val countLimitMap = mutableMapOf<String, Int>()
     private var isReversal = false
     private var isSvcBiller = false
-
+    val valuesKabKot = ArrayList<String>()
+    var currentLabelCIF13: TextView? = null
+    var currentSpinnerCIF13: Spinner? = null
     private var countDownTimer: CountDownTimer? = null
 
     data class Token(val token: String)
@@ -1841,7 +1843,10 @@ class FormActivity : AppCompatActivity() {
                 4 -> {
                     LinearLayout(this@FormActivity).apply {
                         orientation = LinearLayout.VERTICAL
+                        if (component.id == "CIF13"){
 
+                        }
+                        else{
                         // TextView untuk label
                         val labelTextView = TextView(this@FormActivity).apply {
                             text = component.label
@@ -1859,7 +1864,7 @@ class FormActivity : AppCompatActivity() {
                             layoutParams = params
                         }
                         addView(labelTextView)
-
+                        }
                         var compOption = component.compValues?.compValue
 
                         lifecycleScope.launch {
@@ -1889,7 +1894,8 @@ class FormActivity : AppCompatActivity() {
                                                 ""
                                             )
                                         ) // Return a list with default placeholder
-                                    } else {
+                                    }
+                                    else {
                                         try {
                                             val screenJson = JSONObject(formValue)
                                             val screen: Screen = ScreenParser.parseJSON(screenJson)
@@ -1906,7 +1912,7 @@ class FormActivity : AppCompatActivity() {
                                             Log.d(
                                                 "FormActivity",
                                                 "SELECTED OPTIONS : $selectedOptions")
-                                            if (component.id == "PR006" || component.id == "PR007" || component.id == "PR008" || component.id == "PR009" || component.id == "PR010") {
+                                            if (component.id.startsWith("PR")) {
                                                 selectedOptions
                                             } else {
                                                 mutableListOf(
@@ -1930,13 +1936,13 @@ class FormActivity : AppCompatActivity() {
                                         }
                                     }
                                 } else {
-                                    if (component.id == "PR006" || component.id == "PR007" || component.id == "PR008" || component.id == "PR009" || component.id == "PR010") {
+                                    if (component.id.startsWith("PR")) {
                                         compOption.map { Pair(it.print, it.value) }
                                     } else {
                                         mutableListOf(Pair("Pilih ${component.label}", "")) + compOption.map { Pair(it.print, it.value) }
                                     }
                                 }
-                            if (component.id == "PR006" || component.id == "PR007" || component.id == "PR008" || component.id == "PR009" || component.id == "PR010") {
+                            if (component.id.startsWith("PR")) {
                                 val recyclerView = RecyclerView(this@FormActivity).apply {
                                     layoutManager = GridLayoutManager(this@FormActivity, 2)
                                     adapter = ProdukAdapter(options) { selectedItem ->
@@ -1957,6 +1963,16 @@ class FormActivity : AppCompatActivity() {
 
                                 addView(recyclerView)
                             }
+                            else if (component.id == "CIF13") {
+                                component.values?.forEach { pair ->
+                                    // Menggabungkan elemen pertama dan kedua dari Pair dengan pemisah, misalnya "-"
+                                    val combinedValue = "${pair.first} - ${pair.second}"
+                                    valuesKabKot.add(combinedValue)
+                                }
+
+                                Log.d("FormActivity", "valuesCIF13: $valuesKabKot")
+                            }
+
                             else {
                                 val spinner = Spinner(this@FormActivity).apply {
                                     background = getDrawable(R.drawable.combo_box)
@@ -2021,7 +2037,6 @@ class FormActivity : AppCompatActivity() {
                                             val selectedValue = selectedPair.first
                                             val selectedCompValue = selectedPair.second
                                             var spinner: Spinner? = null
-
                                             if (screen.id == "CCIF001") {
                                                 inputRekening[component.id] =
                                                     selectedValue ?: "" // Menyimpan selectedValue
@@ -2031,7 +2046,6 @@ class FormActivity : AppCompatActivity() {
                                                 "FormActivity",
                                                 "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
                                             )
-
                                             Log.d(
                                                 "FormActivity",
                                                 "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
@@ -2154,15 +2168,102 @@ class FormActivity : AppCompatActivity() {
                                                     )
                                                 }
 
-                                                "CIF13" , "CIF14"-> {
-                                                    if (selectedCompValue != null) {
-                                                        inputValues[component.id] = selectedValue ?: ""
+                                                "CIF14" -> {
+                                                    val selectedCIF14Value = selectedCompValue ?: ""
+                                                    Log.d("FormActivity", "Selected CIF14 Value: $selectedCIF14Value")
+
+                                                    // Ekstraksi nilai dari CIF14
+                                                    val extractedValueCIF14 = if (selectedCIF14Value.startsWith("[OI]") && selectedCIF14Value.length >= 6) {
+                                                        selectedCIF14Value.takeLast(2)
+                                                    } else {
+                                                        ""
                                                     }
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "Kab Kota set to: ${inputValues[component.id]}"
-                                                    )
+                                                    Log.d("FormActivity", "Extracted Value from CIF14: $extractedValueCIF14")
+
+                                                    // Simpan nilai terpilih untuk CIF14
+                                                    inputValues[component.id] = selectedValue ?: ""
+                                                    Log.d("FormActivity", "CIF14 set to: ${inputValues[component.id]}")
+
+                                                    // Cek jika inputValues untuk CIF14 sudah ada isinya
+                                                    if (!inputValues[component.id].isNullOrEmpty()) {
+                                                        val filteredValues = valuesKabKot.filter { option ->
+                                                            option.contains("- [OI]") && option.substringAfter("- [OI]").take(2) == extractedValueCIF14
+                                                        }.map { option ->
+                                                            // Ambil bagian sebelum "- [OI]" sebagai label
+                                                            option.substringBefore(" - [OI]")
+                                                        }
+                                                        Log.d("FormActivity", "OptionFilter $filteredValues")
+
+                                                        currentLabelCIF13?.let { existingLabel ->
+                                                            removeView(existingLabel)
+                                                        }
+                                                        currentSpinnerCIF13?.let { existingSpinner ->
+                                                            removeView(existingSpinner)
+                                                        }
+
+                                                        val labelTextView = TextView(this@FormActivity).apply {
+                                                            text ="Kabupaten/Kota"
+                                                            textSize = 16f
+                                                            setTypeface(null, Typeface.BOLD)
+                                                            setTextSize(18f)
+                                                            setTextColor(Color.parseColor("#0A6E44"))
+
+                                                            // Atur jarak antara label dan Spinner di bawahnya
+                                                            val params = LinearLayout.LayoutParams(
+                                                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                                                LinearLayout.LayoutParams.WRAP_CONTENT
+                                                            )
+                                                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                                                            layoutParams = params
+                                                        }
+                                                        addView(labelTextView)
+                                                        currentLabelCIF13 = labelTextView
+
+                                                        val spinnerCIF13 = Spinner(this@FormActivity).apply {
+                                                            background = getDrawable(R.drawable.combo_box)
+
+                                                            // Menambahkan opsi pertama sebagai "Pilih Kabupaten/Kota"
+                                                            val initialOptions = mutableListOf("Pilih Kabupaten/Kota")
+                                                            initialOptions.addAll(filteredValues)
+
+                                                            // Buat adapter dengan initialOptions yang berisi opsi awal dan filteredValues
+                                                            val adapter = ArrayAdapter(
+                                                                this@FormActivity,
+                                                                android.R.layout.simple_spinner_item,
+                                                                initialOptions
+                                                            )
+                                                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                                            this.adapter = adapter
+
+                                                            // Set margin untuk spinner
+                                                            layoutParams = LinearLayout.LayoutParams(
+                                                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                                                LinearLayout.LayoutParams.WRAP_CONTENT
+                                                            ).apply {
+                                                                setMargins(0, 0, 0, 20) // Margin bawah 20dp
+                                                            }
+                                                        }
+
+
+                                                        addView(spinnerCIF13)
+                                                        currentSpinnerCIF13 = spinnerCIF13
+                                                        // Event ketika item dipilih dari Spinner baru
+                                                        spinnerCIF13.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                                                            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+                                                                val selectedItem = valuesKabKot[position]
+                                                                Log.d("FormActivity", "Selected item from new CIF14 ComboBox: $selectedItem")
+                                                                val extractedCIF13Value = selectedItem.substringAfter("[OI]")
+                                                                inputValues["CIF13"] = extractedCIF13Value
+                                                                 Log.d("FormActivity", "Input Values $inputValues")
+                                                            }
+
+                                                            override fun onNothingSelected(parent: AdapterView<*>) {
+                                                                Log.d("FormActivity", "Nothing selected for new CIF14 ComboBox")
+                                                            }
+                                                        }
+                                                    }
                                                 }
+
                                                 else -> inputValues[component.id] = selectedCompValue ?: ""
                                             }
                                         }

@@ -100,6 +100,8 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.Executor
 import java.security.MessageDigest
 import java.util.UUID
+import com.gu.toolargetool.TooLargeTool
+
 
 class FormActivity : AppCompatActivity() {
 
@@ -2719,56 +2721,9 @@ class FormActivity : AppCompatActivity() {
                     }
                 }
                 18 -> {
-
-                    val cameraDevice = layoutInflater.inflate(R.layout.camera_preview, null, false) // Inisiasi kamera
-                    val titleCapture = cameraDevice.findViewById<TextView>(R.id.JudulFoto)
-                    val imageViewPreview = cameraDevice.findViewById<ImageView>(R.id.imageViewPreview)
-                    val buttonCapture = cameraDevice.findViewById<Button>(R.id.buttonCapture)
-
-                    if (component.id == "SIG02" || component.id == "SIG03") {
-                        // Mengatur teks button
-                        buttonCapture.text = if (component.id == "SIG02") {
-                            "Ambil Gambar Nasabah"  // Jika comp_id adalah SIG02
-                        } else {
-                            "Ambil Gambar KTP"      // Jika comp_id adalah SIG03
-                        }
-
-                        // Mengatur teks judul
-                        titleCapture.text = if (component.id == "SIG02") {
-                            "Foto Nasabah"  // Judul untuk foto nasabah
-                        } else {
-                            "Foto KTP"      // Judul untuk foto KTP
-                        }
-                    }
-
-                    buttonCapture.setOnClickListener {
-                        // Tentukan nama file berdasarkan photoCounter
-                        val fileName = if (photoCounter == 0) {
-                            "FOTO_${nikValue ?: "unknown"}.png" // Nama file untuk foto Orang
-                        } else {
-                            "KTP_${nikValue ?: "unknown"}.png" // Nama file untuk foto KTP
-                        }
-
-                        if (currentImageView == null) {
-                            imageViewOrang = imageViewPreview
-                            Log.d("PhotoApp", "Foto Orang diambil: ${imageViewOrang != null} dengan nama file $fileName")
-                        } else {
-                            imageViewKTP = imageViewPreview
-                            Log.d("PhotoApp", "Foto KTP diambil: ${imageViewKTP != null} dengan nama file $fileName")
-                        }
-                        photoCounter++ // Inkrementasi nilai photoCounter setelah foto diambil
-                        currentImageView = imageViewPreview
-                        Log.d("PhotoApp", "Current ImageView Updated: ${currentImageView != null}")
-
-                        // Cek izin kamera
-                        if (checkCameraPermission()) {
-                            openCameraIntent()
-                        } else {
-                            requestCameraPermission() // Minta izin jika belum diberikan
-                        }
-                    }
-
-                    container.addView(cameraDevice)
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.menu_container, CameraFragment())
+                        .commit()
                 }
 
                 19 -> {

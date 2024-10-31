@@ -116,6 +116,7 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.1.0") // Add Material3 dependency
     implementation("androidx.compose.material3:material3-window-size-class:1.1.0") // Optional for window size classes
     implementation("androidx.compose.ui:ui-tooling-preview:1.5.1") // Preview support
+    implementation("com.gu.android:toolargetool:0.3.0")
     
     // Testing
     testImplementation(libs.junit)

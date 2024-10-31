@@ -54,6 +54,7 @@ import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.gu.toolargetool.TooLargeTool
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -74,6 +75,7 @@ class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        TooLargeTool.startLogging(application)
 
         checkNotificationPermission()
 

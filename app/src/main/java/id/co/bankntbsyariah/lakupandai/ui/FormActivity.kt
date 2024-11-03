@@ -1556,7 +1556,7 @@ class FormActivity : AppCompatActivity() {
                             val componentValue = getComponentValue(component)
 
                             if (screen.id == "CCIF001") {
-                                inputRekening[component.id] = componentValue
+                                inputRekening[component.label] = componentValue
                             }
 
                             val numericValue = componentValue.toDoubleOrNull() ?: 0.0
@@ -1645,9 +1645,8 @@ class FormActivity : AppCompatActivity() {
                                     setTextColor(Color.parseColor("#0A6E44")) // Mengatur warna teks label
                                 })
                                 if (screen.id == "RCCIF02") {
-                                    val rekeningIndex = inputRekeningIndex.coerceAtMost(inputRekening.size - 1) // Pastikan tidak melebihi ukuran inputRekening
-                                    val rekeningValue = inputRekening.values.elementAtOrNull(rekeningIndex) ?: formattedValue
-                                    inputRekeningIndex++ // Update ke index berikutnya
+                                    val rekeningValue = findValueInInputRekening(component.label) ?: componentValue
+
                                     addView(TextView(this@FormActivity).apply {
                                         text = rekeningValue
                                         textSize = 18f
@@ -1746,7 +1745,7 @@ class FormActivity : AppCompatActivity() {
                                 }
 
                                 if (screen.id == "CCIF001") {
-                                    inputRekening[component.id] = inputText
+                                    inputRekening[component.label] = inputText
                                     Log.d("FormActivity", "inputRekening[${component.id}] set to: $inputText")
                                 }
 
@@ -2036,7 +2035,7 @@ class FormActivity : AppCompatActivity() {
                                             val selectedCompValue = selectedPair.second
                                             var spinner: Spinner? = null
                                             if (screen.id == "CCIF001") {
-                                                inputRekening[component.id] =
+                                                inputRekening[component.label] =
                                                     selectedValue ?: "" // Menyimpan selectedValue
                                             }
 
@@ -2180,6 +2179,7 @@ class FormActivity : AppCompatActivity() {
 
                                                     // Simpan nilai terpilih untuk CIF14
                                                     inputValues[component.id] = selectedValue ?: ""
+                                                    inputRekening[component.label] = inputValues[component.id] ?: ""
                                                     Log.d("FormActivity", "CIF14 set to: ${inputValues[component.id]}")
 
                                                     // Cek jika inputValues untuk CIF14 sudah ada isinya
@@ -2249,7 +2249,9 @@ class FormActivity : AppCompatActivity() {
                                                         spinnerCIF13.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                                                             override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
                                                                 val selectedItem = valuesKabKot[position]
-                                                                inputRekening[component.id] = selectedItem
+                                                                val realValue = selectedItem.substringBefore(" - [OI]")
+                                                                inputRekening["Kabupaten/Kota"] = realValue
+                                                                Log.d("FormActivity", "Selected item from new CIF14 ComboBox Real Value: $realValue")
                                                                 Log.d("FormActivity", "Selected item from new CIF14 ComboBox: $selectedItem")
                                                                 val extractedCIF13Value = selectedItem.substringAfter("[OI]")
                                                                 inputValues["CIF13"] = extractedCIF13Value
@@ -2366,7 +2368,7 @@ class FormActivity : AppCompatActivity() {
                                     val selectedValue = value.first
 
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] = selectedValue
+                                        inputRekening[component.label] = selectedValue
                                     }
 
                                     val valueToSave = when (component.id) {
@@ -2654,7 +2656,7 @@ class FormActivity : AppCompatActivity() {
                                 showDatePickerDialog(this) { selectedDate ->
                                     inputValues[component.id as String] = selectedDate
                                     if (screen.id == "CCIF001") {
-                                        inputRekening[component.id] = inputValues[component.id] ?: ""
+                                        inputRekening[component.label] = inputValues[component.id] ?: ""
                                     }
                                 }
                             }
@@ -3010,6 +3012,10 @@ class FormActivity : AppCompatActivity() {
         Log.d("Proses", "proses clear : $processedTypes")
     }
 
+    fun findValueInInputRekening(label: String): String? {
+        return inputRekening.entries.find { it.key == label }?.value
+    }
+
     private fun getStatusColor(context: Context, status: String): Int {
         return when (status) {
             "0", "1"-> ContextCompat.getColor(context, R.color.blue)
@@ -3210,8 +3216,6 @@ class FormActivity : AppCompatActivity() {
                     Log.d("FormActivity", "No Rekening Agen sudah terisi dengan: $savedNorekening")
                 }
             }
-
-
             "Pilihan Akad" -> {
                 val sharedPreferences =
                     getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
@@ -5693,8 +5697,8 @@ class FormActivity : AppCompatActivity() {
                 }
             }
             5 -> {
-                if (!inputValue.matches(Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_]).+$"))) {
-                    characterTypeErrors.add("dan mengandung huruf besar, huruf kecil, angka, serta simbol")
+                if (!inputValue.contains("@")) {
+                    characterTypeErrors.add("dan harus berformat email yang mengandung karakter '@'")
                 }
             }
             3 -> {

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="8dp">
 
     <TextView
         android:id="@+id/JudulFoto"
@@ -12,7 +12,9 @@
         android:layout_height="wrap_content"
         android:text="Ambil Foto"
         android:textSize="18sp"
-        android:layout_gravity="center"/>
+        android:textColor="#0A6E44"
+        android:textStyle="bold"
+        android:layout_gravity="left"/>
 
     <ImageView
         android:id="@+id/imageViewPreview"

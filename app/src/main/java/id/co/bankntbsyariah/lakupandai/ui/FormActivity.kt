@@ -2858,11 +2858,16 @@ class FormActivity : AppCompatActivity() {
                         when (component.id) {
                             "AKD01" -> {
                                 akadTitle.text = "Mudharabah Muthlaqah"
-                                akadDescription.text = "Akad Mudharabah Muqayyadah merupakan jenis akad dimana penggunaannya bagi nasabah skala komersil yg membatasi Bank dalam mengelola simpanannya."
+                                akadDescription.text = "Akad Mudharabah Muthlaqah adalah jenis akad Mudharabah dimana Nasabah " +
+                                        "selaku shahibul maal memberikan kebebasan penuh bagi Bank selaku mudharib (pengelola dana) " +
+                                        "untuk menginvestasikan dananya sesuai prinsip syariah dengan perjanjian nisbah bagi hasil yang disepakati di awal."
                             }
                             "AKD02" -> {
-                                akadTitle.text = "Wadiah yad Ad dhamanah"
-                                akadDescription.text = "Akad Wadi'ah yad Al Amanah merupakan jenis akad dimana nasabah BSA tidak membolehkan Bank mengelola dananya (safe deposit box)."
+                                akadTitle.text = "Wadi’ah yad Ad Dhamanah"
+                                akadDescription.text = "Akad Wadi’ah yad Ad Dhamanah Jenis akad Wadiah " +
+                                        "dimana Nasabah selaku pemilik dana menitipkan dananya kepada Bank " +
+                                        "selaku penerima titipan dimana Bank diberikan kebebasan untuk " +
+                                        "memanfaatkan titipan tersebut dengan memperhatikan prinsip kehati-hatian dan sesuai prinsip syariah"
                             }
                             else -> {
                                 akadTitle.text = "Unknown"
@@ -2915,8 +2920,11 @@ class FormActivity : AppCompatActivity() {
                             val selectedAkad = akadTitle.text.toString()
 
                             val akadDescriptionValue = when (selectedAkad) {
-                                "Mudharabah Muthlaqah" -> "Mudharabah adalah"
-                                "Wadiah yad Ad dhamanah" -> "Wadiah adalah"
+                                "Mudharabah Muthlaqah" -> "Mudharabah adalah akad kerja sama dimana Nasabah selaku pemilik dana (shahibul maal) dan Bank " +
+                                        "sebagai mudharib (pengelola dana) dengan perjanjian nisbah bagi hasil yang disepakati di awal."
+                                "Wadiah yad Ad dhamanah" -> "Wadiah adalah akad titipan dimana Nasabah " +
+                                        "selaku pemilik dana menitipkan dananya dan Bank selaku pihak yang menerima " +
+                                        "amanah titipan dari nasabah untuk menjaga dana yang dititip nasabah tersebut"
                                 else -> "Description not available"
                             }
 
@@ -3432,14 +3440,30 @@ class FormActivity : AppCompatActivity() {
             })
             finish()
         } else if (component.id == "STJ01") {
-
             if (areCheckBoxesChecked()) {
-                startActivity(Intent(this@FormActivity, MenuActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    putExtra(Constants.KEY_MENU_ID, "CCIF000")
-                })
-                finish()
+                lifecycleScope.launch{
+                    var pinScreen = "CCIF000"
+                    var formValue =
+                        StorageImpl(applicationContext).fetchForm(pinScreen)
+                    if (formValue.isNullOrEmpty()) {
+                        formValue = withContext(Dispatchers.IO) {
+                            ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                pinScreen
+                            )
+                        }
+                        Log.i(
+                            "FormActivity",
+                            "Fetched pinValue: $formValue"
+                        )
+                    }
+                    setupScreen(formValue)
+                }
             } else {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.Main) {
+                        lottieLoading?.visibility = View.GONE
+                    }
+                }
                 Toast.makeText(this, "Harap centang setidaknya satu opsi sebelum melanjutkan.", Toast.LENGTH_SHORT).show()
             }
 

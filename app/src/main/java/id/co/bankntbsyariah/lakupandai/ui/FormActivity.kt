@@ -1560,7 +1560,7 @@ class FormActivity : AppCompatActivity() {
                             }
 
                             val numericValue = componentValue.toDoubleOrNull() ?: 0.0
-                            val formattedValue = when {
+                            var formattedValue = when {
                                 component.label.contains("nominal", ignoreCase = true)|| component.label.contains("nilai transfer", ignoreCase = true) -> {
                                     nominalValue = numericValue
                                     formatRupiah(nominalValue)
@@ -1606,15 +1606,15 @@ class FormActivity : AppCompatActivity() {
                                 Log.d("FormActivity", "Nominal : $nominalValue")
                                 Log.d("FormActivity", "Fee : $feeValue")
                                 Log.d("FormActivity", "Total : $totalValue")
-                                val totalFormatted = formatRupiah(totalValue)
+                                formattedValue = formatRupiah(totalValue)
 
                                 component.values = component.values.mapIndexed { index, pair ->
-                                    if (index == 0) pair.copy(second = totalFormatted) else pair
+                                    if (index == 0) pair.copy(second = formattedValue) else pair
                                 }
 
                                 component.compValues?.compValue =
                                     component.compValues?.compValue?.mapIndexed { index, compVal ->
-                                        if (index == 0) compVal.copy(value = totalFormatted) else compVal
+                                        if (index == 0) compVal.copy(value = formattedValue) else compVal
                                     } ?: emptyList()
                             }
 
@@ -4532,16 +4532,16 @@ class FormActivity : AppCompatActivity() {
                 "RCS0001" -> {
                     val currentDate = getCurrentDate()
                     val currentTime = getCurrentTime()
-                    componentValues["MSG05"] = "Saldo no.rek $unf03Value a.n $unf05Value Rp.$rnr02Value pada $currentDate waktu: $currentTime."
+                    componentValues["MSG05"] = "Saldo No. Rek $unf03Value a.n $unf05Value Rp.$rnr02Value pada $currentDate waktu: $currentTime."
                 }
                 "TF00003" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$rnr08Value , dengan nomor rekening: $rnr07Value . Berhasil melakukan transaksi transfer kepada $rnr09Value penerima dengan nominal $rnr10Value  ."
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr08Value, dengan No. Rekening: $rnr07Value. Berhasil melakukan Transaksi Transfer kepada $rnr09Value penerima dengan nominal $rnr10Value."
                 }
                 "BR001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan nomor rekening: $rnr11Value. Transaksi Tarik berhasil dilakukan."
+                    componentValues["MSG05"] = "Nasabah Yth.$unf01Value, dengan No. Rekening: $rnr11Value. Transaksi Tarik berhasil dilakukan."
                 }
                 "BS001" -> {
-                    componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan nomor rekening: $unf04Value. Transaksi Setor berhasil dilakukan."
+                    componentValues["MSG05"] = "Nasabah Yth.$rnr06Value, dengan No. Rekening: $unf04Value. Transaksi Setor berhasil dilakukan."
                 }
                 else -> {
                     componentValues["MSG05"] = "Pesan tidak diketahui."

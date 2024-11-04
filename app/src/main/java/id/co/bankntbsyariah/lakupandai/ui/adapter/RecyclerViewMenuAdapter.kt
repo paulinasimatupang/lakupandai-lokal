@@ -111,10 +111,12 @@ class RecyclerViewMenuAdapter(
                 Log.d(TAG, "Menu item with comp_icon: $iconName clicked")
                 Log.d(TAG, "Menu item with title: ${menuItem.title} clicked")
                 val itemType = when {
-                    menuItem.originalLabel.startsWith("PL", true) && !menuItem.originalLabel.equals("PLN", true) -> "pembelian"
+                    menuItem.originalLabel.startsWith("PLN", true) -> "menu"
+                    menuItem.originalLabel.startsWith("PL", true) -> "pembelian"
                     menuItem.originalLabel.startsWith("PB", true) -> "pembayaran"
                     else -> "menu"
                 }
+
                 (context as MenuActivity).onMenuItemClick(position, itemType)
             }
         }

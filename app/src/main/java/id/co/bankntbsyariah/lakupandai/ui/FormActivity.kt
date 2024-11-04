@@ -773,18 +773,18 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun resetTimer(timeInMillis: Long): CountDownTimer {
-        remainingMillis = 0
+        remainingMillis = timeInMillis // Atur waktu awal
+        timerTextView.text = ""        // Reset tampilan timer
 
-        if (!::timerTextView.isInitialized) {
-            Log.e("FormActivity", "timerTextView is not initialized")
-            throw UninitializedPropertyAccessException("timerTextView is not initialized")
-        }
-
-        timerTextView.text = ""
+        // Batalkan dan hapus timer sebelumnya jika ada
         countDownTimer?.cancel()
 
+        // Mulai timer baru
         countDownTimer = object : CountDownTimer(timeInMillis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
+                remainingMillis = millisUntilFinished
+
+                // Format menit dan detik
                 val minutes = millisUntilFinished / 60000
                 val seconds = (millisUntilFinished % 60000) / 1000
                 val timeFormatted = String.format("%02d:%02d", minutes, seconds)
@@ -795,13 +795,16 @@ class FormActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                // Ketika timer habis (00:00), tampilkan "Resend OTP"
+                remainingMillis = 0
                 timerTextView.text = "00:00"
+
+                // Tampilkan "Resend OTP" setelah timer habis
                 resendOtpTextView.visibility = View.VISIBLE
+                Log.e("Timer", "Waktu habis. msg03Value di-set null.")
+                msg03Value = null
             }
         }.start()
 
-        countDownTimer = startTimer(timeInMillis)
         return countDownTimer!!
     }
 
@@ -2420,6 +2423,7 @@ class FormActivity : AppCompatActivity() {
                                             handleScreenType(screen)
                                         }
                                     }else if (otpAttempts.size == 2) {
+                                        otpAttempts.add(System.currentTimeMillis())
                                         lottieLoading?.visibility = View.GONE
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
@@ -2431,7 +2435,7 @@ class FormActivity : AppCompatActivity() {
 
                                         if (remainingTime > 0) {
                                             lottieLoading?.visibility = View.GONE
-                                            if (okButtonPressCount >= 2 || otpAttempts.size >= 2) {
+                                            if (okButtonPressCount >= 3 || otpAttempts.size >= 3) {
                                                 val minutesRemaining = remainingTime / 60000
                                                 val secondsRemaining =
                                                     (remainingTime % 60000) / 1000
@@ -3870,12 +3874,22 @@ class FormActivity : AppCompatActivity() {
                         }
                     }
                 } else if (msg03Value == null) {
+                    lifecycleScope.launch {
+                        withContext(Dispatchers.Main) {
+                            lottieLoading?.visibility = View.GONE
+                        }
+                    }
                     Toast.makeText(
                         this@FormActivity,
                         "Kode OTP telah kadaluarsa, mohon kirim ulang OTP.",
                         Toast.LENGTH_SHORT
                     ).show()
                 } else {
+                    lifecycleScope.launch {
+                        withContext(Dispatchers.Main) {
+                            lottieLoading?.visibility = View.GONE
+                        }
+                    }
                     Toast.makeText(
                         this@FormActivity,
                         "Kode OTP yang dimasukkan salah",

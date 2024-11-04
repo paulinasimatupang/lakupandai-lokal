@@ -33,22 +33,41 @@
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll_view"
         android:layout_width="405dp"
-        android:layout_height="300dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="0dp"
         app:layout_constraintBottom_toTopOf="@id/footer_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/bank_logo"
-        tools:ignore="SpeakableTextPresentCheck">
+        app:layout_constraintTop_toBottomOf="@id/bank_logo">
 
         <LinearLayout
-            android:id="@+id/menu_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:layout_marginBottom="15dp"
             android:orientation="vertical"
-            android:padding="8dp" />
+            android:padding="8dp">
+
+            <LinearLayout
+                android:id="@+id/menu_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="15dp"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/forgot_password"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginBottom="20dp"
+                android:clickable="true"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="8dp"
+                android:text="Lupa Password?"
+                android:textColor="#0A6E44"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
     <!--    <EditText-->
@@ -102,22 +121,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
-
-        <TextView
-            android:id="@+id/forgot_password"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_gravity="end"
-            android:layout_marginTop="0dp"
-            android:layout_marginBottom="20dp"
-            android:clickable="true"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="8dp"
-            android:text="Lupa Password?"
-            android:textColor="#0A6E44"
-            android:textSize="16sp"
-            android:textStyle="bold" />
 
         <Button
             android:id="@+id/fingerprintLoginButton"

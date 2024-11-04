@@ -2116,25 +2116,12 @@ class FormActivity : AppCompatActivity() {
                                                 }
                                                 "PIL03" -> {
                                                     pickOTP = selectedValue
-                                                    Log.d("Form", "PICK OTP: $selectedValue")
+                                                    Log.d("Form", "PICK OTP PIL03: $selectedValue")
 
                                                     // Cek jika nilai tidak valid
                                                     if (selectedValue != "WA" && selectedValue != "SMS") {
-                                                        // Tampilkan AlertDialog
-                                                        AlertDialog.Builder(this@FormActivity)
-                                                            .setTitle("Invalid Option")
-                                                            .setMessage("Harus memilih WA atau SMS.")
-                                                            .setPositiveButton("OK", null)
-                                                            .show()
-
-                                                        // Set pickOTP kembali ke nilai kosong atau default
-                                                        pickOTP = ""
-
-                                                        Toast.makeText(
-                                                            this@FormActivity,
-                                                            "Validasi gagal: Pilih WA atau SMS",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
+                                                        pickOTP = null
+                                                        Toast.makeText(this@FormActivity, "Harus memilih WA atau SMS.", Toast.LENGTH_SHORT).show()
                                                     }
                                                 }
                                                 "KOM05" -> {
@@ -2420,17 +2407,20 @@ class FormActivity : AppCompatActivity() {
                                 if (pinLogin != null && pinLogin == pinValue) {
                                     Log.d("FormActivity", "OTP attempts: ${otpAttempts.size}")
                                     if (otpAttempts.size == 0) {
+                                        lottieLoading?.visibility = View.GONE
                                         otpAttempts.add(System.currentTimeMillis())
                                         startOtpTimer()
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
                                     } else if (otpAttempts.size > 0 && otpAttempts.size < 2) {
+                                        lottieLoading?.visibility = View.GONE
                                         resendOtp(screen)
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
                                     }else if (otpAttempts.size == 2) {
+                                        lottieLoading?.visibility = View.GONE
                                         otpScreen?.let { screen ->
                                             handleScreenType(screen)
                                         }
@@ -2440,6 +2430,7 @@ class FormActivity : AppCompatActivity() {
                                         val remainingTime = remainingMillis
 
                                         if (remainingTime > 0) {
+                                            lottieLoading?.visibility = View.GONE
                                             if (okButtonPressCount >= 2 || otpAttempts.size >= 2) {
                                                 val minutesRemaining = remainingTime / 60000
                                                 val secondsRemaining =
@@ -2453,6 +2444,7 @@ class FormActivity : AppCompatActivity() {
                                                 startActivity(intentPopup)
                                             }
                                         } else {
+                                            lottieLoading?.visibility = View.GONE
                                             otpAttempts.clear()
                                             otpAttempts.add(System.currentTimeMillis())
                                             otpScreen?.let { screen ->
@@ -2461,6 +2453,7 @@ class FormActivity : AppCompatActivity() {
                                         }
                                     }
                                 } else {
+                                    lottieLoading?.visibility = View.GONE
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         handleFailedPinAttempt()
                                     }
@@ -2831,6 +2824,8 @@ class FormActivity : AppCompatActivity() {
                                     }
                                     Log.i("FormActivity", "Fetched pinValue: $formValue")
                                 }
+                                pickOTP = null
+                                Log.i("FormActivity", "setup pick otp saat ini: $pickOTP")
                                 setupScreen(formValue)
                             }
                         }
@@ -3339,21 +3334,27 @@ class FormActivity : AppCompatActivity() {
         val allErrors = mutableListOf<String>()
         val allErrorsPassword = mutableListOf<String>()
         screen?.comp?.forEach { comp ->
+            Log.d("PICKOTP", "PICK OTP SAAT INI: $pickOTP")
             if (comp.id == "PIL03" && pickOTP.isNullOrEmpty()) {
                 allErrors.add("Harus memilih WA atau SMS.")
+                Toast.makeText(this, "Harus memilih WA atau SMS.", Toast.LENGTH_SHORT).show()
             }
         }
         if (formId == "AU00001") {
             screen?.comp?.forEach { comp ->
                 if (comp.type == 2) {
+                    lottieLoading?.visibility = View.GONE
                     allErrors.addAll(validateInput(comp))
                 }
                 if (comp.type == 3) {
+                    lottieLoading?.visibility = View.GONE
                     allErrorsPassword.addAll(validateInput(comp))
+
                     Log.d("PasswordErrors", "All password errors: ${allErrorsPassword.joinToString(", ")}")
                 }
             }
             if (allErrors.contains("Password Wajib Diisi") || allErrorsPassword.contains("Password Wajib Diisi")) {
+                lottieLoading?.visibility = View.GONE
                 return
             }
         }
@@ -3540,12 +3541,13 @@ class FormActivity : AppCompatActivity() {
                                             username,
                                             newPassword,
                                             uid
-                                        ) { response ->
+                                        ) { errorMessage ->
                                             lifecycleScope.launch {
-                                                if (response != null) {
+                                                if (errorMessage == null) {
+                                                    lottieLoading?.visibility = View.GONE
                                                     Log.d(
                                                         "FormActivity",
-                                                        "Forgot Password success: ${response.string()}"
+                                                        "Forgot Password success"
                                                     )
                                                     sharedPreferences.edit().apply {
                                                         remove("new_password")  // Remove the new_password
@@ -3558,10 +3560,12 @@ class FormActivity : AppCompatActivity() {
                                                     )
                                                     navigateToLogin()
                                                 } else {
+                                                    lottieLoading?.visibility = View.GONE
                                                     Log.e(
                                                         "FormActivity",
-                                                        "Failed to reset password"
+                                                        "Failed to reset password $errorMessage"
                                                     )
+                                                    showPopupGagal("$errorMessage")
                                                 }
                                             }
                                         }
@@ -5267,6 +5271,12 @@ class FormActivity : AppCompatActivity() {
                             }
                         }
                         else {
+                            lifecycleScope.launch {
+                                withContext(Dispatchers.Main) {
+                                    lottieLoading?.visibility = View.GONE
+                                }
+                            }
+
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(this@FormActivity, "Data User tidak ditemukan", Toast.LENGTH_SHORT).show()
                             }
@@ -5283,9 +5293,19 @@ class FormActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         when {
                             errorMessage.contains("username", ignoreCase = true) -> {
+                                lifecycleScope.launch {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                }
                                 Toast.makeText(this@FormActivity, "Username tidak terdaftar", Toast.LENGTH_SHORT).show()
                             }
                             errorMessage.contains("incorrect", ignoreCase = true) -> {
+                                lifecycleScope.launch {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                }
                                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                                 val editor = sharedPreferences.edit()
                                 editor.putString("username_input", username)
@@ -5293,6 +5313,11 @@ class FormActivity : AppCompatActivity() {
                                 handleFailedLoginAttempt()
                             }
                             else -> {
+                                lifecycleScope.launch {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                }
                                 Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -5300,6 +5325,11 @@ class FormActivity : AppCompatActivity() {
                     callback(false)
                 }
             } catch (e: Exception) {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.Main) {
+                        lottieLoading?.visibility = View.GONE
+                    }
+                }
                 Log.e(TAG, "Exception occurred while logging in", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -5570,6 +5600,11 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun forgotPassword() {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                lottieLoading?.visibility = View.VISIBLE
+            }
+        }
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val formBodyBuilder = FormBody.Builder()

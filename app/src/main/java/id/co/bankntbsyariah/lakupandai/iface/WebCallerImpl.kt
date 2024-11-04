@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody
 import org.json.JSONException
@@ -145,37 +146,37 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
     }
 }
 
-override fun forgotPassword(username: String, newPassword: String, uid:String, callback: (ResponseBody?) -> Unit) {
-    // Build the request body
-    val formBody = FormBody.Builder()
-            .add("username", username)
-            .add("new_password", newPassword)
-            .add("uid", uid)
-            .build()
-
-        // Create the request
+    override fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit) {
+        val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword&uid=$uid"
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/reset/password")
-            .post(formBody)
+            .url(url)
+            .post(RequestBody.create(null, ByteArray(0))) // Empty body for POST request
             .build()
 
-        Log.d(TAG, "Username FORGOT: $username")
-        Log.d(TAG, "New Password FORGOT: $newPassword")
+        Log.d(TAG, "Forgot Password URL: $url")
 
-        // Execute the request asynchronously using enqueue
         client.newCall(request).enqueue(object : okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
                 Log.e(TAG, "Exception occurred while requesting forgot password", e)
-                callback(null)
+                callback("Request failed: ${e.message}")
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 if (response.isSuccessful) {
                     Log.d(TAG, "Password reset successful for user: $username")
-                    callback(response.body)
+                    callback(null) // Pass null to indicate success
                 } else {
+                    val errorBody = response.body?.string()
                     Log.e(TAG, "Failed to reset password: ${response.code} - ${response.message}")
-                    callback(null)
+
+                    // Try to extract message from error JSON if available
+                    val errorMessage = try {
+                        val jsonObject = JSONObject(errorBody)
+                        jsonObject.getString("message")
+                    } catch (e: Exception) {
+                        "Failed to reset password: ${response.message}"
+                    }
+                    callback(errorMessage)
                 }
             }
         })

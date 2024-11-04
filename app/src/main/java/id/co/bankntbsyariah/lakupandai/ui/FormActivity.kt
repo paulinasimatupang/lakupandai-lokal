@@ -2026,6 +2026,8 @@ class FormActivity : AppCompatActivity() {
                                         ) {
                                             if (position == 0) {
                                                 inputValues[component.id] = ""
+                                                pickOTP = null
+                                                Log.d("OTP", "Pick OTP: '$pickOTP'")
                                                 Log.d(
                                                     "FormActivity",
                                                     "Component ID: ${component.id}, No Value Selected"

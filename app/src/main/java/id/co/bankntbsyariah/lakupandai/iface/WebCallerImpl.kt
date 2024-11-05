@@ -53,7 +53,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         return try {
             client.newCall(request).execute().let { response ->
-                    response.body
+                response.body
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception occurred while fetching history list", e)
@@ -71,7 +71,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         return try {
             client.newCall(request).execute().let { response ->
-                    response.body
+                response.body
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception occurred while fetching history detail", e)
@@ -118,13 +118,13 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         return try {
             client.newCall(request).execute().let { response ->
-                    response.body
+                response.body
             }
-    } catch (e: Exception) {
-        Log.e(TAG, "Exception occurred while changing password", e)
-        null
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while changing password", e)
+            null
+        }
     }
-}
 
     override fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit) {
         val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword&uid=$uid"

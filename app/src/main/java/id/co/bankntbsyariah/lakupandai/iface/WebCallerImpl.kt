@@ -53,12 +53,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         return try {
             client.newCall(request).execute().let { response ->
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to fetch history list: ${response.message}")
-                    null
-                } else {
                     response.body
-                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception occurred while fetching history list", e)
@@ -76,12 +71,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         return try {
             client.newCall(request).execute().let { response ->
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to fetch history detail: ${response.message}")
-                    null
-                } else {
                     response.body
-                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception occurred while fetching history detail", e)
@@ -102,19 +92,14 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             .post(formBody)
             .build()
 
-            return try {
-                client.newCall(request).execute().let { response ->
-                    if (!response.isSuccessful) {
-                        Log.e(TAG, "Failed to change password: ${response.message}")
-                        null
-                    } else {
-                        response.body
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception occurred while changing password", e)
-                null
+        return try {
+            client.newCall(request).execute().let { response ->
+                response.body
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while changing password", e)
+            null
+        }
     }
 
     override fun changePin(id: String, old_pin: String, new_pin: String, token: String): ResponseBody? {
@@ -133,12 +118,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
         return try {
             client.newCall(request).execute().let { response ->
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed to change password: ${response.message}")
-                    null
-                } else {
                     response.body
-                }
             }
     } catch (e: Exception) {
         Log.e(TAG, "Exception occurred while changing password", e)

@@ -1116,6 +1116,11 @@ class FormActivity : AppCompatActivity() {
                         val searchLayout = LayoutInflater.from(context).inflate(R.layout.history_create, container, false) as LinearLayout
                         container.addView(searchLayout)
 
+                        val errorLayout = LayoutInflater.from(context).inflate(R.layout.error_history_transaksi, container, false) as LinearLayout
+                        val bodyMessageTextView = errorLayout.findViewById<TextView>(R.id.body_message)
+                        errorLayout.visibility = View.GONE
+                        container.addView(errorLayout)
+
                         // Initialize search and sort views
                         val searchBar = searchLayout.findViewById<EditText>(R.id.searchBar)
                         val sortSpinner = searchLayout.findViewById<Spinner>(R.id.sortSpinner)
@@ -1148,16 +1153,17 @@ class FormActivity : AppCompatActivity() {
 
                                         val jsonResponse = JSONObject(fetchedValue)
                                         val status = jsonResponse.optBoolean("status", true)
+
                                         if (!status) {
-                                            val message = jsonResponse.optString("message", "Gagal")
+                                            val message = jsonResponse.optString("message", "Tidak Ada Transaksi Hari Ini")
                                             withContext(Dispatchers.Main) {
-                                                Toast.makeText(
-                                                    this@FormActivity,
-                                                    message,
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                errorLayout.visibility = View.VISIBLE
+                                                bodyMessageTextView.text = message
                                             }
+                                        } else {
+                                            errorLayout.visibility = View.GONE
                                         }
+
                                         val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
                                         val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
                                         layout.removeAllViews()

@@ -2531,9 +2531,33 @@ class FormActivity : AppCompatActivity() {
                                     }
                                 }
                             } else if (formId == "LS00001") {
-                                changePassword()
+                                val allErrors = mutableListOf<String>()
+                                screen?.comp?.forEach { comp ->
+                                    if (comp.type == 2) {
+                                        Log.d ("Validate", "Validate")
+                                        allErrors.addAll(validateInput(comp))
+                                    }
+                                }
+                                if (allErrors.isNotEmpty()) {
+                                    lottieLoading?.visibility = View.GONE
+                                }else{
+                                    lottieLoading?.visibility = View.GONE
+                                    changePassword()
+                                }
                             } else if (formId == "LS00002") {
-                                changePin()
+                                val allErrors = mutableListOf<String>()
+                                screen?.comp?.forEach { comp ->
+                                    if (comp.type == 2) {
+                                        Log.d ("Validate", "Validate")
+                                        allErrors.addAll(validateInput(comp))
+                                    }
+                                }
+                                if (allErrors.isNotEmpty()) {
+                                    lottieLoading?.visibility = View.GONE
+                                }else{
+                                    lottieLoading?.visibility = View.GONE
+                                    changePin()
+                                }
                             } else if (formId == "LPW0000" && component.id != "OTP10") {
                                 forgotPassword()
                             } else {
@@ -5593,16 +5617,16 @@ class FormActivity : AppCompatActivity() {
 
                         val jsonResponse = JSONObject(fetchedValue)
                         val status = jsonResponse.optBoolean("status", false)
-                        val message = jsonResponse.optString("message", "gagal")
+                        val message = jsonResponse.optString("message")
                         if (!status) {
                             Log.e(TAG, "Failed to change password.")
-                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                            showPopupGagal(
+                                message
+                            )
                         } else {
                             Log.d(TAG, "Password changed successfully.")
                             Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
                             navigateToLogin()
-                            Log.e(TAG, "Failed to change password.")
-                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
                         }
                     } catch (jsonException: JSONException) {
                         Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
@@ -5656,11 +5680,13 @@ class FormActivity : AppCompatActivity() {
                         val status = jsonResponse.optBoolean("status", false)
                         val message = jsonResponse.optString("message", "")
                         if (status) {
-                            Log.d(TAG, "Password changed successfully.")
+                            Log.d(TAG, "PIN changed successfully.")
                             Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
                             navigateToLogin()
                         } else {
-                            Log.e(TAG, "Failed to change password.")
+                            showPopupGagal(
+                                message
+                            )
                             Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
                         }
                     } catch (jsonException: JSONException) {

@@ -1146,6 +1146,17 @@ class FormActivity : AppCompatActivity() {
                                         Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
                                         val jsonResponse = JSONObject(fetchedValue)
+                                        val status = jsonResponse.optBoolean("status", true)
+                                        if (!status) {
+                                            val message = jsonResponse.optString("message", "Gagal")
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(
+                                                    this@FormActivity,
+                                                    message,
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
                                         val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
                                         val dataList = List(dataArray.length()) { i -> dataArray.getJSONObject(i) }
                                         layout.removeAllViews()
@@ -5533,15 +5544,17 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
                         val jsonResponse = JSONObject(fetchedValue)
-                        val status = jsonResponse.optBoolean("status", false) ?: JSONArray()
-                        val message = jsonResponse.optString("message", "")
-                        if (status as Boolean) {
+                        val status = jsonResponse.optBoolean("status", false)
+                        val message = jsonResponse.optString("message", "gagal")
+                        if (!status) {
+                            Log.e(TAG, "Failed to change password.")
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
+                        } else {
                             Log.d(TAG, "Password changed successfully.")
                             Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
-                            navigateToScreen()  // Replace with your actual navigation function
-                        } else {
+                            navigateToLogin()
                             Log.e(TAG, "Failed to change password.")
-                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
                         }
                     } catch (jsonException: JSONException) {
                         Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
@@ -5589,19 +5602,18 @@ class FormActivity : AppCompatActivity() {
 
                 if (!fetchedValue.isNullOrEmpty()) {
                     try {
-                        // Debug log for the raw response
                         Log.d("FormActivity", "Fetched JSON: $fetchedValue")
 
                         val jsonResponse = JSONObject(fetchedValue)
-                        val status = jsonResponse.optBoolean("status", false) ?: JSONArray()
+                        val status = jsonResponse.optBoolean("status", false)
                         val message = jsonResponse.optString("message", "")
-                        if (status as Boolean) {
+                        if (status) {
                             Log.d(TAG, "Password changed successfully.")
                             Toast.makeText(this@FormActivity, message, Toast.LENGTH_SHORT).show()
-                            navigateToScreen()  // Replace with your actual navigation function
+                            navigateToLogin()
                         } else {
                             Log.e(TAG, "Failed to change password.")
-                            Toast.makeText(this@FormActivity, "Failed to change password: $message", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
                         }
                     } catch (jsonException: JSONException) {
                         Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")

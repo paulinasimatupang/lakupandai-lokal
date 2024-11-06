@@ -2204,7 +2204,7 @@ class FormActivity : AppCompatActivity() {
                                                     Log.d("FormActivity", "Extracted Value from CIF14: $extractedValueCIF14")
 
                                                     // Simpan nilai terpilih untuk CIF14
-                                                    inputValues[component.id] = selectedValue ?: ""
+                                                    inputValues[component.id] = selectedCIF14Value ?: ""
                                                     inputRekening[component.label] = inputValues[component.id] ?: ""
                                                     Log.d("FormActivity", "CIF14 set to: ${inputValues[component.id]}")
 

@@ -455,6 +455,7 @@ class FormActivity : AppCompatActivity() {
         editor.putString("token", token)
         editor.putString("fullname", user.optString("fullname", "Unknown"))
         editor.putString("id", user.optString("id", "Unknown"))
+        editor.putString("branchid", user.optString("branchid", "Unknown"))
 
         val merchantData = user.optJSONObject("merchant")
         val terminalArray = merchantData?.optJSONArray("terminal")
@@ -467,7 +468,6 @@ class FormActivity : AppCompatActivity() {
             editor.putString("merchant_address", merchantData.optString("address", "Unknown"))
             editor.putString("merchant_phone", merchantData.optString("phone", "Unknown"))
             editor.putString("merchant_email", merchantData.optString("email", "Unknown"))
-            editor.putString("merchant_branchid", merchantData.optString("branchid", "Unknown"))
             editor.putString("merchant_balance", merchantData.optString("balance", "0"))
             editor.putString("merchant_avatar", merchantData.optString("avatar", "Unknown"))
             editor.putInt("merchant_status", merchantData.optInt("status", 0))
@@ -4500,7 +4500,7 @@ class FormActivity : AppCompatActivity() {
             val savedNamaAgen = sharedPreferences.getString("fullname", "") ?: ""
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "")?: ""
 
-            val savedBranchid = sharedPreferences.getString("merchant_branchid", "")?: ""
+            val savedBranchid = sharedPreferences.getString("branchid", "")?: ""
 
             val savedAkad = sharedPreferences.getString("akad", "") ?: ""
             val savedToken = sharedPreferences.getString("token", "") ?: ""
@@ -4515,6 +4515,7 @@ class FormActivity : AppCompatActivity() {
             Log.e("FormActivity", "Saved Akad: $savedAkad")
             Log.e("FormActivity", "Saved Token: $savedToken")
             Log.e("FormActivity", "Saved No Agen: $savedNoAgen")
+            Log.e("FormActivity", "Saved Branchid: $savedBranchid")
 
             // Generate timestamp in the required format
             val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
@@ -4597,7 +4598,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Updated componentValues with nikValue for Component ID: ${component.id}")
                     }
                     component.type == 1 && component.label == "Kode Cabang" -> {
-                        val branchid = sharedPreferences.getString("merchant_branchid", "")?: ""
+                        val branchid = sharedPreferences.getString("branchid", "")?: ""
                         componentValues[component.id] = branchid ?: ""
                         Log.d("FormActivity", "Updated componentValues with branchid : ${branchid}")
                     }
@@ -4896,6 +4897,7 @@ class FormActivity : AppCompatActivity() {
                         val userStatus = userData?.optString("status")
                         val merchantData = userData?.optJSONObject("merchant")
                         val terminalArray = merchantData?.optJSONArray("terminal")
+                        val branchid = userData?.optString("branchid")
 
                         Log.d(TAG, "User status: $userStatus")
                         Log.d(TAG, "Terminal array: $terminalArray")
@@ -4940,6 +4942,7 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("token", token)
                             editor.putString("fullname", fullname)
                             editor.putString("id", id)
+                            editor.putString("branchid", branchid)
 
                             // Save merchant data
                             editor.putString("merchant_id", merchantData.optString("id"))
@@ -5215,7 +5218,7 @@ class FormActivity : AppCompatActivity() {
                                     val tid = terminalData.optString("tid")
                                     val terminalImei = terminalData.optString("imei")
 
-                                    Log.d(TAG, "TID: $tid, IMEI: $terminalImei") // Log nilai TID dan IMEI
+                                    Log.d("LOGINUSER", "TID: $tid, IMEI: $terminalImei") // Log nilai TID dan IMEI
 
                                     editor.putString("tid", tid)
                                     editor.putString("imei", terminalImei)
@@ -5228,91 +5231,25 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-//
-//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
-//                                    withContext(Dispatchers.Main) {
-//                                        lottieLoading?.visibility = View.GONE
-//                                    }
-//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-//                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
-//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-//                                        putExtra("RETURN_TO_ROOT", false)
-//                                    }
-//                                    startActivity(intentPopup)
-//                                }else{
-//                                    fun retrieveAuthToken(): String {
-//                                        // Return the stored auth token
-//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
-//                                    }
-//
-//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//                                        if (!task.isSuccessful) {
-//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-//                                            return@addOnCompleteListener
-//                                        }
-//
-//                                        val fcmToken = task.result
-//                                        Log.d("FCM", "FCM Token: $fcmToken")
-//
-//                                        // Send FCM token and user_id to server
-//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
-//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-//                                    }
-//
-//                                createCheckSaldo { messageBody ->
-//                                    if (messageBody != null) {
-//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
-//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-//                                            responseBody?.let {
-//                                                lifecycleScope.launch {
-//                                                    withContext(Dispatchers.Main) {
-//                                                        Toast.makeText(
-//                                                            this@FormActivity,
-//                                                            "Login berhasil",
-//                                                            Toast.LENGTH_SHORT
-//                                                        ).show()
-//                                                        navigateToScreen()
-//                                                        callback(true)
-//                                                    }
-//                                                }
-//                                            } ?: run {
-//                                                lifecycleScope.launch {
-//                                                    withContext(Dispatchers.Main) {
-//                                                        lottieLoading?.visibility = View.GONE
-//                                                    }
-//                                                }
-//                                                showPopupGagal(
-//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
-//                                                )
-//                                                Log.e("FormActivity", "Failed to fetch response body")
-//                                            }
-//                                        }
-//                                    } else {
-//                                        lifecycleScope.launch {
-//                                            withContext(Dispatchers.Main) {
-//                                                lottieLoading?.visibility = View.GONE
-//                                            }
-//                                        }
-//                                        showPopupGagal(
-//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
-//                                        )
-//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
-//                                    }
-//                                }
-//
-//
-//                                }
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 
-
-
-//                                ini di comment nanti kalo mau berdasarkan perangkat
-                                fun retrieveAuthToken(): String {
+                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
+                                    startActivity(intentPopup)
+                                }else{
+                                    fun retrieveAuthToken(): String {
                                         // Return the stored auth token
                                         return "auth_token" // Replace this with the actual logic to retrieve the token
-                                }
+                                    }
 
                                     FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                                         if (!task.isSuccessful) {
@@ -5334,15 +5271,15 @@ class FormActivity : AppCompatActivity() {
                                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                                             responseBody?.let {
                                                 lifecycleScope.launch {
-                                                        withContext(Dispatchers.Main) {
-                                                            Toast.makeText(
-                                                                this@FormActivity,
-                                                                "Login berhasil",
-                                                                Toast.LENGTH_SHORT
-                                                            ).show()
-                                                            navigateToScreen()
-                                                            callback(true)
-                                                        }
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "Login berhasil",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        navigateToScreen()
+                                                        callback(true)
+                                                    }
                                                 }
                                             } ?: run {
                                                 lifecycleScope.launch {
@@ -5368,6 +5305,72 @@ class FormActivity : AppCompatActivity() {
                                         Log.e("FormActivity", "Failed to create message body, request not sent")
                                     }
                                 }
+
+
+                                }
+
+
+
+//                                ini di comment nanti kalo mau berdasarkan perangkat
+//                                fun retrieveAuthToken(): String {
+//                                        // Return the stored auth token
+//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
+//                                }
+//
+//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//                                        if (!task.isSuccessful) {
+//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                            return@addOnCompleteListener
+//                                        }
+//
+//                                        val fcmToken = task.result
+//                                        Log.d("FCM", "FCM Token: $fcmToken")
+//
+//                                        // Send FCM token and user_id to server
+//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+//                                    }
+//
+//                                createCheckSaldo { messageBody ->
+//                                    if (messageBody != null) {
+//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+//                                            responseBody?.let {
+//                                                lifecycleScope.launch {
+//                                                        withContext(Dispatchers.Main) {
+//                                                            Toast.makeText(
+//                                                                this@FormActivity,
+//                                                                "Login berhasil",
+//                                                                Toast.LENGTH_SHORT
+//                                                            ).show()
+//                                                            navigateToScreen()
+//                                                            callback(true)
+//                                                        }
+//                                                }
+//                                            } ?: run {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        lottieLoading?.visibility = View.GONE
+//                                                    }
+//                                                }
+//                                                showPopupGagal(
+//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                                )
+//                                                Log.e("FormActivity", "Failed to fetch response body")
+//                                            }
+//                                        }
+//                                    } else {
+//                                        lifecycleScope.launch {
+//                                            withContext(Dispatchers.Main) {
+//                                                lottieLoading?.visibility = View.GONE
+//                                            }
+//                                        }
+//                                        showPopupGagal(
+//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                        )
+//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+//                                    }
+//                                }
                             }
                         }
                         else {
@@ -6411,6 +6414,12 @@ class FormActivity : AppCompatActivity() {
                             val success = jsonResponse.optBoolean("success", false)
 
                             if (success) {
+                                val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
+                                val editor = sharedPreferences.edit()
+                                editor.putString("imei", imei)
+                                editor.apply()
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Emei After Create Terminal : $storedImeiTerminal")
                                 Log.d(TAG, "Terminal created successfully")
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Terminal created", Toast.LENGTH_SHORT).show()

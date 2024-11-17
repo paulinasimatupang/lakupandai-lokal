@@ -1734,7 +1734,7 @@ class FormActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.WRAP_CONTENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            params.setMargins(0, 0, 0, 18) // Margin bawah 16dp
+                            params.setMargins(10, 0, 0, 18) // Margin bawah 16dp
                             layoutParams = params
                         }
                         addView(labelTextView)
@@ -1825,7 +1825,7 @@ class FormActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.WRAP_CONTENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
+                            params.setMargins(10, 0, 0, 18) // Margin bawah 18dp
                             layoutParams = params
                         }
                         addView(labelTextView)

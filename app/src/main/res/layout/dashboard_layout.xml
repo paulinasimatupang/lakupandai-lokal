@@ -203,7 +203,7 @@
                         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintHorizontal_bias="0.0"
+                        app:layout_constraintHorizontal_bias="1.0"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/imageSlider"
                         app:layout_constraintVertical_bias="0.0"
@@ -221,61 +221,61 @@
         android:id="@+id/nav_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="0dp"
-        android:layout_marginEnd="0dp"
-        android:paddingStart="30dp"
-        android:paddingEnd="30dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:background="?android:attr/windowBackground"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent">
 
-        <ImageButton
-            android:id="@+id/history_nav"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:background="@android:color/transparent"
-            android:padding="5dp"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            android:scaleType="fitCenter"
-            android:src="@mipmap/history"
-            android:importantForAccessibility="no"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/dashboard_nav"/>
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <ImageButton
-            android:id="@+id/dashboard_nav"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_gravity="center"
-            android:background="@android:color/transparent"
-            android:padding="5dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_home"
-            android:importantForAccessibility="no"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@id/history_nav"
-            app:layout_constraintEnd_toStartOf="@id/history_bsa_nav"/>
+            <!-- Left button (History) -->
+            <ImageButton
+                android:id="@+id/history_nav"
+                android:layout_width="0dp"
+                android:layout_height="45dp"
+                android:background="@android:color/transparent"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/history"
+                android:importantForAccessibility="no"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/dashboard_nav"
+                app:layout_constraintHorizontal_weight="1" />
 
-        <ImageButton
-            android:id="@+id/history_bsa_nav"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@android:color/transparent"
-            android:padding="5dp"
-            android:scaleType="fitCenter"
-            android:src="@mipmap/history_bsa"
-            android:layout_marginStart="300dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@id/dashboard_nav"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            <!-- Center button (Dashboard) -->
+            <ImageButton
+                android:id="@+id/dashboard_nav"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:background="@android:color/transparent"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_home"
+                android:importantForAccessibility="no"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/history_nav"
+                app:layout_constraintEnd_toStartOf="@id/history_bsa_nav"
+                app:layout_constraintHorizontal_weight="1" />
+
+            <!-- Right button (History BSA) -->
+            <ImageButton
+                android:id="@+id/history_bsa_nav"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/history_bsa"
+                android:importantForAccessibility="no"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/dashboard_nav"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_weight="1" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.bottomnavigation.BottomNavigationView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

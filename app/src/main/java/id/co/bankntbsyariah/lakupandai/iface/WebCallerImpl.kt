@@ -126,8 +126,9 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit) {
-        val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword&uid=$uid"
+    override fun forgotPassword(username: String, newPassword: String, callback: (String?) -> Unit) {
+        // URL API tanpa parameter 'uid'
+        val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword"
         val request = Request.Builder()
             .url(url)
             .post(RequestBody.create(null, ByteArray(0))) // Empty body for POST request
@@ -162,8 +163,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         })
     }
 
-
-    override fun getPhoneByUsername(username: String): String? {
+    override fun getPhoneByUsername(username: String): UserDetails? {
         val formBody = FormBody.Builder()
             .add("username", username)
             .build()
@@ -174,7 +174,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             .build()
 
         return try {
-            Log.d(TAG, "Sending request to get phone by username: $username")
+            Log.d(TAG, "Sending request to get user details by username: $username")
 
             client.newCall(request).execute().let { response ->
                 val responseBody = response.body
@@ -182,13 +182,41 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
                 Log.d(TAG, "Response for username $username: $responseString")
 
-                responseString // Return the string instead of ResponseBody
+                // Parse JSON response to get the desired fields
+                if (!responseString.isNullOrEmpty()) {
+                    val jsonObject = JSONObject(responseString)
+                    if (jsonObject.optString("status") == "success") {
+                        val data = jsonObject.getJSONObject("data")
+                        val email = data.optString("email")
+                        val phone = data.optString("phone")
+                        val noKtp = data.optString("no_ktp")
+                        val no = data.optString("no")
+
+                        // Return the user details in a structured format
+                        UserDetails(email, phone, noKtp, no)
+                    } else {
+                        Log.e(TAG, "Error in response: ${jsonObject.optString("message")}")
+                        null
+                    }
+                } else {
+                    Log.e(TAG, "Empty response")
+                    null
+                }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception occurred while requesting phone by username: $username", e)
+            Log.e(TAG, "Exception occurred while requesting user details for username: $username", e)
             null
         }
     }
+
+    // Data class to hold the user details
+    data class UserDetails(
+        val email: String?,
+        val phone: String?,
+        val noKtp: String?,
+        val no: String?
+    )
+
 
     override fun blockAgen(id: String, token: String): ResponseBody? {
         // Create form body with the parameters

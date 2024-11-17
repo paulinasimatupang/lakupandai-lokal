@@ -102,7 +102,6 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.Executor
 import java.security.MessageDigest
 import java.util.UUID
-import com.gu.toolargetool.TooLargeTool
 
 
 class FormActivity : AppCompatActivity() {
@@ -3625,9 +3624,7 @@ class FormActivity : AppCompatActivity() {
 
                         // Ambil newPassword dari sharedPreferences
                         val newPassword = sharedPreferences.getString("new_password", null)
-                        val uid = getUniqueID()
                         Log.d("FormActivity", "Saved New Password: $newPassword")
-                        Log.d("FormActivity", "Saved uid: $uid")
 
                         // Periksa newPassword terlebih dahulu
                         if (!newPassword.isNullOrEmpty()) {
@@ -3638,52 +3635,46 @@ class FormActivity : AppCompatActivity() {
                             lifecycleScope.launch {
                                 val username = sharedPreferences.getString("username", null)
                                 if (!username.isNullOrEmpty()) {
-                                    try {
-                                        // Call forgotPassword asynchronously
-                                        WebCallerImpl().forgotPassword(
-                                            username,
-                                            newPassword,
-                                            uid
-                                        ) { errorMessage ->
-                                            lifecycleScope.launch {
-                                                if (errorMessage == null) {
-                                                    lottieLoading?.visibility = View.GONE
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "Forgot Password success"
-                                                    )
-                                                    sharedPreferences.edit().apply {
-                                                        remove("new_password")  // Remove the new_password
-                                                        remove("username")
-                                                        apply()                 // Save changes
+                                    // Ambil screen_id dari SharedPreferences
+                                    val currentScreenId = sharedPreferences.getString("screen_id", null)
+
+                                    // Periksa apakah screen_id adalah LPW0001
+                                    if (currentScreenId == "LPW0001") {
+                                        try {
+                                            // Panggil forgotPassword secara asinkron
+                                            WebCallerImpl().forgotPassword(username, newPassword) { errorMessage ->
+                                                lifecycleScope.launch {
+                                                    if (errorMessage == null) {
+                                                        lottieLoading?.visibility = View.GONE
+                                                        Log.d("FormActivity", "Forgot Password success")
+                                                        sharedPreferences.edit().apply {
+                                                            remove("new_password")  // Remove the new_password
+                                                            remove("username")
+                                                            apply()                 // Save changes
+                                                        }
+                                                        Log.d("FormActivity", "New password cleared from SharedPreferences")
+                                                        navigateToLogin()
+                                                    } else {
+                                                        lottieLoading?.visibility = View.GONE
+                                                        Log.e("FormActivity", "Failed to reset password: $errorMessage")
+                                                        showPopupGagal("$errorMessage")
                                                     }
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "New password cleared from SharedPreferences"
-                                                    )
-                                                    navigateToLogin()
-                                                } else {
-                                                    lottieLoading?.visibility = View.GONE
-                                                    Log.e(
-                                                        "FormActivity",
-                                                        "Failed to reset password $errorMessage"
-                                                    )
-                                                    showPopupGagal("$errorMessage")
                                                 }
                                             }
+                                        } catch (e: Exception) {
+                                            lottieLoading?.visibility = View.GONE
+                                            Log.e("FormActivity", "Error during forgot password request", e)
+                                            showPopupGagal("An error occurred while resetting the password.")
                                         }
-                                    } catch (e: Exception) {
-                                        Log.e(
-                                            "FormActivity",
-                                            "Error during forgot password request",
-                                            e
-                                        )
+                                    } else {
+                                        // Jika screen_id tidak sesuai
+                                        Log.e("FormActivity", "Incorrect screen_id. Current screen_id is: $currentScreenId")
+                                        showPopupGagal("You must be on the correct screen to reset the password.")
                                     }
                                 } else {
-                                    Log.e(
-                                        "FormActivity",
-                                        "Username is null or empty, unable to reset password."
-                                    )
+                                    lottieLoading?.visibility = View.GONE
+                                    Log.e("FormActivity", "Username is null or empty, unable to reset password.")
+                                    showPopupGagal("Username is missing. Please try again.")
                                 }
                             }
                         } else {

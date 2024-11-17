@@ -54,6 +54,7 @@ import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.airbnb.lottie.LottieAnimationView
 import com.gu.toolargetool.TooLargeTool
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -69,6 +70,7 @@ class MenuActivity : AppCompatActivity() {
     private var pembelianList = mutableListOf<MenuItem>()
     private var pembayaranList = mutableListOf<MenuItem>()
 
+    private var lottieLoading: LottieAnimationView? = null
     private val NOTIFICATION_PERMISSION_CODE = 1001
 
 
@@ -105,6 +107,7 @@ class MenuActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                lottieLoading?.visibility = View.GONE
                 var menuValue: String? = StorageImpl(applicationContext).fetchMenu(menuId)
                 Log.d("MenuActivity", "Fetched menu value from storage: $menuValue")
 
@@ -112,6 +115,8 @@ class MenuActivity : AppCompatActivity() {
                     menuValue = withContext(Dispatchers.IO) {
                         ArrestCallerImpl(OkHttpClient()).fetchScreen(menuId)
                     }
+
+
                     Log.d("MenuActivity", "Fetched menu value from server: $menuValue")
                 }
 
@@ -165,7 +170,7 @@ class MenuActivity : AppCompatActivity() {
         val imageSliderView: View? = findViewById(R.id.imageSlider)
         if (imageSliderView != null) {
             imageSlider = imageSliderView as ViewPager2
-            val imageUrlBase = "http://108.137.154.8:8081/ARRest/static"
+            val imageUrlBase = "http://16.78.84.90:8081/ARRest/static"
             val imageList = listOf(
                 BannerItem("banner1.png"),
                 BannerItem("banner2.png"),
@@ -487,7 +492,10 @@ class MenuActivity : AppCompatActivity() {
     }
 
     fun onMenuItemClick(position: Int, itemType: String) {
+        lottieLoading = findViewById<LottieAnimationView>(R.id.lottie_loading)
         Log.d("Menu", "Position: $position")
+
+        lottieLoading?.visibility = View.VISIBLE
         when(itemType) {
             "menu" -> {
                 if (position < menuList.size) { // Check if position is valid
@@ -560,6 +568,8 @@ class MenuActivity : AppCompatActivity() {
         }
 
         bottomSheetDialog.show()
+
+        lottieLoading?.visibility = View.GONE
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -669,6 +679,7 @@ class MenuActivity : AppCompatActivity() {
     }
 
     private fun navigateToScreen(screenId: String) {
+        lottieLoading?.visibility = View.GONE
         lifecycleScope.launch {
             val screenJson = withContext(Dispatchers.IO) {
                 ArrestCallerImpl(OkHttpClient()).fetchScreen(screenId)

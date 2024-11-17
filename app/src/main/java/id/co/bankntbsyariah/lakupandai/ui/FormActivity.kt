@@ -2577,6 +2577,20 @@ class FormActivity : AppCompatActivity() {
                                     lottieLoading?.visibility = View.GONE
                                     changePin()
                                 }
+                            } else if (formId == "CHD0001") {
+                                val allErrors = mutableListOf<String>()
+                                screen?.comp?.forEach { comp ->
+                                    if (comp.type == 2) {
+                                        Log.d ("Validate", "Validate")
+                                        allErrors.addAll(validateInput(comp))
+                                    }
+                                }
+                                if (allErrors.isNotEmpty()) {
+                                    lottieLoading?.visibility = View.GONE
+                                }else{
+                                    lottieLoading?.visibility = View.GONE
+                                    changeDevice()
+                                }
                             } else if (formId == "LPW0001" && component.id != "OTP10") {
                                 forgotPasswordAwal()
                             } else {
@@ -5253,7 +5267,7 @@ class FormActivity : AppCompatActivity() {
 //                                    }
 //                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
 //                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-//                                        putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
+//                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
 //                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
 //                                        putExtra("RETURN_TO_ROOT", false)
 //                                    }
@@ -5606,6 +5620,7 @@ class FormActivity : AppCompatActivity() {
                 val formBodyBuilder = FormBody.Builder()
                 var oldPassword: String? = null
                 var newPassword: String? = null
+                var confirmNewPassword: String? = null
 
                 for ((key, value) in inputValues) {
                     when (key) {
@@ -5617,10 +5632,13 @@ class FormActivity : AppCompatActivity() {
                             newPassword = value
                             formBodyBuilder.add("new_password", value)
                         }
+                        "LSN03" -> {
+                            confirmNewPassword = value
+                            formBodyBuilder.add("confirm_new_password", value)
+                        }
                         else -> formBodyBuilder.add(key, value)
                     }
                 }
-
                 val formBody = formBodyBuilder.build()
 
                 val webCaller = WebCallerImpl()
@@ -5628,7 +5646,7 @@ class FormActivity : AppCompatActivity() {
                     val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val token = sharedPreferences.getString("token", "") ?: ""
                     val userId = sharedPreferences.getString("id", "") ?: ""
-                    val response = webCaller.changePassword(userId, oldPassword ?: "", newPassword ?: "", token)
+                    val response = webCaller.changePassword(userId, oldPassword ?: "", newPassword ?: "", confirmNewPassword ?: "", token)
                     response?.string()
                 }
 
@@ -5641,7 +5659,7 @@ class FormActivity : AppCompatActivity() {
                         val status = jsonResponse.optBoolean("status", false)
                         val message = jsonResponse.optString("message")
                         if (!status) {
-                            Log.e(TAG, "Failed to change password.")
+                            Log.e(TAG, "Failed to change password. $message")
                             showPopupGagal(
                                 message
                             )
@@ -5661,24 +5679,27 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun changePin() {
         lifecycleScope.launch {
             try {
                 val formBodyBuilder = FormBody.Builder()
                 var oldPin: String? = null
                 var newPin: String? = null
+                var confirmNewPin: String? = null
 
                 for ((key, value) in inputValues) {
                     when (key) {
                         "LSP01" -> {
                             oldPin = value
-                            formBodyBuilder.add("old_password", value)
+                            formBodyBuilder.add("old_pin", value)
                         }
                         "LSP02" -> {
                             newPin = value
-                            formBodyBuilder.add("new_password", value)
-                        }
+                            formBodyBuilder.add("new_pin", value)
+                        }"LSP03" -> {
+                        confirmNewPin = value
+                        formBodyBuilder.add("confirm_new_pin", value)
+                    }
                         else -> formBodyBuilder.add(key, value)
                     }
                 }
@@ -5690,7 +5711,7 @@ class FormActivity : AppCompatActivity() {
                     val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val token = sharedPreferences.getString("token", "") ?: ""
                     val id = sharedPreferences.getString("merchant_id", "") ?:""
-                    val response = webCaller.changePin(id, oldPin ?: "", newPin ?: "", token)
+                    val response = webCaller.changePin(id, oldPin ?: "", newPin ?: "",confirmNewPin ?: "", token)
                     response?.string()
                 }
 
@@ -5709,7 +5730,6 @@ class FormActivity : AppCompatActivity() {
                             showPopupGagal(
                                 message
                             )
-                            Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_SHORT).show()
                         }
                     } catch (jsonException: JSONException) {
                         Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
@@ -5722,7 +5742,78 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
+    private fun changeDevice() {
+        lifecycleScope.launch {
+            try {
+                val formBodyBuilder = FormBody.Builder()
+                var username: String? = null
+                var password: String? = null
+                var nik: String? = null
+                var deskripsi: String? = null
+                var imei: String? = null
 
+                for ((key, value) in inputValues) {
+                    when (key) {
+                        "UN001" -> {
+                            username = value
+                            formBodyBuilder.add("username", value)
+                        }
+                        "UN002" -> {
+                            password = value
+                            formBodyBuilder.add("password", value)
+                        }"NIK01" -> {
+                        nik = value
+                        formBodyBuilder.add("nik", value)
+                    }"KOM02" -> {
+                        deskripsi = value
+                        formBodyBuilder.add("deskripsi", value)
+                    }
+                        else -> formBodyBuilder.add(key, value)
+                    }
+                }
+
+                val formBody = formBodyBuilder.build()
+
+                val webCaller = WebCallerImpl()
+                val fetchedValue = withContext(Dispatchers.IO) {
+                    imei = getUniqueID()
+                    val response = webCaller.changeDevice(username ?:"", password ?: "", nik ?: "",deskripsi ?: "", imei ?:"")
+                    response?.string()
+                }
+
+                Log.d("FormActivity", "username: $username, password: $password,nik: $nik,deskripsi: $deskripsi,imei: $imei,")
+                if (!fetchedValue.isNullOrEmpty()) {
+                    try {
+                        Log.d("FormActivity", "Fetched JSON: $fetchedValue")
+
+                        val jsonResponse = JSONObject(fetchedValue)
+                        val status = jsonResponse.optBoolean("status", false)
+                        val message = jsonResponse.optString("message", "")
+                        if (status) {
+                            Log.d(TAG, "Request Change Device successfully.")
+                            val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                putExtra("MESSAGE_BODY", message)
+                                putExtra("RETURN_TO_ROOT", true)
+                                putExtra(Constants.KEY_FORM_ID, "AU00001")
+                            }
+                            startActivity(intentPopup)
+                        } else {
+                            showPopupGagal(
+                                message
+                            )
+                        }
+                    } catch (jsonException: JSONException) {
+                        Log.e("FormActivity", "JSON parsing error: ${jsonException.localizedMessage}")
+                    }
+                } else {
+                    Log.e("FormActivity", "Fetched value is null or empty")
+                }
+            } catch (e: Exception) {
+                Log.e("FormActivity", "Error changing password: ${e.localizedMessage}")
+            }
+        }
+    }
     private fun forgotPasswordAwal() {
         lifecycleScope.launch {
             withContext(Dispatchers.Main) {
@@ -6417,7 +6508,7 @@ class FormActivity : AppCompatActivity() {
 
                     if (response != null) {
                         try {
-                            val jsonResponse = JSONObject(response)
+                            val jsonResponse = JSONObject(response.toString())
                             val status = jsonResponse.optString("status")
 
                             if (status == "success") {
@@ -6451,7 +6542,7 @@ class FormActivity : AppCompatActivity() {
                                 callback(msg) // Return the message object via callback
                             } else {
                                 val message = jsonResponse.optString("message")
-                                Toast.makeText(this@FormActivity, message, Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_LONG).show()
                                 Log.e("FormActivity", "Error from server: $message")
                                 callback(null) // Return null on error
                             }
@@ -6459,7 +6550,8 @@ class FormActivity : AppCompatActivity() {
                             Log.e("FormActivity", "Failed to parse JSON response", e)
                             callback(null) // Return null on exception
                         }
-                    } else {
+                    }
+                    else {
                         Log.e("FormActivity", "Forgot password request failed")
                         callback(null) // Return null if response is null
                     }
@@ -6734,7 +6826,7 @@ class FormActivity : AppCompatActivity() {
 
                         data?.let {
                             val id = it.optInt("id")
-                            if (judul == "Ganti Perangkat") {
+                            if (judul == "Pengaduan Ganti Perangkat") {
                                 sendRequestImei(id.toString())
                             }
                             val intent = Intent(this@FormActivity, PopupActivity::class.java).apply {

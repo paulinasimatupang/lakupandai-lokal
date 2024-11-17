@@ -79,11 +79,12 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun changePassword(id: String, old_password: String, new_password: String, token: String): ResponseBody? {
+    override fun changePassword(id: String, old_password: String, new_password: String,  confirm_new_password: String, token: String): ResponseBody? {
         val formBody = FormBody.Builder()
             .add("id", id)
             .add("old_password", old_password)
             .add("new_password", new_password)
+            .add("confirm_new_password", confirm_new_password)
             .build()
 
         val request = Request.Builder()
@@ -101,13 +102,13 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             null
         }
     }
-
-    override fun changePin(id: String, old_pin: String, new_pin: String, token: String): ResponseBody? {
+    override fun changePin(id: String, old_pin: String, new_pin: String,  confirm_new_pin: String, token: String): ResponseBody? {
         // Create form body with the parameters
         val formBody = FormBody.Builder()
             .add("id", id)
             .add("old_pin", old_pin)
             .add("new_pin", new_pin)
+            .add("confirm_new_pin", confirm_new_pin)
             .build()
 
         val request = Request.Builder()
@@ -366,5 +367,27 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             }
         }.start() // Menjalankan dalam thread terpisah untuk menghindari blocking UI thread
     }
+    override fun changeDevice(username: String, password: String, nik: String, deskripsi: String, imei: String): ResponseBody?{
+        val formBody = FormBody.Builder()
+            .add("username", username)
+            .add("password", password)
+            .add("nik", nik)
+            .add("deskripsi", deskripsi)
+            .add("imei", imei)
+            .build()
 
+        val request = Request.Builder()
+            .url("http://reportntbs.selada.id/api/change_device")
+            .post(formBody)
+            .build()
+
+        return try {
+            client.newCall(request).execute().let { response ->
+                response.body
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while changing password", e)
+            null
+        }
+    }
 }

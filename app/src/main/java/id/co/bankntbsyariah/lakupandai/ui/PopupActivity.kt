@@ -1,7 +1,9 @@
 package id.co.bankntbsyariah.lakupandai.ui
 
+import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +20,7 @@ class PopupActivity : AppCompatActivity() {
         val titleMessage = findViewById<TextView>(R.id.title_message)
         val bodyMessage = findViewById<TextView>(R.id.body_message)
         val popupButton = findViewById<Button>(R.id.popup_button)
+        val changeDeviceTextButton = findViewById<TextView>(R.id.text_button)
 
         titleMessage.text = if (layoutId == R.layout.pop_up_berhasil) "Success" else "Gagal"
         bodyMessage.text = messageBody
@@ -38,6 +41,19 @@ class PopupActivity : AppCompatActivity() {
                 })
             }
             finish()
+        }
+        if (changeDeviceTextButton != null) {
+            changeDeviceTextButton.setOnClickListener {
+                Log.d(TAG, "Text button ditekan.")
+                val intent = Intent(this, FormActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    putExtra(Constants.KEY_FORM_ID, "CHD0001")
+                }
+                startActivity(intent)
+                finish() // Tutup PopupActivity setelah navigasi
+            }
+        } else {
+            Log.e(TAG, "Text button tidak ditemukan.")
         }
     }
 }

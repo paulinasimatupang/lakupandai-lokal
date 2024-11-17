@@ -3754,7 +3754,12 @@ class FormActivity : AppCompatActivity() {
                                                         "FormActivity",
                                                         "New password cleared from SharedPreferences"
                                                     )
-                                                    navigateToLogin()
+                                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                        putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                        putExtra("MESSAGE_BODY", "Password berhasil di ganti! Silahkan login kembali.")
+                                                        putExtra("RETURN_TO_ROOT", true)
+                                                        putExtra(Constants.KEY_FORM_ID, "AU00001")
+                                                    }
                                                 } else {
                                                     lottieLoading?.visibility = View.GONE
                                                     Log.e(
@@ -5351,105 +5356,39 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-//
-//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
-//                                    withContext(Dispatchers.Main) {
-//                                        lottieLoading?.visibility = View.GONE
-//                                    }
-//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-//                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
-//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-//                                        putExtra("RETURN_TO_ROOT", false)
-//                                    }
-//                                    startActivity(intentPopup)
-//                                }else{
-//                                    fun retrieveAuthToken(): String {
-//                                        // Return the stored auth token
-//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
-//                                    }
-//
-//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//                                        if (!task.isSuccessful) {
-//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-//                                            return@addOnCompleteListener
-//                                        }
-//
-//                                        val fcmToken = task.result
-//                                        Log.d("FCM", "FCM Token: $fcmToken")
-//
-//                                        // Send FCM token and user_id to server
-//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
-//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-//                                    }
-//
-//                                createCheckSaldo { messageBody ->
-//                                    if (messageBody != null) {
-//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
-//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-//                                            responseBody?.let {
-//                                                lifecycleScope.launch {
-//                                                    withContext(Dispatchers.Main) {
-//                                                        Toast.makeText(
-//                                                            this@FormActivity,
-//                                                            "Login berhasil",
-//                                                            Toast.LENGTH_SHORT
-//                                                        ).show()
-//                                                        navigateToScreen()
-//                                                        callback(true)
-//                                                    }
-//                                                }
-//                                            } ?: run {
-//                                                lifecycleScope.launch {
-//                                                    withContext(Dispatchers.Main) {
-//                                                        lottieLoading?.visibility = View.GONE
-//                                                    }
-//                                                }
-//                                                showPopupGagal(
-//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
-//                                                )
-//                                                Log.e("FormActivity", "Failed to fetch response body")
-//                                            }
-//                                        }
-//                                    } else {
-//                                        lifecycleScope.launch {
-//                                            withContext(Dispatchers.Main) {
-//                                                lottieLoading?.visibility = View.GONE
-//                                            }
-//                                        }
-//                                        showPopupGagal(
-//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
-//                                        )
-//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
-//                                    }
-//                                }
-//
-//
-//                                }
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 
-
-
-                                //                                ini di comment nanti kalo mau berdasarkan perangkat
-                                fun retrieveAuthToken(): String {
-                                    // Return the stored auth token
-                                    return "auth_token" // Replace this with the actual logic to retrieve the token
-                                }
-
-                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                    if (!task.isSuccessful) {
-                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                        return@addOnCompleteListener
+                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
+                                    withContext(Dispatchers.Main) {
+                                        lottieLoading?.visibility = View.GONE
+                                    }
+                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
+                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
+                                    startActivity(intentPopup)
+                                }else{
+                                    fun retrieveAuthToken(): String {
+                                        // Return the stored auth token
+                                        return "auth_token" // Replace this with the actual logic to retrieve the token
                                     }
 
-                                    val fcmToken = task.result
-                                    Log.d("FCM", "FCM Token: $fcmToken")
+                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                        if (!task.isSuccessful) {
+                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                            return@addOnCompleteListener
+                                        }
 
-                                    // Send FCM token and user_id to server
-                                    val authToken = sharedPreferences.getString("token", "") ?: ""
-                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-                                }
+                                        val fcmToken = task.result
+                                        Log.d("FCM", "FCM Token: $fcmToken")
+
+                                        // Send FCM token and user_id to server
+                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                    }
 
                                 createCheckSaldo { messageBody ->
                                     if (messageBody != null) {
@@ -5491,6 +5430,73 @@ class FormActivity : AppCompatActivity() {
                                         Log.e("FormActivity", "Failed to create message body, request not sent")
                                     }
                                 }
+
+
+                                }
+
+
+
+                                //                                ini di comment nanti kalo mau berdasarkan perangkat
+//                                fun retrieveAuthToken(): String {
+//                                    // Return the stored auth token
+//                                    return "auth_token" // Replace this with the actual logic to retrieve the token
+//                                }
+//
+//                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//                                    if (!task.isSuccessful) {
+//                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                        return@addOnCompleteListener
+//                                    }
+//
+//                                    val fcmToken = task.result
+//                                    Log.d("FCM", "FCM Token: $fcmToken")
+//
+//                                    // Send FCM token and user_id to server
+//                                    val authToken = sharedPreferences.getString("token", "") ?: ""
+//                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+//                                }
+//
+//                                createCheckSaldo { messageBody ->
+//                                    if (messageBody != null) {
+//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+//                                            responseBody?.let {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        Toast.makeText(
+//                                                            this@FormActivity,
+//                                                            "Login berhasil",
+//                                                            Toast.LENGTH_SHORT
+//                                                        ).show()
+//                                                        navigateToScreen()
+//                                                        callback(true)
+//                                                    }
+//                                                }
+//                                            } ?: run {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        lottieLoading?.visibility = View.GONE
+//                                                    }
+//                                                }
+//                                                showPopupGagal(
+//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                                )
+//                                                Log.e("FormActivity", "Failed to fetch response body")
+//                                            }
+//                                        }
+//                                    } else {
+//                                        lifecycleScope.launch {
+//                                            withContext(Dispatchers.Main) {
+//                                                lottieLoading?.visibility = View.GONE
+//                                            }
+//                                        }
+//                                        showPopupGagal(
+//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                        )
+//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+//                                    }
+//                                }
+//                                comment sampai sini
                             }
                         }
                         else {
@@ -5979,9 +5985,9 @@ class FormActivity : AppCompatActivity() {
                                 lottieLoading?.visibility = View.GONE
                             }
                         }
-                        showPopupGagal(
-                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
-                        )
+//                        showPopupGagal(
+//                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+//                        )
                         Log.e("FormActivity", "Failed to create message body, request not sent")
                     }
                 }
@@ -6489,7 +6495,7 @@ class FormActivity : AppCompatActivity() {
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
                 val usernameLogin = sharedPreferences.getString("username", "") ?: ""
                 val username = "lakupandai"
-                val newPassword = sharedPreferences.getString("no_ktp", null)
+                val newPassword = sharedPreferences.getString("new_password", null)
 
                 Log.d("FormActivity", "Saved New Password: $newPassword")
                 Log.d("FormActivity", "Merchant OTP: $merchantPhone")
@@ -6538,7 +6544,7 @@ class FormActivity : AppCompatActivity() {
                                 callback(msg) // Return the message object via callback
                             } else {
                                 val message = jsonResponse.optString("message")
-                                Toast.makeText(this@FormActivity, "$message", Toast.LENGTH_LONG).show()
+                                showPopupGagal(message)
                                 Log.e("FormActivity", "Error from server: $message")
                                 callback(null) // Return null on error
                             }

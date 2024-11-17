@@ -144,7 +144,7 @@ class FormActivity : AppCompatActivity() {
     private var lastMessageBody: JSONObject? = null
     private var otpAttempts = mutableListOf<Long>()
     private val otpCooldownTime = 3 * 60 * 1000L // 30 minutes in milliseconds
-    private var otpScreen: Screen? = null
+    private var otpMessage: String? = null
     private var remainingMillis: Long = 0
     private var okButtonPressCount = 0
     lateinit var timerTextView: TextView
@@ -2469,20 +2469,74 @@ class FormActivity : AppCompatActivity() {
                                         lottieLoading?.visibility = View.GONE
                                         otpAttempts.add(System.currentTimeMillis())
                                         startOtpTimer()
-                                        otpScreen?.let { screen ->
-                                            handleScreenType(screen)
+                                        otpMessage?.let {
+                                            try {
+                                                // Konversi otpMessage ke JSONObject
+                                                val jsonMessage = JSONObject(otpMessage)
+
+                                                ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
+                                                    responseBody?.let { body ->
+                                                        lifecycleScope.launch {
+                                                            lottieLoading?.visibility = View.GONE
+                                                            Log.e("FormActivity", "")
+                                                            val screenJson = JSONObject(body)
+                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                            handleScreenType(newScreen)
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: JSONException) {
+                                                // Tangani kesalahan parsing jika otpMessage bukan JSON yang valid
+                                                Log.e("FormActivity", "Invalid JSON format: ${e.message}")
+                                            }
                                         }
                                     } else if (otpAttempts.size > 0 && otpAttempts.size < 2) {
                                         lottieLoading?.visibility = View.GONE
                                         resendOtp(screen)
-                                        otpScreen?.let { screen ->
-                                            handleScreenType(screen)
+                                        otpMessage?.let {
+                                            try {
+                                                // Konversi otpMessage ke JSONObject
+                                                val jsonMessage = JSONObject(otpMessage)
+
+                                                ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
+                                                    responseBody?.let { body ->
+                                                        lifecycleScope.launch {
+                                                            lottieLoading?.visibility = View.GONE
+                                                            Log.e("FormActivity", "")
+                                                            val screenJson = JSONObject(body)
+                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                            handleScreenType(newScreen)
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: JSONException) {
+                                                // Tangani kesalahan parsing jika otpMessage bukan JSON yang valid
+                                                Log.e("FormActivity", "Invalid JSON format: ${e.message}")
+                                            }
                                         }
                                     }else if (otpAttempts.size == 2) {
                                         lottieLoading?.visibility = View.GONE
                                         otpAttempts.add(System.currentTimeMillis())
-                                        otpScreen?.let { screen ->
-                                            handleScreenType(screen)
+                                        otpMessage?.let {
+                                            try {
+                                                // Konversi otpMessage ke JSONObject
+                                                val jsonMessage = JSONObject(otpMessage)
+
+                                                ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
+                                                    responseBody?.let { body ->
+                                                        lifecycleScope.launch {
+                                                            lottieLoading?.visibility = View.GONE
+                                                            Log.e("FormActivity", "")
+                                                            val screenJson = JSONObject(body)
+                                                            val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                            handleScreenType(newScreen)
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: JSONException) {
+                                                // Tangani kesalahan parsing jika otpMessage bukan JSON yang valid
+                                                Log.e("FormActivity", "Invalid JSON format: ${e.message}")
+                                            }
                                         }
                                     }else if (otpAttempts.size == 3) {
                                         resetTimer(30 * 60 * 1000)
@@ -2533,8 +2587,26 @@ class FormActivity : AppCompatActivity() {
                                             lottieLoading?.visibility = View.GONE
                                             otpAttempts.clear()
                                             otpAttempts.add(System.currentTimeMillis())
-                                            otpScreen?.let { screen ->
-                                                handleScreenType(screen)
+                                            otpMessage?.let {
+                                                try {
+                                                    // Konversi otpMessage ke JSONObject
+                                                    val jsonMessage = JSONObject(otpMessage)
+
+                                                    ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
+                                                        responseBody?.let { body ->
+                                                            lifecycleScope.launch {
+                                                                lottieLoading?.visibility = View.GONE
+                                                                Log.e("FormActivity", "")
+                                                                val screenJson = JSONObject(body)
+                                                                val newScreen: Screen = ScreenParser.parseJSON(screenJson)
+                                                                handleScreenType(newScreen)
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (e: JSONException) {
+                                                    // Tangani kesalahan parsing jika otpMessage bukan JSON yang valid
+                                                    Log.e("FormActivity", "Invalid JSON format: ${e.message}")
+                                                }
                                             }
                                         }
                                     }
@@ -4029,6 +4101,7 @@ class FormActivity : AppCompatActivity() {
                 val sendPIN = screen?.comp?.find { it.id == "P0005" }
                 val sendPengaduan = screen?.comp?.find { it.id == "G0002" }
                 Log.d("Form", "Send Pengaduan : $sendPengaduan")
+                Log.d("Form", "OTP Component : $sendOTPComponent")
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                 if(sendPengaduan != null){
                     val bodyPengaduan = screen?.let { createBodyPengaduan(it) }
@@ -4055,6 +4128,30 @@ class FormActivity : AppCompatActivity() {
                             }
                             setupScreen(formValue)
                         }
+                    }else if (sendOTPComponent != null || sendPIN != null) {
+                        Log.i(
+                            "FormActivity",
+                            "Masuk PIN"
+                        )
+                            var pinScreen = "P000001"
+                            lifecycleScope.launch {
+                                var formValue =
+                                    StorageImpl(applicationContext).fetchForm(pinScreen)
+                                if (formValue.isNullOrEmpty()) {
+                                    formValue = withContext(Dispatchers.IO) {
+                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(
+                                            pinScreen
+                                        )
+                                    }
+                                    Log.i(
+                                        "FormActivity",
+                                        "Fetched pinValue: $formValue"
+                                    )
+                                }
+                                setupScreen(formValue)
+
+                                otpMessage = messageBody.toString()
+                            }
                     }else{
                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                             responseBody?.let { body ->
@@ -4213,25 +4310,7 @@ class FormActivity : AppCompatActivity() {
                                         }
                                     } else {
                                         Log.e("FormActivity", "GAK ADA PRODID ")
-                                        if (sendOTPComponent != null || sendPIN != null) {
-                                            var pinScreen = "P000001"
-                                            var formValue =
-                                                StorageImpl(applicationContext).fetchForm(pinScreen)
-                                            if (formValue.isNullOrEmpty()) {
-                                                formValue = withContext(Dispatchers.IO) {
-                                                    ArrestCallerImpl(OkHttpClient()).fetchScreen(
-                                                        pinScreen
-                                                    )
-                                                }
-                                                Log.i(
-                                                    "FormActivity",
-                                                    "Fetched pinValue: $formValue"
-                                                )
-                                            }
-                                            setupScreen(formValue)
 
-                                            otpScreen = newScreen
-                                        } else {
                                             if (screen.id == "CCIF003" && newScreen.id == "000000D") {
                                                 val message =
                                                     newScreen?.comp?.find { it.id == "0000A" }
@@ -4471,7 +4550,6 @@ class FormActivity : AppCompatActivity() {
                                             } else {
                                                 handleScreenType(newScreen)
                                             }
-                                        }
                                     }
                                 }
                             } ?: run {
@@ -4578,13 +4656,21 @@ class FormActivity : AppCompatActivity() {
                     "RS001" -> msgSi = "OTN002"
                     "PR00010" -> msgSi = "PPR003"
                     "P000002" -> msgSi = "LPI002"
+                    "OPLN000" -> msgSi = "OPLN02"
+                    "OBPJS00" -> msgSi = "OBPJS2"
+                    "OIND000" -> msgSi = "OIND02"
                     else -> msgSi = screen.actionUrl
                 }
             }
 
             if (screen.title.contains("BL") && pickNRK == "Rekening Nasabah") {
                 Log.d("FormActivity", "Ganti MSG SI Rekening Nasabah")
-                msgSi = "OPR002"
+                when (msgSi) {
+                    "PLN001" -> msgSi = "OPLN00"
+                    "BPJS01" -> msgSi = "OBPJS0"
+                    "IND001" -> msgSi = "OIND00"
+                    else -> msgSi = "OPR002"
+                }
             }
 
             // Reversal
@@ -5978,16 +6064,17 @@ class FormActivity : AppCompatActivity() {
                     characterTypeErrors.add("dan format uang tidak valid")
                 }
             }
-            5 -> {
-                if (!inputValue.contains("@")) {
-                    characterTypeErrors.add("dan harus berformat email yang mengandung karakter '@'")
-                }
-            }
             3 -> {
                 // No Constraint
             }
             else -> {
 
+            }
+        }
+
+        if(component.id == "UN005"){
+            if (!inputValue.contains("@")) {
+                characterTypeErrors.add("dan harus berformat email yang mengandung karakter '@'")
             }
         }
 

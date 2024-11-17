@@ -12,7 +12,7 @@ interface WebCaller {
     fun fetchHistory(terminalId: String, token: String): ResponseBody?
     fun fetchHistoryDetail(terminalId: String, messageId: String, token: String): ResponseBody?
     fun changePassword(id: String, old_password: String, new_password: String, token: String): ResponseBody?
-    fun forgotPassword(username: String, newPassword: String, callback: (String?) -> Unit)
+    fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit)
     fun getPhoneByUsername(username: String): UserDetails?
     fun changePin(id: String, old_pin: String, new_pin: String, token: String): ResponseBody?
     fun blockAgen(id: String, token: String): ResponseBody?

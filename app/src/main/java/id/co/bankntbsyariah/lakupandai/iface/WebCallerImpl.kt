@@ -126,9 +126,8 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun forgotPassword(username: String, newPassword: String, callback: (String?) -> Unit) {
-        // URL API tanpa parameter 'uid'
-        val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword"
+    override fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit) {
+        val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword&uid=$uid"
         val request = Request.Builder()
             .url(url)
             .post(RequestBody.create(null, ByteArray(0))) // Empty body for POST request

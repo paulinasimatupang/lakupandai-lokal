@@ -88,7 +88,21 @@
                     android:layout_width="344dp"
                     android:layout_height="166dp"
                     android:padding="15dp">
-
+                    <ImageButton
+                        android:id="@+id/refresh_saldo"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginEnd="10dp"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="@string/check_saldo_desc"
+                        android:importantForAccessibility="no"
+                        android:padding="3dp"
+                        android:scaleType="fitCenter"
+                        android:src="@mipmap/refresh"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0.05" />
                     <ImageButton
                         android:id="@+id/check_saldo_button"
                         android:layout_width="32dp"

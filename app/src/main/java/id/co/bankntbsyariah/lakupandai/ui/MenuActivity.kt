@@ -275,9 +275,9 @@ class MenuActivity : AppCompatActivity() {
         }
 
         // Set up check saldo button click listener
-//        findViewById<ImageButton>(R.id.check_saldo_button)?.setOnClickListener {
-        checkSaldo()
-//        }
+        findViewById<ImageButton>(R.id.refresh_saldo)?.setOnClickListener {
+            checkSaldo()
+        }
 
         findViewById<ImageButton>(R.id.dashboard_nav)?.setOnClickListener {
             val intent = Intent(this, MenuActivity::class.java)

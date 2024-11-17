@@ -2215,10 +2215,11 @@ class FormActivity : AppCompatActivity() {
                                                         ""
                                                     }
                                                     Log.d("FormActivity", "Extracted Value from CIF14: $extractedValueCIF14")
+                                                    Log.d("FormActivity", "Extracted Value from CIF14: ${selectedPair.first}")
 
                                                     // Simpan nilai terpilih untuk CIF14
                                                     inputValues[component.id] = selectedCIF14Value ?: ""
-                                                    inputRekening[component.label] = inputValues[component.id] ?: ""
+                                                    inputRekening[component.label] = selectedPair.first?:""
                                                     Log.d("FormActivity", "CIF14 set to: ${inputValues[component.id]}")
 
                                                     // Cek jika inputValues untuk CIF14 sudah ada isinya
@@ -2226,10 +2227,11 @@ class FormActivity : AppCompatActivity() {
                                                         val filteredValues = valuesKabKot.filter { option ->
                                                             option.contains("- [OI]") && option.substringAfter("- [OI]").take(2) == extractedValueCIF14
                                                         }.map { option ->
-                                                            // Ambil bagian sebelum "- [OI]" sebagai label
-                                                            option.substringBefore(" - [OI]")
+                                                            val label = option.substringBefore(" - [OI]")
+                                                            val code = option.substringAfter("[OI]").trim()
+                                                            Pair(label, code)
                                                         }
-                                                        Log.d("FormActivity", "OptionFilter $filteredValues")
+                                                        Log.d("FormActivity", "Filtered Values: $filteredValues")
 
                                                         currentLabelCIF13?.let { existingLabel ->
                                                             removeView(existingLabel)
@@ -2261,7 +2263,7 @@ class FormActivity : AppCompatActivity() {
 
                                                             // Menambahkan opsi pertama sebagai "Pilih Kabupaten/Kota"
                                                             val initialOptions = mutableListOf("Pilih Kabupaten/Kota")
-                                                            initialOptions.addAll(filteredValues)
+                                                            initialOptions.addAll(filteredValues.map { it.first } )
 
                                                             // Buat adapter dengan initialOptions yang berisi opsi awal dan filteredValues
                                                             val adapter = ArrayAdapter(
@@ -2284,23 +2286,28 @@ class FormActivity : AppCompatActivity() {
 
                                                         addView(spinnerCIF13)
                                                         currentSpinnerCIF13 = spinnerCIF13
-                                                        // Event ketika item dipilih dari Spinner baru
                                                         spinnerCIF13.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                                                             override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                                                                val selectedItem = valuesKabKot[position]
-                                                                val realValue = selectedItem.substringBefore(" - [OI]")
-                                                                inputRekening["Kabupaten/Kota"] = realValue
-                                                                Log.d("FormActivity", "Selected item from new CIF14 ComboBox Real Value: $realValue")
-                                                                Log.d("FormActivity", "Selected item from new CIF14 ComboBox: $selectedItem")
-                                                                val extractedCIF13Value = selectedItem.substringAfter("[OI]")
-                                                                inputValues["CIF13"] = extractedCIF13Value
-                                                                Log.d("FormActivity", "Input Values $inputValues")
+                                                                if (position > 0) { // Abaikan "Pilih Kabupaten/Kota"
+                                                                    val selectedItem = filteredValues[position - 1]
+                                                                    val realValue = selectedItem.first
+                                                                    val extractedCIF13Value = selectedItem.second
+                                                                    inputRekening["Kabupaten/Kota"] = realValue
+                                                                    Log.d("FormActivity", "Selected item from new CIF14 ComboBox Real Value: $realValue")
+                                                                    Log.d("FormActivity", "Selected item from new CIF14 ComboBox Code: $extractedCIF13Value")
+                                                                    Log.d("FormActivity", "Selected item from new CIF14 ComboBox: $selectedItem")
+                                                                    inputValues["CIF13"] = extractedCIF13Value
+                                                                    Log.d("FormActivity", "Input Values $inputValues")
+                                                                } else {
+                                                                    Log.d("FormActivity", "No valid item selected in CIF14 ComboBox")
+                                                                }
                                                             }
 
                                                             override fun onNothingSelected(parent: AdapterView<*>) {
                                                                 Log.d("FormActivity", "Nothing selected for new CIF14 ComboBox")
                                                             }
                                                         }
+
                                                     }
                                                 }
 

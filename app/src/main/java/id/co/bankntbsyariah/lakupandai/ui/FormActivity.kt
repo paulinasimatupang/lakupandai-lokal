@@ -2591,7 +2591,7 @@ class FormActivity : AppCompatActivity() {
                                     lottieLoading?.visibility = View.GONE
                                     changeDevice()
                                 }
-                            } else if (formId == "LPW0001" && component.id != "OTP10") {
+                            } else if (formId == "LPW0000" && component.id != "OTP10") {
                                 forgotPasswordAwal()
                             } else {
                                 handleButtonClick(component, screen)
@@ -6493,7 +6493,7 @@ class FormActivity : AppCompatActivity() {
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
                 val usernameLogin = sharedPreferences.getString("username", "") ?: ""
                 val username = "lakupandai"
-                val newPassword = sharedPreferences.getString("new_password", null)
+                val newPassword = sharedPreferences.getString("no_ktp", null)
 
                 Log.d("FormActivity", "Saved New Password: $newPassword")
                 Log.d("FormActivity", "Merchant OTP: $merchantPhone")

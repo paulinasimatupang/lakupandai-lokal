@@ -1,6 +1,5 @@
 package id.co.bankntbsyariah.lakupandai.api
 
-import id.co.bankntbsyariah.lakupandai.iface.WebCallerImpl.UserDetails
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import org.json.JSONObject
@@ -13,7 +12,7 @@ interface WebCaller {
     fun fetchHistoryDetail(terminalId: String, messageId: String, token: String): ResponseBody?
     fun changePassword(id: String, old_password: String, new_password: String, confirm_new_password: String, token: String): ResponseBody?
     fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit)
-    fun getPhoneByUsername(username: String): UserDetails?
+    fun getPhoneByUsername(username: String): String?
     fun changePin(id: String, old_pin: String, new_pin: String,  confirm_new_pin: String, token: String): ResponseBody?
     fun blockAgen(id: String, token: String): ResponseBody?
     fun blockAgenLogin(username: String): ResponseBody?

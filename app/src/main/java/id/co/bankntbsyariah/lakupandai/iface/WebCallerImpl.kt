@@ -102,6 +102,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             null
         }
     }
+
     override fun changePin(id: String, old_pin: String, new_pin: String,  confirm_new_pin: String, token: String): ResponseBody? {
         // Create form body with the parameters
         val formBody = FormBody.Builder()
@@ -163,7 +164,8 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         })
     }
 
-    override fun getPhoneByUsername(username: String): UserDetails? {
+
+    override fun getPhoneByUsername(username: String): String? {
         val formBody = FormBody.Builder()
             .add("username", username)
             .build()
@@ -174,7 +176,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             .build()
 
         return try {
-            Log.d(TAG, "Sending request to get user details by username: $username")
+            Log.d(TAG, "Sending request to get phone by username: $username")
 
             client.newCall(request).execute().let { response ->
                 val responseBody = response.body
@@ -182,41 +184,13 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
 
                 Log.d(TAG, "Response for username $username: $responseString")
 
-                // Parse JSON response to get the desired fields
-                if (!responseString.isNullOrEmpty()) {
-                    val jsonObject = JSONObject(responseString)
-                    if (jsonObject.optString("status") == "success") {
-                        val data = jsonObject.getJSONObject("data")
-                        val email = data.optString("email")
-                        val phone = data.optString("phone")
-                        val noKtp = data.optString("no_ktp")
-                        val no = data.optString("no")
-
-                        // Return the user details in a structured format
-                        UserDetails(email, phone, noKtp, no)
-                    } else {
-                        Log.e(TAG, "Error in response: ${jsonObject.optString("message")}")
-                        null
-                    }
-                } else {
-                    Log.e(TAG, "Empty response")
-                    null
-                }
+                responseString // Return the string instead of ResponseBody
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception occurred while requesting user details for username: $username", e)
+            Log.e(TAG, "Exception occurred while requesting phone by username: $username", e)
             null
         }
     }
-
-    // Data class to hold the user details
-    data class UserDetails(
-        val email: String?,
-        val phone: String?,
-        val noKtp: String?,
-        val no: String?
-    )
-
 
     override fun blockAgen(id: String, token: String): ResponseBody? {
         // Create form body with the parameters
@@ -367,6 +341,7 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             }
         }.start() // Menjalankan dalam thread terpisah untuk menghindari blocking UI thread
     }
+
     override fun changeDevice(username: String, password: String, nik: String, deskripsi: String, imei: String): ResponseBody?{
         val formBody = FormBody.Builder()
             .add("username", username)
@@ -390,4 +365,5 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
             null
         }
     }
+
 }

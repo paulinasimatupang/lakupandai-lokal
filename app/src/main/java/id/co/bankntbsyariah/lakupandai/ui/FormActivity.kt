@@ -2592,7 +2592,7 @@ class FormActivity : AppCompatActivity() {
                                     changeDevice()
                                 }
                             } else if (formId == "LPW0000" && component.id != "OTP10") {
-                                forgotPasswordAwal()
+                                forgotPassword()
                             } else {
                                 handleButtonClick(component, screen)
                             }
@@ -5814,104 +5814,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-    private fun forgotPasswordAwal() {
-        lifecycleScope.launch {
-            withContext(Dispatchers.Main) {
-                lottieLoading?.visibility = View.VISIBLE
-            }
-        }
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val formBodyBuilder = FormBody.Builder()
-                var username: String? = null
-                var email: String? = null
-                var noKtp: String? = null
-                var no: String? = null
-
-                // Collect data from inputValues
-                for ((key, value) in inputValues) {
-                    when (key) {
-                        "UN001" -> {
-                            username = value
-                            formBodyBuilder.add("username", value)
-                        }
-                        "UN005" -> {
-                            email = value
-                            formBodyBuilder.add("email", value)
-                        }
-                        "CF001" -> {
-                            noKtp = value
-                            formBodyBuilder.add("no_ktp", value)
-                        }
-                        "LP004" -> {
-                            no = value
-                            formBodyBuilder.add("no", value)
-                        }
-                        else -> formBodyBuilder.add(key, value)
-                    }
-                }
-
-                val formBody = formBodyBuilder.build()
-
-                // Save data to SharedPreferences if all required fields are present
-                if (username != null && email != null && noKtp != null && no != null) {
-                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-                    val editor = sharedPreferences.edit()
-                    editor.putString("username", username)
-                    editor.putString("email", email)
-                    editor.putString("no_ktp", noKtp)
-                    editor.putString("no", no)
-                    editor.apply() // Save data
-                }
-
-                // Log form body for debugging
-                Log.d(TAG, "Form body content: username=$username, email=$email, no_ktp=$noKtp, no=$no")
-
-                // Check if OTP is needed first
-                val webCaller = WebCallerImpl()
-
-                // Generate OTP before proceeding with password reset
-                createOTP { messageBody ->
-                    if (messageBody != null) {
-                        Log.d("FormActivity", "Message Body OTP: $messageBody")
-                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                            responseBody?.let { body ->
-                                lifecycleScope.launch {
-                                    val screenJson = JSONObject(body)
-                                    val newScreen: Screen = ScreenParser.parseJSON(screenJson)
-
-                                    // If OTP is created successfully, navigate to OTP screen
-                                    handleScreenType(newScreen)
-                                }
-                            } ?: run {
-                                showPopupGagal(
-                                    "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
-                                )
-                                Log.e("FormActivity", "Failed to fetch response body")
-                            }
-                        }
-                    } else {
-                        lifecycleScope.launch {
-                            withContext(Dispatchers.Main) {
-                                lottieLoading?.visibility = View.GONE
-                            }
-                        }
-                        showPopupGagal(
-                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
-                        )
-                        Log.e("FormActivity", "Failed to create message body, request not sent")
-                    }
-                }
-
-            } catch (e: Exception) {
-                Log.e("FormActivity", "Error during forgotPasswordAwal: ${e.localizedMessage}")
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@FormActivity, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
 
     private fun forgotPassword() {
         lifecycleScope.launch {

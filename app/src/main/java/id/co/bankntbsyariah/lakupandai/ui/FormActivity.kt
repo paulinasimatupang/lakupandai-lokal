@@ -3719,6 +3719,10 @@ class FormActivity : AppCompatActivity() {
                         // Ambil newPassword dari sharedPreferences
                         val newPassword = sharedPreferences.getString("new_password", null)
                         val uid = getUniqueID()
+                        val modified_uid = uid
+                            .replace("+", "%2B")
+                            .replace("=", "%3D")
+
                         Log.d("FormActivity", "Saved New Password: $newPassword")
                         Log.d("FormActivity", "Saved uid: $uid")
 
@@ -3736,7 +3740,7 @@ class FormActivity : AppCompatActivity() {
                                         WebCallerImpl().forgotPassword(
                                             username,
                                             newPassword,
-                                            uid
+                                            modified_uid
                                         ) { errorMessage ->
                                             lifecycleScope.launch {
                                                 if (errorMessage == null) {

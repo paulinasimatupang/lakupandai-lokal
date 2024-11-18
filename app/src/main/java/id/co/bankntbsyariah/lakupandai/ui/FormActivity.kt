@@ -153,6 +153,7 @@ class FormActivity : AppCompatActivity() {
     private lateinit var executor: Executor
     private val webCallerImpl = WebCallerImpl()
     private var lottieLoading: LottieAnimationView? = null
+    private var loadingOverlay: View? = null
     private var processedTypes = mutableSetOf<String>()
     private var msgDtCreateRekening: String? = null
 
@@ -814,7 +815,7 @@ class FormActivity : AppCompatActivity() {
 
                 // Tampilkan "Resend OTP" setelah timer habis
                 resendOtpTextView.visibility = View.VISIBLE
-                Log.e("Timer", "Waktu habis. msg03Value di-set null.")
+                Log.e("Time Check", "Waktu habis. msg03Value di-set null. (Reset Timer)")
                 msg03Value = null
             }
         }.start()
@@ -831,6 +832,13 @@ class FormActivity : AppCompatActivity() {
         val buttontf = findViewById<LinearLayout>(R.id.button_type_7_container)
 
         lottieLoading = findViewById(R.id.lottie_loading) ?: null
+        loadingOverlay = findViewById(R.id.loading_overlay) ?: null
+
+        if (loadingOverlay == null) {
+            Log.e("FormActivity", "No loading overlay (${screen.title})")
+        }else{
+            Log.e("FormActivity", "Loading overlay (${screen.title})")
+        }
 
         if (container == null) {
             Log.e("FormActivity", "Container is null.")
@@ -2453,7 +2461,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Screen Button Form: $formId")
                         setBackground(background)
                         setOnClickListener {
-                            lottieLoading?.visibility = View.VISIBLE
+                            showLoading()
                             Log.d("FormActivity", "Screen Type: ${screen.type}")
                             val sharedPreferences =
                                 getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
@@ -2466,9 +2474,8 @@ class FormActivity : AppCompatActivity() {
                                 if (pinLogin != null && pinLogin == pinValue) {
                                     Log.d("FormActivity", "OTP attempts: ${otpAttempts.size}")
                                     if (otpAttempts.size == 0) {
-                                        lottieLoading?.visibility = View.GONE
                                         otpAttempts.add(System.currentTimeMillis())
-                                        startOtpTimer()
+//                                        startOtpTimer()
                                         otpMessage?.let {
                                             try {
                                                 // Konversi otpMessage ke JSONObject
@@ -2477,7 +2484,7 @@ class FormActivity : AppCompatActivity() {
                                                 ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
                                                     responseBody?.let { body ->
                                                         lifecycleScope.launch {
-                                                            lottieLoading?.visibility = View.GONE
+                                                            hideLoading()
                                                             Log.e("FormActivity", "")
                                                             val screenJson = JSONObject(body)
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
@@ -2491,7 +2498,6 @@ class FormActivity : AppCompatActivity() {
                                             }
                                         }
                                     } else if (otpAttempts.size > 0 && otpAttempts.size < 2) {
-                                        lottieLoading?.visibility = View.GONE
                                         resendOtp(screen)
                                         otpMessage?.let {
                                             try {
@@ -2501,7 +2507,7 @@ class FormActivity : AppCompatActivity() {
                                                 ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
                                                     responseBody?.let { body ->
                                                         lifecycleScope.launch {
-                                                            lottieLoading?.visibility = View.GONE
+                                                            hideLoading()
                                                             Log.e("FormActivity", "")
                                                             val screenJson = JSONObject(body)
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
@@ -2515,7 +2521,6 @@ class FormActivity : AppCompatActivity() {
                                             }
                                         }
                                     }else if (otpAttempts.size == 2) {
-                                        lottieLoading?.visibility = View.GONE
                                         otpAttempts.add(System.currentTimeMillis())
                                         otpMessage?.let {
                                             try {
@@ -2525,7 +2530,7 @@ class FormActivity : AppCompatActivity() {
                                                 ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
                                                     responseBody?.let { body ->
                                                         lifecycleScope.launch {
-                                                            lottieLoading?.visibility = View.GONE
+                                                            hideLoading()
                                                             Log.e("FormActivity", "")
                                                             val screenJson = JSONObject(body)
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
@@ -2541,15 +2546,14 @@ class FormActivity : AppCompatActivity() {
                                     }else if (otpAttempts.size == 3) {
                                         resetTimer(30 * 60 * 1000)
                                         otpAttempts.add(System.currentTimeMillis())
-                                        lottieLoading?.visibility = View.GONE
                                         val remainingTime = remainingMillis
                                         if (remainingTime > 0) {
-                                            lottieLoading?.visibility = View.GONE
+                                            hideLoading()
                                             if (okButtonPressCount >= 4 || otpAttempts.size >= 3) {
                                                 val minutesRemaining = remainingTime / 60000
                                                 val secondsRemaining =
                                                     (remainingTime % 60000) / 1000
-                                                lottieLoading?.visibility = View.GONE
+                                                hideLoading()
                                                 val intentPopup = Intent(
                                                     this@FormActivity,
                                                     PopupActivity::class.java
@@ -2570,12 +2574,11 @@ class FormActivity : AppCompatActivity() {
                                         val remainingTime = remainingMillis
 
                                         if (remainingTime > 0) {
-                                            lottieLoading?.visibility = View.GONE
                                             if (okButtonPressCount >= 4 || otpAttempts.size >= 3) {
                                                 val minutesRemaining = remainingTime / 60000
                                                 val secondsRemaining =
                                                     (remainingTime % 60000) / 1000
-                                                lottieLoading?.visibility = View.GONE
+                                                hideLoading()
                                                 val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                                     putExtra("LAYOUT_ID", R.layout.pop_up_warning)
                                                     putExtra("MESSAGE_BODY", "Anda sudah melebihi batas limit pengiriman OTP! Mohon tunggu $minutesRemaining menit dan $secondsRemaining detik sebelum mengirim OTP kembali.")
@@ -2584,7 +2587,6 @@ class FormActivity : AppCompatActivity() {
                                                 startActivity(intentPopup)
                                             }
                                         } else {
-                                            lottieLoading?.visibility = View.GONE
                                             otpAttempts.clear()
                                             otpAttempts.add(System.currentTimeMillis())
                                             otpMessage?.let {
@@ -2595,7 +2597,7 @@ class FormActivity : AppCompatActivity() {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(jsonMessage) { responseBody ->
                                                         responseBody?.let { body ->
                                                             lifecycleScope.launch {
-                                                                lottieLoading?.visibility = View.GONE
+                                                                hideLoading()
                                                                 Log.e("FormActivity", "")
                                                                 val screenJson = JSONObject(body)
                                                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
@@ -2611,7 +2613,7 @@ class FormActivity : AppCompatActivity() {
                                         }
                                     }
                                 } else {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         handleFailedPinAttempt()
                                     }
@@ -2637,9 +2639,9 @@ class FormActivity : AppCompatActivity() {
                                     }
                                 }
                                 if (allErrors.isNotEmpty()) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }else{
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                     changePassword()
                                 }
                             } else if (formId == "LS00002") {
@@ -2651,9 +2653,9 @@ class FormActivity : AppCompatActivity() {
                                     }
                                 }
                                 if (allErrors.isNotEmpty()) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }else{
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                     changePin()
                                 }
                             } else if (formId == "CHD0001") {
@@ -2665,9 +2667,9 @@ class FormActivity : AppCompatActivity() {
                                     }
                                 }
                                 if (allErrors.isNotEmpty()) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }else{
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                     changeDevice()
                                 }
                             } else if (formId == "LPW0000" && component.id != "OTP10") {
@@ -3539,18 +3541,18 @@ class FormActivity : AppCompatActivity() {
         if (formId == "AU00001") {
             screen?.comp?.forEach { comp ->
                 if (comp.type == 2) {
-                    lottieLoading?.visibility = View.GONE
+                    hideLoading()
                     allErrors.addAll(validateInput(comp))
                 }
                 if (comp.type == 3) {
-                    lottieLoading?.visibility = View.GONE
+                    hideLoading()
                     allErrorsPassword.addAll(validateInput(comp))
 
                     Log.d("PasswordErrors", "All password errors: ${allErrorsPassword.joinToString(", ")}")
                 }
             }
             if (allErrors.contains("Password Wajib Diisi") || allErrorsPassword.contains("Password Wajib Diisi")) {
-                lottieLoading?.visibility = View.GONE
+                hideLoading()
                 return
             }
         }
@@ -3565,7 +3567,7 @@ class FormActivity : AppCompatActivity() {
                 }
             }
             if (allErrors.isNotEmpty()) {
-                lottieLoading?.visibility = View.GONE
+                hideLoading()
                 return
             }
         }
@@ -3579,7 +3581,7 @@ class FormActivity : AppCompatActivity() {
         if (formId == "AU00001" && component.id != "OTP10") {
             loginUser { isSuccess ->
                 if (!isSuccess) {
-                    lottieLoading?.visibility = View.GONE
+                    hideLoading()
                     return@loginUser
                 }
             }
@@ -3611,7 +3613,7 @@ class FormActivity : AppCompatActivity() {
                         Log.d("FormActivity", "Difference in Days: $diffInDays")
 
                         if (diffInDays > 7) {
-                            lottieLoading?.visibility = View.GONE
+                            hideLoading()
                             Toast.makeText(
                                 this,
                                 "Maksimal Periode Tanggal 7 hari",
@@ -3658,7 +3660,7 @@ class FormActivity : AppCompatActivity() {
             } else {
                 lifecycleScope.launch {
                     withContext(Dispatchers.Main) {
-                        lottieLoading?.visibility = View.GONE
+                        hideLoading()
                     }
                 }
                 Toast.makeText(this, "Harap centang setidaknya satu opsi sebelum melanjutkan.", Toast.LENGTH_SHORT).show()
@@ -3744,7 +3746,7 @@ class FormActivity : AppCompatActivity() {
                                         ) { errorMessage ->
                                             lifecycleScope.launch {
                                                 if (errorMessage == null) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                     Log.d(
                                                         "FormActivity",
                                                         "Forgot Password success"
@@ -3766,7 +3768,7 @@ class FormActivity : AppCompatActivity() {
                                                     }
                                                     startActivity(intentPopup)
                                                 } else {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                     Log.e(
                                                         "FormActivity",
                                                         "Failed to reset password $errorMessage"
@@ -3850,7 +3852,7 @@ class FormActivity : AppCompatActivity() {
                             ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                                 responseBody?.let { body ->
                                     lifecycleScope.launch {
-                                        lottieLoading?.visibility = View.GONE
+                                        hideLoading()
                                         val screenJson = JSONObject(body)
                                         val newScreen: Screen =
                                             ScreenParser.parseJSON(screenJson)
@@ -4066,7 +4068,7 @@ class FormActivity : AppCompatActivity() {
                         } else {
                             lifecycleScope.launch {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                             }
                             showPopupGagal(
@@ -4078,7 +4080,7 @@ class FormActivity : AppCompatActivity() {
                 } else if (msg03Value == null) {
                     lifecycleScope.launch {
                         withContext(Dispatchers.Main) {
-                            lottieLoading?.visibility = View.GONE
+                            hideLoading()
                         }
                     }
                     Toast.makeText(
@@ -4089,7 +4091,7 @@ class FormActivity : AppCompatActivity() {
                 } else {
                     lifecycleScope.launch {
                         withContext(Dispatchers.Main) {
-                            lottieLoading?.visibility = View.GONE
+                            hideLoading()
                         }
                     }
                     Toast.makeText(
@@ -4166,7 +4168,7 @@ class FormActivity : AppCompatActivity() {
                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
                             responseBody?.let { body ->
                                 lifecycleScope.launch {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                     Log.e("FormActivity", "")
                                     val screenJson = JSONObject(body)
                                     val newScreen: Screen = ScreenParser.parseJSON(screenJson)
@@ -4573,7 +4575,7 @@ class FormActivity : AppCompatActivity() {
                 } else {
                     lifecycleScope.launch {
                         withContext(Dispatchers.Main) {
-                            lottieLoading?.visibility = View.GONE
+                            hideLoading()
                         }
                     }
                     showPopupGagal(
@@ -4749,6 +4751,7 @@ class FormActivity : AppCompatActivity() {
             }
             val unf01Value = componentValues["AG009"] ?: ""
             val rnr02Value = componentValues["RNR05"] ?: ""
+            val sisaSaldo = if (rnr02Value.startsWith("-")) rnr02Value.replace("-", "") else rnr02Value
             val unf03Value = componentValues["UNF05"] ?: ""
             val unf04Value = componentValues["SET10"] ?: ""
             val unf05Value = componentValues["NAR05"] ?: ""
@@ -4763,7 +4766,7 @@ class FormActivity : AppCompatActivity() {
                 "RCS0001" -> {
                     val currentDate = getCurrentDate()
                     val currentTime = getCurrentTime()
-                    componentValues["MSG05"] = "Saldo No. Rek $unf03Value a.n $unf05Value Rp.$rnr02Value pada $currentDate waktu: $currentTime."
+                    componentValues["MSG05"] = "Saldo No. Rek $unf03Value a.n $unf05Value Rp.$sisaSaldo pada $currentDate Waktu: $currentTime."
                 }
                 "TF00003" -> {
                     componentValues["MSG05"] = "Nasabah Yth.$rnr08Value, dengan No. Rekening: $rnr07Value. Berhasil melakukan Transaksi Transfer kepada $rnr09Value penerima dengan nominal $rnr10Value."
@@ -4977,7 +4980,7 @@ class FormActivity : AppCompatActivity() {
     }
 
     private fun loginUser(callback: (Boolean) -> Unit){
-        lottieLoading?.visibility = View.VISIBLE
+        showLoading()
         lifecycleScope.launch(Dispatchers.IO) {
             val formBodyBuilder = FormBody.Builder()
             var username: String? = null
@@ -5037,7 +5040,7 @@ class FormActivity : AppCompatActivity() {
                         when (userStatus) {
                             "0" -> {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Akun Anda belum diaktivasi", Toast.LENGTH_SHORT).show()
@@ -5046,7 +5049,7 @@ class FormActivity : AppCompatActivity() {
                             }
                             "2" -> {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Akun Anda telah dinonaktifkan", Toast.LENGTH_SHORT).show()
@@ -5055,7 +5058,7 @@ class FormActivity : AppCompatActivity() {
                             }
                             "3" -> {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(this@FormActivity, "Akun Anda terblokir", Toast.LENGTH_SHORT).show()
@@ -5139,7 +5142,7 @@ class FormActivity : AppCompatActivity() {
                                             Log.d("FormActivity", "Message Body OTP: $messageBody")
                                             lifecycleScope.launch {
                                                 withContext(Dispatchers.Main) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                 }
                                                 withContext(Dispatchers.IO) {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -5168,7 +5171,7 @@ class FormActivity : AppCompatActivity() {
                                         } else {
                                             lifecycleScope.launch {
                                                 withContext(Dispatchers.Main) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                 }
                                             }
                                             showPopupGagal(
@@ -5186,7 +5189,7 @@ class FormActivity : AppCompatActivity() {
                                             Log.d("FormActivity", "Message Body OTP: $messageBody")
                                             lifecycleScope.launch {
                                                 withContext(Dispatchers.Main) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                 }
                                                 withContext(Dispatchers.IO) {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -5215,7 +5218,7 @@ class FormActivity : AppCompatActivity() {
                                         } else {
                                             lifecycleScope.launch {
                                                 withContext(Dispatchers.Main) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                 }
                                             }
                                             showPopupGagal(
@@ -5233,7 +5236,7 @@ class FormActivity : AppCompatActivity() {
                                             Log.d("FormActivity", "Message Body OTP: $messageBody")
                                             lifecycleScope.launch {
                                                 withContext(Dispatchers.Main) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                 }
                                                 withContext(Dispatchers.IO) {
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -5262,7 +5265,7 @@ class FormActivity : AppCompatActivity() {
                                         } else {
                                             lifecycleScope.launch {
                                                 withContext(Dispatchers.Main) {
-                                                    lottieLoading?.visibility = View.GONE
+                                                    hideLoading()
                                                 }
                                             }
                                             showPopupGagal(
@@ -5280,7 +5283,7 @@ class FormActivity : AppCompatActivity() {
                                             val minutesRemaining = remainingMillis  / 60000
                                             val secondsRemaining = (remainingMillis % 60000) / 1000
                                             withContext(Dispatchers.Main) {
-                                                lottieLoading?.visibility = View.GONE
+                                                hideLoading()
                                             }
                                             val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                                 putExtra("LAYOUT_ID", R.layout.pop_up_warning)
@@ -5299,7 +5302,7 @@ class FormActivity : AppCompatActivity() {
                                                 Log.d("FormActivity", "Message Body OTP: $messageBody")
                                                 lifecycleScope.launch {
                                                     withContext(Dispatchers.Main) {
-                                                        lottieLoading?.visibility = View.GONE
+                                                        hideLoading()
                                                     }
                                                     withContext(Dispatchers.IO) {
                                                         ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -5328,7 +5331,7 @@ class FormActivity : AppCompatActivity() {
                                             } else {
                                                 lifecycleScope.launch {
                                                     withContext(Dispatchers.Main) {
-                                                        lottieLoading?.visibility = View.GONE
+                                                        hideLoading()
                                                     }
                                                 }
                                                 showPopupGagal(
@@ -5366,7 +5369,7 @@ class FormActivity : AppCompatActivity() {
 
                                 if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
                                     withContext(Dispatchers.Main) {
-                                        lottieLoading?.visibility = View.GONE
+                                        hideLoading()
                                     }
                                     Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
                                     val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
@@ -5414,7 +5417,7 @@ class FormActivity : AppCompatActivity() {
                                             } ?: run {
                                                 lifecycleScope.launch {
                                                     withContext(Dispatchers.Main) {
-                                                        lottieLoading?.visibility = View.GONE
+                                                        hideLoading()
                                                     }
                                                 }
                                                 showPopupGagal(
@@ -5426,7 +5429,7 @@ class FormActivity : AppCompatActivity() {
                                     } else {
                                         lifecycleScope.launch {
                                             withContext(Dispatchers.Main) {
-                                                lottieLoading?.visibility = View.GONE
+                                                hideLoading()
                                             }
                                         }
                                         showPopupGagal(
@@ -5480,7 +5483,7 @@ class FormActivity : AppCompatActivity() {
 //                                            } ?: run {
 //                                                lifecycleScope.launch {
 //                                                    withContext(Dispatchers.Main) {
-//                                                        lottieLoading?.visibility = View.GONE
+//                                                        hideLoading()
 //                                                    }
 //                                                }
 //                                                showPopupGagal(
@@ -5492,7 +5495,7 @@ class FormActivity : AppCompatActivity() {
 //                                    } else {
 //                                        lifecycleScope.launch {
 //                                            withContext(Dispatchers.Main) {
-//                                                lottieLoading?.visibility = View.GONE
+//                                                hideLoading()
 //                                            }
 //                                        }
 //                                        showPopupGagal(
@@ -5507,7 +5510,7 @@ class FormActivity : AppCompatActivity() {
                         else {
                             lifecycleScope.launch {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                             }
 
@@ -5529,7 +5532,7 @@ class FormActivity : AppCompatActivity() {
                             errorMessage.contains("username", ignoreCase = true) -> {
                                 lifecycleScope.launch {
                                     withContext(Dispatchers.Main) {
-                                        lottieLoading?.visibility = View.GONE
+                                        hideLoading()
                                     }
                                 }
                                 Toast.makeText(this@FormActivity, "Username tidak terdaftar", Toast.LENGTH_SHORT).show()
@@ -5537,7 +5540,7 @@ class FormActivity : AppCompatActivity() {
                             errorMessage.contains("incorrect", ignoreCase = true) -> {
                                 lifecycleScope.launch {
                                     withContext(Dispatchers.Main) {
-                                        lottieLoading?.visibility = View.GONE
+                                        hideLoading()
                                     }
                                 }
                                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
@@ -5549,7 +5552,7 @@ class FormActivity : AppCompatActivity() {
                             else -> {
                                 lifecycleScope.launch {
                                     withContext(Dispatchers.Main) {
-                                        lottieLoading?.visibility = View.GONE
+                                        hideLoading()
                                     }
                                 }
                                 Toast.makeText(this@FormActivity, errorMessage, Toast.LENGTH_SHORT).show()
@@ -5561,7 +5564,7 @@ class FormActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 lifecycleScope.launch {
                     withContext(Dispatchers.Main) {
-                        lottieLoading?.visibility = View.GONE
+                        hideLoading()
                     }
                 }
                 Log.e(TAG, "Exception occurred while logging in", e)
@@ -5610,7 +5613,7 @@ class FormActivity : AppCompatActivity() {
             if (username_input != null) {
                 blockUserAccountLogin(username_input)
                 withContext(Dispatchers.Main) {
-                    lottieLoading?.visibility = View.GONE
+                    hideLoading()
                 }
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@FormActivity, "Akun Anda telah terblokir. Hubungi Call Center", Toast.LENGTH_SHORT).show()
@@ -5621,7 +5624,7 @@ class FormActivity : AppCompatActivity() {
             editor.apply()
             val attemptsLeft = maxLoginAttempt - (currentAttempts + 1)
             withContext(Dispatchers.Main) {
-                lottieLoading?.visibility = View.GONE
+                hideLoading()
             }
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@FormActivity, "Username atau password salah. Kesalahan ke-${currentAttempts + 1}. Percobaan tersisa: $attemptsLeft", Toast.LENGTH_SHORT).show()
@@ -5922,7 +5925,7 @@ class FormActivity : AppCompatActivity() {
     private fun forgotPassword() {
         lifecycleScope.launch {
             withContext(Dispatchers.Main) {
-                lottieLoading?.visibility = View.VISIBLE
+                showLoading()
             }
         }
         lifecycleScope.launch(Dispatchers.IO) {
@@ -5987,7 +5990,7 @@ class FormActivity : AppCompatActivity() {
                     } else {
                         lifecycleScope.launch {
                             withContext(Dispatchers.Main) {
-                                lottieLoading?.visibility = View.GONE
+                                hideLoading()
                             }
                         }
 //                        showPopupGagal(
@@ -6297,7 +6300,7 @@ class FormActivity : AppCompatActivity() {
             }
             override fun onFinish() {
                 msg03Value = null
-                Log.d("FormActivity", "OTP expired and cleared.")
+                Log.d("Time ChecK", "OTP expired and cleared. (Start OTP Timer)")
             }
         }.start()
     }
@@ -6324,7 +6327,7 @@ class FormActivity : AppCompatActivity() {
                             responseBody?.let { body ->
                                 lifecycleScope.launch {
                                     withContext(Dispatchers.Main) {
-                                        lottieLoading?.visibility = View.GONE
+                                        hideLoading()
                                     }
 
                                     val screenJson = JSONObject(body)
@@ -6361,7 +6364,7 @@ class FormActivity : AppCompatActivity() {
                                         ).show()
 
                                         cancelOtpTimer()
-                                        startOtpTimer()
+//                                        startOtpTimer()
                                     } else {
                                         Toast.makeText(
                                             this@FormActivity,
@@ -6380,7 +6383,7 @@ class FormActivity : AppCompatActivity() {
                     } else {
                         lifecycleScope.launch {
                             withContext(Dispatchers.Main) {
-                                lottieLoading?.visibility = View.GONE
+                                hideLoading()
                             }
                         }
                         Log.e("FormActivity", "Failed to create message body, request not sent")
@@ -6395,7 +6398,7 @@ class FormActivity : AppCompatActivity() {
                             Log.d("FormActivity", "Message Body OTP: $messageBody")
                             lifecycleScope.launch {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                                 withContext(Dispatchers.IO) {
                                     ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
@@ -6442,7 +6445,7 @@ class FormActivity : AppCompatActivity() {
                                                     ).show()
 
                                                     cancelOtpTimer()
-                                                    startOtpTimer()
+//                                                    startOtpTimer()
                                                 } else {
                                                     Toast.makeText(
                                                         this@FormActivity,
@@ -6463,7 +6466,7 @@ class FormActivity : AppCompatActivity() {
                         } else {
                             lifecycleScope.launch {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                             }
                             showPopupGagal(
@@ -6494,7 +6497,7 @@ class FormActivity : AppCompatActivity() {
 
     private fun createOTP(callback: (JSONObject?) -> Unit) {
         lifecycleScope.launch {
-            lottieLoading?.visibility = View.GONE
+            hideLoading()
             try {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
@@ -6639,27 +6642,27 @@ class FormActivity : AppCompatActivity() {
                             } else {
                                 val message = jsonResponse.optString("message", "Gagal membuat terminal.")
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                                 showPopupGagal(message)
                             }
                         } else {
                             withContext(Dispatchers.Main) {
-                                lottieLoading?.visibility = View.GONE
+                                hideLoading()
                             }
                             showPopupGagal("Unauthorized: Server response is not in JSON format.")
                         }
                     } else {
                         val message = parseErrorMessage(responseData)
                         withContext(Dispatchers.Main) {
-                            lottieLoading?.visibility = View.GONE
+                            hideLoading()
                         }
                         showPopupGagal(message)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error occurred while creating terminal", e)
                     withContext(Dispatchers.Main) {
-                        lottieLoading?.visibility = View.GONE
+                        hideLoading()
                         showPopupGagal("Terjadi kesalahan: ${e.message}")
                     }
                 }
@@ -6755,7 +6758,7 @@ class FormActivity : AppCompatActivity() {
                             val storedImeiTerminal = sharedPreferences.getString("imei", null)
                             if (imei != null && imei != storedImeiTerminal) {
                                 withContext(Dispatchers.Main) {
-                                    lottieLoading?.visibility = View.GONE
+                                    hideLoading()
                                 }
                                 val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
                                     putExtra("LAYOUT_ID", R.layout.pop_up_gagal)
@@ -7193,5 +7196,16 @@ class FormActivity : AppCompatActivity() {
         format.maximumFractionDigits = 0
         return format.format(amount)
     }
+
+    fun showLoading() {
+        loadingOverlay?.visibility = View.VISIBLE
+        lottieLoading?.visibility = View.VISIBLE
+    }
+
+    fun hideLoading() {
+        loadingOverlay?.visibility = View.GONE
+        lottieLoading?.visibility = View.GONE
+    }
+
 
 }

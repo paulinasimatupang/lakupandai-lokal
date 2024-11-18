@@ -3760,6 +3760,7 @@ class FormActivity : AppCompatActivity() {
                                                         putExtra("RETURN_TO_ROOT", true)
                                                         putExtra(Constants.KEY_FORM_ID, "AU00001")
                                                     }
+                                                    startActivity(intentPopup)
                                                 } else {
                                                     lottieLoading?.visibility = View.GONE
                                                     Log.e(

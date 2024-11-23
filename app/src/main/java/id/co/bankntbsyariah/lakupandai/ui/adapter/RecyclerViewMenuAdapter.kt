@@ -32,6 +32,7 @@ class RecyclerViewMenuAdapter(
     private val isList: Boolean,
     private val isKomplain: Boolean,
     private val isKomplain2: Boolean,
+    private val isProvider: Boolean,
     private val onItemClick: (Int) -> Unit
 ) : RecyclerView.Adapter<RecyclerViewMenuAdapter.MenuViewHolder>() {
     val TAG: String  // Define a tag for logging
@@ -50,6 +51,8 @@ class RecyclerViewMenuAdapter(
                 R.layout.recycler_combo_box_provider
             } else if(isKomplain || isKomplain2){
                 R.layout.recycler_menu_komplain
+            } else if(isProvider){
+                R.layout.recycler_view_menu_product
             }
             else {
                 R.layout.recycler_view_menu_item
@@ -60,7 +63,7 @@ class RecyclerViewMenuAdapter(
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
-        Log.d(TAG, "Binding view holder for position $position")
+//        Log.d(TAG, "Binding view holder for position $position")
 
         (context as MenuActivity).lifecycleScope.launch {
 
@@ -81,7 +84,7 @@ class RecyclerViewMenuAdapter(
 
             // Contoh untuk menghitung item dengan subtitle tertentu
             val specificItemCount = menuList.count { it.subtitle == "Transaksi Lainnya" }
-            Log.d(TAG, "Number of items with specific subtitle: $specificItemCount")
+//            Log.d(TAG, "Number of items with specific subtitle: $specificItemCount")
 
 
             // Selain dashboard

@@ -112,7 +112,7 @@
                 android:gravity="center"
                 android:layout_marginStart="30dp"
                 android:orientation="vertical"
-                app:layout_constraintTop_toBottomOf="@id/recyclerPembayaran">
+                app:layout_constraintTop_toBottomOf="@id/titleLainnya">
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/menu_container"

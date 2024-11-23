@@ -54,6 +54,8 @@ import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.airbnb.lottie.LottieAnimationView
 import com.gu.toolargetool.TooLargeTool
 import java.text.SimpleDateFormat
@@ -93,17 +95,23 @@ class MenuActivity : AppCompatActivity() {
         }
 
         // Set the appropriate layout based on menuId
-        setContentView(
-            when (menuId) {
-                "PP00001" -> R.layout.profile_layout
-                "KOM0000" , "PKOM001"-> R.layout.komplain_menu
-                "LOG0001","HMB0000" -> R.layout.hamburger
-                "MN00001" , "MN00002" -> R.layout.activity_menu_lainnya
-                "PR00000", "VCG0000" -> R.layout.menu_header
-                Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
-                else -> R.layout.activity_menu
-            }
-        )
+        // Mendapatkan menuId dan menentukan layout
+        val selectedLayout = when (menuId) {
+            "PP00001" -> R.layout.profile_layout
+            "KOM0000", "PKOM001" -> R.layout.komplain_menu
+            "LOG0001", "HMB0000" -> R.layout.hamburger
+            "MN00001", "MN00002" -> R.layout.activity_menu_lainnya
+            "PR00000", "VCG0000", "PKTDT00" -> R.layout.menu_header
+            "PD00008" -> R.layout.menu_produk
+            Constants.DEFAULT_ROOT_ID, "MN00000" -> R.layout.dashboard_layout
+            else -> R.layout.activity_menu
+        }
+
+        // Log menuId dan layout yang dipilih
+        Log.d("MenuSelection", "menuId: $menuId, Selected Layout: $selectedLayout")
+
+        // Set layout yang dipilih
+        setContentView(selectedLayout)
 
         lifecycleScope.launch {
             try {
@@ -129,7 +137,7 @@ class MenuActivity : AppCompatActivity() {
                     if (screenTitle.contains("Form", ignoreCase = true)) {
                         val processedTitle = screenTitle.replace("FORM", "", ignoreCase = true).trim()
                         val textView: TextView = findViewById(R.id.text_center)
-                        textView?.text = processedTitle
+                        textView.text = processedTitle
                     }
                 }
             } catch (e: JSONException) {
@@ -189,7 +197,7 @@ class MenuActivity : AppCompatActivity() {
                     if (currentItem >= imageList.size) {
                         currentItem = 0
                     }
-                    Log.d("MenuActivity", "Sliding to item: $currentItem")
+//                    Log.d("MenuActivity", "Sliding to item: $currentItem")
                     imageSlider.setCurrentItem(currentItem++, true)
                     handler.postDelayed(this, 3000) // Auto-slide every 3 seconds
                 }
@@ -452,9 +460,10 @@ class MenuActivity : AppCompatActivity() {
             this@MenuActivity,
             menuId == "HMB0000",
             menuId == "PP00001",
-            menuId == "PR00000" || menuId == "VCG0000",  // List Biller
+            menuId == "PR00000" || menuId == "VCG0000" || menuId == "PKTDT00",  // List Biller
             menuId == "KOM0000",
-            menuId == "PKOM001"
+            menuId == "PKOM001",
+            menuId == "PD00008"
         ){position ->
         // Define what happens on item click here
             onMenuItemClick(position, "menu")
@@ -555,6 +564,8 @@ class MenuActivity : AppCompatActivity() {
         val originalMenuList = ArrayList(menuList)
 
         menuList.clear()
+        pembelianList.clear()
+        pembayaranList.clear()
         val menuContainer = bottomSheetView.findViewById<RecyclerView>(R.id.menu_container)
         menuContainer?.let {
             setupMenuRecyclerViewForBottomSheet(menuId, it, bottomSheetView)
@@ -562,6 +573,8 @@ class MenuActivity : AppCompatActivity() {
 
         bottomSheetDialog.setOnDismissListener {
             menuList.clear()
+            pembelianList.clear()
+            pembayaranList.clear()
             menuList.addAll(originalMenuList)
 
             // navigateToScreen("MN00000")
@@ -592,6 +605,8 @@ class MenuActivity : AppCompatActivity() {
                 Log.d("BOTTOM1", "Parsed screen object: ${screen.toString()}")
 
                 menuList.clear()
+                pembelianList.clear()
+                pembayaranList.clear()
 
                 val titleLainnya = bottomSheetView.findViewById<TextView>(R.id.titleLainnya)
                 when (menuId) {
@@ -620,7 +635,6 @@ class MenuActivity : AppCompatActivity() {
                     }
 
                     Log.d("BOTTOM AWAL", "Pembelian size : ${pembelianList.size}, Pembayaran size : ${pembayaranList.size}, Menu size : ${menuList.size},")
-                    Log.d("BOTTOM AWAL", "Pembelian size : ${pembelianList.size}, Pembayaran size : ${pembayaranList.size}, Menu size : ${menuList.size},")
 
                     // Atur visibilitas dan isi subtitle
                     val recyclerPembelian = bottomSheetView.findViewById<RecyclerView>(R.id.recyclerPembelian)
@@ -628,10 +642,13 @@ class MenuActivity : AppCompatActivity() {
                     val titlePembelian = bottomSheetView.findViewById<TextView>(R.id.titlePembelian)
                     val titlePembayaran = bottomSheetView.findViewById<TextView>(R.id.titlePembayaran)
 
+                    recyclerView.visibility = View.GONE
                     if (pembelianList.isNotEmpty()) {
+                        Log.e("DEBUG", "Pembelian List : $pembelianList")
                         titlePembelian.visibility = View.VISIBLE
                         recyclerPembelian.visibility = View.VISIBLE
-                        val pembelianAdapter = RecyclerViewMenuAdapter(pembelianList, this@MenuActivity, false, false, false, false, false){ position ->
+                        recyclerPembelian.layoutManager = GridLayoutManager(this@MenuActivity, 3)
+                        val pembelianAdapter = RecyclerViewMenuAdapter(pembelianList, this@MenuActivity, false, false, false, false, false, false){ position ->
                             // Handle click event for pembelianList
                             onMenuItemClick(position, "pembelian")
                         }
@@ -642,7 +659,8 @@ class MenuActivity : AppCompatActivity() {
                     if (pembayaranList.isNotEmpty()) {
                         titlePembayaran.visibility = View.VISIBLE
                         recyclerPembayaran.visibility = View.VISIBLE
-                        val pembayaranAdapter = RecyclerViewMenuAdapter(pembayaranList, this@MenuActivity, false, false, false, false, false){ position ->
+                        recyclerPembayaran.layoutManager = GridLayoutManager(this@MenuActivity, 3)
+                        val pembayaranAdapter = RecyclerViewMenuAdapter(pembayaranList, this@MenuActivity, false, false, false, false, false, false){ position ->
                             // Handle click event for pembelianList
                             onMenuItemClick(position, "pembayaran")
                         }
@@ -660,7 +678,7 @@ class MenuActivity : AppCompatActivity() {
 
                     Log.d("BOTTOM1", "MENULIST BOTTOM: $menuList")
 
-                    val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false, isKomplain=false, isKomplain2 = false){position ->
+                    val menuAdapter = RecyclerViewMenuAdapter(menuList, this@MenuActivity, false, isProfile = false, isList = false, isKomplain=false, isKomplain2 = false, false){position ->
                         // Define what happens on item click here
                         onMenuItemClick(position, "menu")
                     }

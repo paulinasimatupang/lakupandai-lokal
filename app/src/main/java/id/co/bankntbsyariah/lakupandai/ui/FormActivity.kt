@@ -2799,7 +2799,7 @@ class FormActivity : AppCompatActivity() {
                                 resetTimer(120000)
                             } else if (otpAttempts.size == 3) {
                                 otpAttempts.add(System.currentTimeMillis())
-                                Toast.makeText(this@FormActivity, "Anda sudah melebihi batas limit OTP. Mohon tunggu 30 menit.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@FormActivity, "Anda sudah melebihi batas limit OTP. Mohon tunggu 5 menit.", Toast.LENGTH_LONG).show()
                                 resetTimer(5 * 60 * 1000)
                             } else {
                                 Toast.makeText(this@FormActivity, "Mohon tunggu hingga waktu limit berakhir.", Toast.LENGTH_LONG).show()
@@ -6587,7 +6587,7 @@ class FormActivity : AppCompatActivity() {
             if (currentTime - lastAttemptTime < otpCooldownTime) {
                 Toast.makeText(
                     this@FormActivity,
-                    "Anda sudah melebihi batas pengiriman OTP. Silahkan tunggu selama 30 menit.",
+                    "Anda sudah melebihi batas pengiriman OTP. Silahkan tunggu selama 5 menit.",
                     Toast.LENGTH_LONG
                 ).show()
             } else {

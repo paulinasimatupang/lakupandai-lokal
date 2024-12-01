@@ -2504,6 +2504,16 @@ class FormActivity : AppCompatActivity() {
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                             handleScreenType(newScreen)
                                                         }
+                                                    }?: run {
+                                                        Log.e("FormActivity", "Response gagal")
+                                                        lifecycleScope.launch {
+                                                            withContext(Dispatchers.Main) {
+                                                                hideLoading()
+                                                            }
+                                                        }
+                                                        showPopupGagal(
+                                                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                        )
                                                     }
                                                 }
                                             } catch (e: JSONException) {
@@ -2527,6 +2537,16 @@ class FormActivity : AppCompatActivity() {
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                             handleScreenType(newScreen)
                                                         }
+                                                    }?: run {
+                                                        Log.e("FormActivity", "Response gagal")
+                                                        lifecycleScope.launch {
+                                                            withContext(Dispatchers.Main) {
+                                                                hideLoading()
+                                                            }
+                                                        }
+                                                        showPopupGagal(
+                                                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                        )
                                                     }
                                                 }
                                             } catch (e: JSONException) {
@@ -2550,6 +2570,16 @@ class FormActivity : AppCompatActivity() {
                                                             val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                             handleScreenType(newScreen)
                                                         }
+                                                    }?: run {
+                                                        Log.e("FormActivity", "Response gagal")
+                                                        lifecycleScope.launch {
+                                                            withContext(Dispatchers.Main) {
+                                                                hideLoading()
+                                                            }
+                                                        }
+                                                        showPopupGagal(
+                                                            "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                        )
                                                     }
                                                 }
                                             } catch (e: JSONException) {
@@ -2558,7 +2588,7 @@ class FormActivity : AppCompatActivity() {
                                             }
                                         }
                                     }else if (otpAttempts.size == 3) {
-                                        resetTimer(30 * 60 * 1000)
+                                        resetTimer(5 * 60 * 1000)
                                         otpAttempts.add(System.currentTimeMillis())
                                         val remainingTime = remainingMillis
                                         if (remainingTime > 0) {
@@ -2617,6 +2647,16 @@ class FormActivity : AppCompatActivity() {
                                                                 val newScreen: Screen = ScreenParser.parseJSON(screenJson)
                                                                 handleScreenType(newScreen)
                                                             }
+                                                        }?: run {
+                                                            Log.e("FormActivity", "Response gagal")
+                                                            lifecycleScope.launch {
+                                                                withContext(Dispatchers.Main) {
+                                                                    hideLoading()
+                                                                }
+                                                            }
+                                                            showPopupGagal(
+                                                                "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                            )
                                                         }
                                                     }
                                                 } catch (e: JSONException) {
@@ -2760,7 +2800,7 @@ class FormActivity : AppCompatActivity() {
                             } else if (otpAttempts.size == 3) {
                                 otpAttempts.add(System.currentTimeMillis())
                                 Toast.makeText(this@FormActivity, "Anda sudah melebihi batas limit OTP. Mohon tunggu 30 menit.", Toast.LENGTH_LONG).show()
-                                resetTimer(30 * 60 * 1000)
+                                resetTimer(5 * 60 * 1000)
                             } else {
                                 Toast.makeText(this@FormActivity, "Mohon tunggu hingga waktu limit berakhir.", Toast.LENGTH_LONG).show()
                             }
@@ -2777,7 +2817,7 @@ class FormActivity : AppCompatActivity() {
                     if(otpAttempts.size < 4){
                         resetTimer(120000)
                     } else if (otpAttempts.size >= 4) {
-                        resetTimer(30 * 60 * 1000)
+                        resetTimer(5 * 60 * 1000)
                     }
 
                     val otpDigits = listOf(
@@ -3970,6 +4010,7 @@ class FormActivity : AppCompatActivity() {
                                                 Log.e("FormActivity", "Debit Berhasil")
                                                 val messageBody = createMessageBody(newScreen)
                                                 if (messageBody != null) {
+                                                    var billerScreen = newScreen
                                                     Log.d(
                                                         "FormActivity",
                                                         "Message Body Biller: $messageBody"
@@ -3982,14 +4023,19 @@ class FormActivity : AppCompatActivity() {
                                                         "FormActivity",
                                                         "MAU NEW SCREEN.ID: ${newScreen.id}"
                                                     )
-                                                    var billerScreen = newScreen
                                                     ArrestCallerImpl(OkHttpClient()).requestPost(
                                                         messageBody
                                                     ) { responseBody ->
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Callback diterima: $responseBody"
+                                                        )
                                                         responseBody?.let { body ->
+                                                            Log.d(
+                                                                "FormActivity",
+                                                                "Response Body: $body, Response : $responseBody"
+                                                            )
                                                             lifecycleScope.launch {
-                                                                lottieLoading?.visibility =
-                                                                    View.GONE
                                                                 val screenJson =
                                                                     JSONObject(body)
                                                                 val newScreen: Screen =
@@ -4061,9 +4107,29 @@ class FormActivity : AppCompatActivity() {
                                                                         }
                                                                     }
                                                                 } else {
-                                                                    handleScreenType(newScreen)
+                                                                    hideLoading()
+                                                                    Log.e(
+                                                                        "FormActivity",
+                                                                        "Biller berhasil"
+                                                                    )
+                                                                    handleScreenType(
+                                                                        newScreen
+                                                                    )
                                                                 }
                                                             }
+                                                        } ?: run {
+                                                            Log.e(
+                                                                "FormActivity",
+                                                                "Response null atau gagal"
+                                                            )
+                                                            lifecycleScope.launch {
+                                                                withContext(Dispatchers.Main) {
+                                                                    hideLoading()
+                                                                }
+                                                            }
+                                                            showPopupGagal(
+                                                                "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                            )
                                                         }
                                                     }
                                                 }
@@ -4197,8 +4263,8 @@ class FormActivity : AppCompatActivity() {
                                             prodIDComponent.compValues?.compValue?.firstOrNull()?.value
                                         Log.d("FormActivity", "Value of PROID: $prodIDvalue")
                                         when (screen.id) {
-                                            // Transfer Sesama Bank & Tarik Tunai
-                                            "TF00001","FT0001" -> {
+                                            // Transfer Sesama Bank & Tarik Tunai & Cek Saldo
+                                            "TF00001","FT0001","CS00001" -> {
                                                 if (prodIDvalue != "36") {
                                                     val intentPopup = Intent(
                                                         this@FormActivity,
@@ -4467,6 +4533,7 @@ class FormActivity : AppCompatActivity() {
                                                 startActivity(intent)
                                                 // BILLER
                                             } else if (isSvcBiller == true) {
+                                                showLoading()
                                                 Log.e("FormActivity", "Masuk Service Biller")
                                                 if (newScreen.id != "000000F") {
                                                     Log.e("FormActivity", "Debit Berhasil")
@@ -4485,14 +4552,12 @@ class FormActivity : AppCompatActivity() {
                                                             "MAU NEW SCREEN.ID: ${newScreen.id}"
                                                         )
                                                         var billerScreen = newScreen
-                                                        ArrestCallerImpl(OkHttpClient()).requestPost(
-                                                            messageBody
-                                                        ) { responseBody ->
-
+                                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                                            Log.d("FormActivity", "Response Body Biller: $responseBody")
                                                             responseBody?.let { body ->
+                                                                Log.d("FormActivity", "Body Biller: $body")
                                                                 lifecycleScope.launch {
-                                                                    lottieLoading?.visibility =
-                                                                        View.GONE
+                                                                    hideLoading()
                                                                     val screenJson =
                                                                         JSONObject(body)
                                                                     val newScreen: Screen =
@@ -4560,13 +4625,37 @@ class FormActivity : AppCompatActivity() {
                                                                                             newScreen
                                                                                         )
                                                                                     }
+                                                                                }?: run {
+                                                                                    Log.e("FormActivity", "Response gagal")
+                                                                                    lifecycleScope.launch {
+                                                                                        withContext(Dispatchers.Main) {
+                                                                                            hideLoading()
+                                                                                        }
+                                                                                    }
+                                                                                    showPopupGagal(
+                                                                                        "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                                                    )
                                                                                 }
                                                                             }
                                                                         }
                                                                     } else {
+                                                                        Log.e(
+                                                                            "FormActivity",
+                                                                            "Biller berhasil"
+                                                                        )
                                                                         handleScreenType(newScreen)
                                                                     }
                                                                 }
+                                                            } ?: run {
+                                                                Log.e("FormActivity", "Biller tidak ada response")
+                                                                lifecycleScope.launch {
+                                                                    withContext(Dispatchers.Main) {
+                                                                        hideLoading()
+                                                                    }
+                                                                }
+                                                                showPopupGagal(
+                                                                    "Terjadi Kesalahan Dalam Proses. Silahkan Coba Kembali atau Hubungi Call Center."
+                                                                )
                                                             }
                                                         }
                                                     }
@@ -5378,105 +5467,39 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-
-                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
-                                    withContext(Dispatchers.Main) {
-                                        hideLoading()
-                                    }
-                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
-                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-                                        putExtra("RETURN_TO_ROOT", false)
-                                    }
-                                    startActivity(intentPopup)
-                                }else{
-                                    fun retrieveAuthToken(): String {
-                                        // Return the stored auth token
-                                        return "auth_token" // Replace this with the actual logic to retrieve the token
-                                    }
-
-                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                        if (!task.isSuccessful) {
-                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                            return@addOnCompleteListener
-                                        }
-
-                                        val fcmToken = task.result
-                                        Log.d("FCM", "FCM Token: $fcmToken")
-
-                                        // Send FCM token and user_id to server
-                                        val authToken = sharedPreferences.getString("token", "") ?: ""
-                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-                                    }
-
-                                createCheckSaldo { messageBody ->
-                                    if (messageBody != null) {
-                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
-                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                            responseBody?.let {
-                                                lifecycleScope.launch {
-                                                    withContext(Dispatchers.Main) {
-                                                        Toast.makeText(
-                                                            this@FormActivity,
-                                                            "Login berhasil",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                        navigateToScreen()
-                                                        callback(true)
-                                                    }
-                                                }
-                                            } ?: run {
-                                                lifecycleScope.launch {
-                                                    withContext(Dispatchers.Main) {
-                                                        hideLoading()
-                                                    }
-                                                }
-                                                showPopupGagal(
-                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
-                                                )
-                                                Log.e("FormActivity", "Failed to fetch response body")
-                                            }
-                                        }
-                                    } else {
-                                        lifecycleScope.launch {
-                                            withContext(Dispatchers.Main) {
-                                                hideLoading()
-                                            }
-                                        }
-                                        showPopupGagal(
-                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
-                                        )
-                                        Log.e("FormActivity", "Failed to create message body, request not sent")
-                                    }
-                                }
-
-
-                                }
-
-
-
-                                //                                ini di comment nanti kalo mau berdasarkan perangkat
-//                                fun retrieveAuthToken(): String {
-//                                    // Return the stored auth token
-//                                    return "auth_token" // Replace this with the actual logic to retrieve the token
-//                                }
+//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 //
-//                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//                                    if (!task.isSuccessful) {
-//                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-//                                        return@addOnCompleteListener
+//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
+//                                    withContext(Dispatchers.Main) {
+//                                        hideLoading()
+//                                    }
+//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+//                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
+//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+//                                        putExtra("RETURN_TO_ROOT", false)
+//                                    }
+//                                    startActivity(intentPopup)
+//                                }else{
+//                                    fun retrieveAuthToken(): String {
+//                                        // Return the stored auth token
+//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
 //                                    }
 //
-//                                    val fcmToken = task.result
-//                                    Log.d("FCM", "FCM Token: $fcmToken")
+//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//                                        if (!task.isSuccessful) {
+//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                            return@addOnCompleteListener
+//                                        }
 //
-//                                    // Send FCM token and user_id to server
-//                                    val authToken = sharedPreferences.getString("token", "") ?: ""
-//                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-//                                }
+//                                        val fcmToken = task.result
+//                                        Log.d("FCM", "FCM Token: $fcmToken")
+//
+//                                        // Send FCM token and user_id to server
+//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+//                                    }
 //
 //                                createCheckSaldo { messageBody ->
 //                                    if (messageBody != null) {
@@ -5518,6 +5541,72 @@ class FormActivity : AppCompatActivity() {
 //                                        Log.e("FormActivity", "Failed to create message body, request not sent")
 //                                    }
 //                                }
+//
+//
+//                                }
+
+
+
+                                //                                ini di comment nanti kalo mau berdasarkan perangkat
+                                fun retrieveAuthToken(): String {
+                                    // Return the stored auth token
+                                    return "auth_token" // Replace this with the actual logic to retrieve the token
+                                }
+
+                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                    if (!task.isSuccessful) {
+                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                        return@addOnCompleteListener
+                                    }
+
+                                    val fcmToken = task.result
+                                    Log.d("FCM", "FCM Token: $fcmToken")
+
+                                    // Send FCM token and user_id to server
+                                    val authToken = sharedPreferences.getString("token", "") ?: ""
+                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                }
+
+                                createCheckSaldo { messageBody ->
+                                    if (messageBody != null) {
+                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                            responseBody?.let {
+                                                lifecycleScope.launch {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "Login berhasil",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        navigateToScreen()
+                                                        callback(true)
+                                                    }
+                                                }
+                                            } ?: run {
+                                                lifecycleScope.launch {
+                                                    withContext(Dispatchers.Main) {
+                                                        hideLoading()
+                                                    }
+                                                }
+                                                showPopupGagal(
+                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+                                                )
+                                                Log.e("FormActivity", "Failed to fetch response body")
+                                            }
+                                        }
+                                    } else {
+                                        lifecycleScope.launch {
+                                            withContext(Dispatchers.Main) {
+                                                hideLoading()
+                                            }
+                                        }
+                                        showPopupGagal(
+                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+                                        )
+                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                                    }
+                                }
 //                                comment sampai sini
                             }
                         }

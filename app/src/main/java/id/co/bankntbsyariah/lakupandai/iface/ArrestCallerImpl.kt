@@ -132,6 +132,7 @@ class ArrestCallerImpl(override val client: OkHttpClient = OkHttpClient()) : Arr
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Failed to post message", e)
                 callback(null)
+                Log.d(TAG, "Callback null telah dipanggil")
             }
 
             override fun onResponse(call: Call, response: Response) {

@@ -5222,7 +5222,7 @@ class FormActivity : AppCompatActivity() {
                                     // Jika attempt ke-4 dan lebih harus reset waktu ke 30 menit
                                     if (otpAttempts.size == 3) {
                                         otpAttempts.add(System.currentTimeMillis())
-                                        remainingMillis = 30 * 60 * 1000 // Set ke 30 menit
+                                        remainingMillis = 5 * 60 * 1000 // Set ke 30 menit
                                         Log.d("FormActivity", "Reset remainingMillis to 30 minutes")
                                         lifecycleScope.launch(Dispatchers.Main) {
                                             resetTimer(remainingMillis) // Jika Anda memiliki metode resetTimer

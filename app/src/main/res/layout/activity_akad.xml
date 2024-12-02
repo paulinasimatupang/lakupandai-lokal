@@ -46,8 +46,8 @@
         android:layout_height="wrap_content"
         android:backgroundTint="@color/green"
         android:text="Pilih"
-        android:textColor="@color/grey"
+        android:textColor="@color/white"
         android:layout_gravity="center"
-        android:visibility="gone"
-        android:background="?attr/selectableItemBackgroundBorderless"/>
+        android:visibility="gone"/>
+
 </LinearLayout>

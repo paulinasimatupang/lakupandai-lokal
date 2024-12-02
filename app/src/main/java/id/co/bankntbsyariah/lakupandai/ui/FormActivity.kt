@@ -64,6 +64,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.os.Environment
 import android.os.CountDownTimer
 import android.provider.MediaStore
@@ -1773,64 +1774,51 @@ class FormActivity : AppCompatActivity() {
                         inputValues[component.id] = ""
 
                         setKeyboard(editText, component)
-
                         editText.addTextChangedListener(object : TextWatcher {
-                            override fun beforeTextChanged(
-                                s: CharSequence?,
-                                start: Int,
-                                count: Int,
-                                after: Int
-                            ) {
-                            }
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
-                            override fun onTextChanged(
-                                s: CharSequence?,
-                                start: Int,
-                                before: Int,
-                                count: Int
-                            ) {
-                            }
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
                             override fun afterTextChanged(s: Editable?) {
-                                val inputText = s.toString().replace(".", "")
+                                val inputText = s.toString()
+
                                 inputValues[component.id] = inputText
 
-                                // Format input as currency if the label is admin, nominal, or fee
+                                // Format angka jika label mengandung "nominal", "fee", atau "nilai"
                                 if (component.label.contains("nominal", ignoreCase = true) ||
                                     component.label.contains("fee", ignoreCase = true) ||
                                     component.label.contains("nilai", ignoreCase = true)
                                 ) {
                                     editText.removeTextChangedListener(this)
 
-                                    val formattedText = if (inputText.isNotEmpty()) {
-                                        val reversed = inputText.reversed()
-                                        val chunked = reversed.chunked(3).joinToString(".")
-                                        chunked.reversed()
+                                    val numericInput = inputText.replace(".", "")
+                                    val formattedText = if (numericInput.isNotEmpty()) {
+                                        numericInput.reversed().chunked(3).joinToString(".").reversed()
                                     } else {
                                         ""
                                     }
 
                                     editText.setText(formattedText)
-                                    editText.setSelection(formattedText.length) // Move cursor to end
-
+                                    editText.setSelection(formattedText.length)
+                                    inputValues[component.id] = numericInput
                                     editText.addTextChangedListener(this)
                                 }
 
-                                if (screen.id == "CCIF001") {
-                                    inputRekening[component.label] = inputText
-                                    Log.d("FormActivity", "inputRekening[${component.id}] set to: $inputText")
-                                }
-
-                                if (component.label == "NIK") {
-                                    nikValue = inputText
-                                    Log.d("FormActivity", "NIK : $nikValue")
+                                val errors = validateInput(component)
+                                if (errors.isNotEmpty()) {
+                                    editText.error = errors.first()
+                                    editText.background = ContextCompat.getDrawable(this@FormActivity, R.drawable.edit_text_wrong)
+                                } else {
+                                    editText.error = null
+                                    editText.background = ContextCompat.getDrawable(this@FormActivity, R.drawable.edit_text_background)
                                 }
                             }
                         })
+
+
                         addView(editText)
                     }
                 }
-
 
                 3 -> {
                     LinearLayout(this@FormActivity).apply {
@@ -1905,6 +1893,26 @@ class FormActivity : AppCompatActivity() {
                             inputValues[component.id] = it.toString()
 
                         }
+                        editText.addTextChangedListener(object : TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                            override fun afterTextChanged(s: Editable?) {
+                                val inputText = s.toString()
+                                inputValues[component.id] = inputText
+
+                                // Validasi input
+                                val errors = validateInput(component)
+                                if (errors.isNotEmpty()) {
+                                    editText.error = errors.first()
+                                    editText.background = ContextCompat.getDrawable(this@FormActivity, R.drawable.edit_text_wrong)
+                                } else {
+                                    editText.error = null
+                                    editText.background = ContextCompat.getDrawable(this@FormActivity, R.drawable.edit_text_background)
+                                }
+                            }
+                        })
                         addView(editText)
                     }
                 }
@@ -2101,242 +2109,416 @@ class FormActivity : AppCompatActivity() {
                                                     "FormActivity",
                                                     "Component ID: ${component.id}, No Value Selected"
                                                 )
-                                                return
-                                            }
+                                                spinner.background = ContextCompat.getDrawable(
+                                                    this@FormActivity,
+                                                    R.drawable.spinner_error_background
+                                                )
 
-                                            val selectedPair = options[position]
-                                            val selectedValue = selectedPair.first
-                                            val selectedCompValue = selectedPair.second
-                                            var spinner: Spinner? = null
-                                            if (screen.id == "CCIF001") {
-                                                inputRekening[component.label] =
-                                                    selectedValue ?: "" // Menyimpan selectedValue
-                                            }
+                                                val textView = view as TextView
+                                                textView.setTextColor(
+                                                    ContextCompat.getColor(
+                                                        this@FormActivity,
+                                                        android.R.color.holo_red_dark
+                                                    )
+                                                )
+                                            } else {
+                                                spinner.background = ContextCompat.getDrawable(
+                                                    this@FormActivity,
+                                                    R.drawable.combo_box
+                                                )
 
-                                            Log.d(
-                                                "FormActivity",
-                                                "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
-                                            )
-                                            Log.d(
-                                                "FormActivity",
-                                                "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
-                                            )
+                                                val textView = view as TextView
+                                                textView.setTextColor(ContextCompat.getColor(this@FormActivity, android.R.color.black))
 
-                                            when (component.id) {
-                                                "NRK01" -> {
-                                                    pickNRK = selectedValue
-                                                    Log.d("Form", "Norekening yang dipilih: $selectedValue")
+                                                val selectedPair = options[position]
+                                                val selectedValue = selectedPair.first
+                                                val selectedCompValue = selectedPair.second
+                                                var spinner: Spinner? = null
+                                                if (screen.id == "CCIF001") {
+                                                    inputRekening[component.label] =
+                                                        selectedValue
+                                                            ?: "" // Menyimpan selectedValue
+                                                }
 
-                                                    val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-                                                    val savedNorekening = sharedPreferences.getString("norekening", "") ?: ""
-                                                    val userFullname = sharedPreferences.getString("fullname", "") ?: ""
-                                                    val noAgen = sharedPreferences.getString("merchant_phone", "") ?: ""
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "Component ID: ${component.id}, Selected Value: $selectedValue, Position: $position"
+                                                )
+                                                Log.d(
+                                                    "FormActivity",
+                                                    "selectedPair: ${selectedPair}, Selected Value: $selectedValue, selectedCompValue: $selectedCompValue"
+                                                )
 
-                                                    Log.d("FormActivity", "Fetched Userfullname: '$userFullname'")
+                                                when (component.id) {
+                                                    "NRK01" -> {
+                                                        pickNRK = selectedValue
+                                                        Log.d(
+                                                            "Form",
+                                                            "Norekening yang dipilih: $selectedValue"
+                                                        )
 
-                                                    var norekToSave: String? = null
-                                                    var namaToSave: String? = null
-                                                    var nomorToSave: String? = null
+                                                        val sharedPreferences =
+                                                            getSharedPreferences(
+                                                                "MyAppPreferences",
+                                                                MODE_PRIVATE
+                                                            )
+                                                        val savedNorekening =
+                                                            sharedPreferences.getString(
+                                                                "norekening",
+                                                                ""
+                                                            ) ?: ""
+                                                        val userFullname =
+                                                            sharedPreferences.getString(
+                                                                "fullname",
+                                                                ""
+                                                            ) ?: ""
+                                                        val noAgen = sharedPreferences.getString(
+                                                            "merchant_phone",
+                                                            ""
+                                                        ) ?: ""
 
-                                                    if (selectedValue == "Rekening Nasabah") {
-                                                        val norekBillerNasabah = sharedPreferences.getString("norek_biller", null)
-                                                        val namarekBillerNasabah = sharedPreferences.getString("namarek_biller", null)
-                                                        val nomorBillerNasabah = sharedPreferences.getString("nomor_biller", null)
-                                                        if (norekBillerNasabah != null && namarekBillerNasabah != null && norekBillerNasabah.isNotEmpty() && namarekBillerNasabah.isNotEmpty()) {
-                                                            norekToSave = norekBillerNasabah
-                                                            namaToSave = namarekBillerNasabah
-                                                            nomorToSave = nomorBillerNasabah
-                                                            Log.d("FormActivity", "NRK01 set to saved No Rekening: $norekBillerNasabah, Account Name: $namarekBillerNasabah")
-                                                        } else {
-                                                            lifecycleScope.launch {
-                                                                val editor = sharedPreferences.edit()
-                                                                val gson = Gson()
-                                                                val screenJson = gson.toJson(screen) // mengubah objek Screen menjadi JSON String
-                                                                editor.putString("screen_biller", screenJson)
-                                                                editor.apply()
-                                                                var newScreenId = "PRP0006"
-                                                                var formValue = StorageImpl(applicationContext).fetchForm(newScreenId)
-                                                                if (formValue.isNullOrEmpty()) {
-                                                                    formValue = withContext(Dispatchers.IO) {
-                                                                        ArrestCallerImpl(OkHttpClient()).fetchScreen(newScreenId)
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Fetched Userfullname: '$userFullname'"
+                                                        )
+
+                                                        var norekToSave: String? = null
+                                                        var namaToSave: String? = null
+                                                        var nomorToSave: String? = null
+
+                                                        if (selectedValue == "Rekening Nasabah") {
+                                                            val norekBillerNasabah =
+                                                                sharedPreferences.getString(
+                                                                    "norek_biller",
+                                                                    null
+                                                                )
+                                                            val namarekBillerNasabah =
+                                                                sharedPreferences.getString(
+                                                                    "namarek_biller",
+                                                                    null
+                                                                )
+                                                            val nomorBillerNasabah =
+                                                                sharedPreferences.getString(
+                                                                    "nomor_biller",
+                                                                    null
+                                                                )
+                                                            if (norekBillerNasabah != null && namarekBillerNasabah != null && norekBillerNasabah.isNotEmpty() && namarekBillerNasabah.isNotEmpty()) {
+                                                                norekToSave = norekBillerNasabah
+                                                                namaToSave = namarekBillerNasabah
+                                                                nomorToSave = nomorBillerNasabah
+                                                                Log.d(
+                                                                    "FormActivity",
+                                                                    "NRK01 set to saved No Rekening: $norekBillerNasabah, Account Name: $namarekBillerNasabah"
+                                                                )
+                                                            } else {
+                                                                lifecycleScope.launch {
+                                                                    val editor =
+                                                                        sharedPreferences.edit()
+                                                                    val gson = Gson()
+                                                                    val screenJson =
+                                                                        gson.toJson(screen) // mengubah objek Screen menjadi JSON String
+                                                                    editor.putString(
+                                                                        "screen_biller",
+                                                                        screenJson
+                                                                    )
+                                                                    editor.apply()
+                                                                    var newScreenId = "PRP0006"
+                                                                    var formValue = StorageImpl(
+                                                                        applicationContext
+                                                                    ).fetchForm(newScreenId)
+                                                                    if (formValue.isNullOrEmpty()) {
+                                                                        formValue =
+                                                                            withContext(Dispatchers.IO) {
+                                                                                ArrestCallerImpl(
+                                                                                    OkHttpClient()
+                                                                                ).fetchScreen(
+                                                                                    newScreenId
+                                                                                )
+                                                                            }
+                                                                        Log.i(
+                                                                            "FormActivity",
+                                                                            "Fetched formValue: $formValue"
+                                                                        )
                                                                     }
-                                                                    Log.i("FormActivity", "Fetched formValue: $formValue")
+                                                                    setupScreen(formValue)
                                                                 }
-                                                                setupScreen(formValue)
+                                                            }
+                                                        } else if (selectedValue == "Rekening Agen") {
+                                                            if (savedNorekening.isNotEmpty() && userFullname.isNotEmpty()) {
+                                                                norekToSave = savedNorekening
+                                                                namaToSave = userFullname
+                                                                nomorToSave = noAgen
+                                                                Log.d(
+                                                                    "FormActivity",
+                                                                    "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname"
+                                                                )
+                                                            } else {
+                                                                Log.d(
+                                                                    "FormActivity",
+                                                                    "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname"
+                                                                )
                                                             }
                                                         }
-                                                    } else if (selectedValue == "Rekening Agen") {
-                                                        if (savedNorekening.isNotEmpty() && userFullname.isNotEmpty()) {
-                                                            norekToSave = savedNorekening
-                                                            namaToSave = userFullname
-                                                            nomorToSave = noAgen
-                                                            Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
-                                                        } else {
-                                                            Log.d("FormActivity", "NRK01 set to saved No Rekening: $savedNorekening, Account Name: $userFullname")
-                                                        }
-                                                    }
 
-                                                    // Set inputValues hanya di akhir
-                                                    if (norekToSave != null && namaToSave != null) {
-                                                        inputValues[component.id] = "$norekToSave|$namaToSave|$nomorToSave"
-                                                        Log.e("FormActivity", "Norek dan Namarek Nasabah dihapus")
-                                                        val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
-                                                        val editor = sharedPreferences.edit()
-                                                        editor.remove("norek_biller")
-                                                        editor.remove("namarek_biller")
-                                                        editor.remove("nomor_biller")
-                                                        editor.apply()
-                                                    }
-                                                }
-                                                "PIL03" -> {
-                                                    pickOTP = selectedValue
-                                                    Log.d("Form", "PICK OTP PIL03: $selectedValue")
-
-                                                    // Cek jika nilai tidak valid
-                                                    if (selectedValue != "WA" && selectedValue != "SMS") {
-                                                        pickOTP = null
-                                                        Toast.makeText(this@FormActivity, "Harus memilih WA atau SMS.", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                                "KOM05" -> {
-                                                    val pickJudul = selectedValue
-                                                    if (pickJudul != null) {
-                                                        Log.d("Form", "PICK OTP: $pickJudul")
-                                                        inputValues[component.id] = pickJudul
-                                                    } else {
-                                                        Log.d("Form", "PICK OTP is null")
-                                                    }
-                                                }
-                                                "CB001"-> {
-                                                    if (selectedCompValue != null) {
-                                                        inputValues[component.id] =
-                                                            selectedCompValue.replace("[OI]", "")
-                                                    }
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "Branch Code set to: ${inputValues[component.id]}"
-                                                    )
-                                                }
-
-                                                "CR002" -> if (selectedValue == "BSA Lakupandai") {
-                                                    inputValues[component.id] = "36"
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "Special case for CR002: Value set to 36"
-                                                    )
-                                                }
-
-                                                "CIF14" -> {
-                                                    val selectedCIF14Value = selectedCompValue ?: ""
-                                                    Log.d("FormActivity", "Selected CIF14 Value: $selectedCIF14Value")
-
-                                                    // Ekstraksi nilai dari CIF14
-                                                    val extractedValueCIF14 = if (selectedCIF14Value.startsWith("[OI]") && selectedCIF14Value.length >= 6) {
-                                                        selectedCIF14Value.takeLast(2)
-                                                    } else {
-                                                        ""
-                                                    }
-                                                    Log.d("FormActivity", "Extracted Value from CIF14: $extractedValueCIF14")
-                                                    Log.d("FormActivity", "Extracted Value from CIF14: ${selectedPair.first}")
-
-                                                    // Simpan nilai terpilih untuk CIF14
-                                                    inputValues[component.id] = selectedCIF14Value ?: ""
-                                                    inputRekening[component.label] = selectedPair.first?:""
-                                                    Log.d("FormActivity", "CIF14 set to: ${inputValues[component.id]}")
-
-                                                    // Cek jika inputValues untuk CIF14 sudah ada isinya
-                                                    if (!inputValues[component.id].isNullOrEmpty()) {
-                                                        val filteredValues = valuesKabKot.filter { option ->
-                                                            option.contains("- [OI]") && option.substringAfter("- [OI]").take(2) == extractedValueCIF14
-                                                        }.map { option ->
-                                                            val label = option.substringBefore(" - [OI]")
-                                                            val code = option.substringAfter("[OI]").trim()
-                                                            Pair(label, code)
-                                                        }
-                                                        Log.d("FormActivity", "Filtered Values: $filteredValues")
-
-                                                        currentLabelCIF13?.let { existingLabel ->
-                                                            removeView(existingLabel)
-                                                        }
-                                                        currentSpinnerCIF13?.let { existingSpinner ->
-                                                            removeView(existingSpinner)
-                                                        }
-
-                                                        val labelTextView = TextView(this@FormActivity).apply {
-                                                            text ="Kabupaten/Kota"
-                                                            textSize = 16f
-                                                            setTypeface(null, Typeface.BOLD)
-                                                            setTextSize(18f)
-                                                            setTextColor(Color.parseColor("#0A6E44"))
-
-                                                            // Atur jarak antara label dan Spinner di bawahnya
-                                                            val params = LinearLayout.LayoutParams(
-                                                                LinearLayout.LayoutParams.WRAP_CONTENT,
-                                                                LinearLayout.LayoutParams.WRAP_CONTENT
+                                                        // Set inputValues hanya di akhir
+                                                        if (norekToSave != null && namaToSave != null) {
+                                                            inputValues[component.id] =
+                                                                "$norekToSave|$namaToSave|$nomorToSave"
+                                                            Log.e(
+                                                                "FormActivity",
+                                                                "Norek dan Namarek Nasabah dihapus"
                                                             )
-                                                            params.setMargins(0, 0, 0, 18) // Margin bawah 18dp
-                                                            layoutParams = params
+                                                            val sharedPreferences =
+                                                                getSharedPreferences(
+                                                                    "MyAppPreferences",
+                                                                    MODE_PRIVATE
+                                                                )
+                                                            val editor = sharedPreferences.edit()
+                                                            editor.remove("norek_biller")
+                                                            editor.remove("namarek_biller")
+                                                            editor.remove("nomor_biller")
+                                                            editor.apply()
                                                         }
-                                                        addView(labelTextView)
-                                                        currentLabelCIF13 = labelTextView
+                                                    }
 
-                                                        val spinnerCIF13 = Spinner(this@FormActivity).apply {
-                                                            background = getDrawable(R.drawable.combo_box)
+                                                    "PIL03" -> {
+                                                        pickOTP = selectedValue
+                                                        Log.d(
+                                                            "Form",
+                                                            "PICK OTP PIL03: $selectedValue"
+                                                        )
 
-                                                            // Menambahkan opsi pertama sebagai "Pilih Kabupaten/Kota"
-                                                            val initialOptions = mutableListOf("Pilih Kabupaten/Kota")
-                                                            initialOptions.addAll(filteredValues.map { it.first } )
-
-                                                            // Buat adapter dengan initialOptions yang berisi opsi awal dan filteredValues
-                                                            val adapter = ArrayAdapter(
+                                                        // Cek jika nilai tidak valid
+                                                        if (selectedValue != "WA" && selectedValue != "SMS") {
+                                                            pickOTP = null
+                                                            Toast.makeText(
                                                                 this@FormActivity,
-                                                                android.R.layout.simple_spinner_item,
-                                                                initialOptions
-                                                            )
-                                                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                                                            this.adapter = adapter
-
-                                                            // Set margin untuk spinner
-                                                            layoutParams = LinearLayout.LayoutParams(
-                                                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                                                LinearLayout.LayoutParams.WRAP_CONTENT
-                                                            ).apply {
-                                                                setMargins(0, 0, 0, 20) // Margin bawah 20dp
-                                                            }
+                                                                "Harus memilih WA atau SMS.",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
                                                         }
-
-
-                                                        addView(spinnerCIF13)
-                                                        currentSpinnerCIF13 = spinnerCIF13
-                                                        spinnerCIF13.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                                                            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                                                                if (position > 0) { // Abaikan "Pilih Kabupaten/Kota"
-                                                                    val selectedItem = filteredValues[position - 1]
-                                                                    val realValue = selectedItem.first
-                                                                    val extractedCIF13Value = selectedItem.second
-                                                                    inputRekening["Kabupaten/Kota"] = realValue
-                                                                    Log.d("FormActivity", "Selected item from new CIF14 ComboBox Real Value: $realValue")
-                                                                    Log.d("FormActivity", "Selected item from new CIF14 ComboBox Code: $extractedCIF13Value")
-                                                                    Log.d("FormActivity", "Selected item from new CIF14 ComboBox: $selectedItem")
-                                                                    inputValues["CIF13"] = extractedCIF13Value
-                                                                    Log.d("FormActivity", "Input Values $inputValues")
-                                                                } else {
-                                                                    Log.d("FormActivity", "No valid item selected in CIF14 ComboBox")
-                                                                }
-                                                            }
-
-                                                            override fun onNothingSelected(parent: AdapterView<*>) {
-                                                                Log.d("FormActivity", "Nothing selected for new CIF14 ComboBox")
-                                                            }
-                                                        }
-
                                                     }
-                                                }
 
-                                                else -> inputValues[component.id] = selectedCompValue ?: ""
+                                                    "KOM05" -> {
+                                                        val pickJudul = selectedValue
+                                                        if (pickJudul != null) {
+                                                            Log.d("Form", "PICK OTP: $pickJudul")
+                                                            inputValues[component.id] = pickJudul
+                                                        } else {
+                                                            Log.d("Form", "PICK OTP is null")
+                                                        }
+                                                    }
+
+                                                    "CB001" -> {
+                                                        if (selectedCompValue != null) {
+                                                            inputValues[component.id] =
+                                                                selectedCompValue.replace(
+                                                                    "[OI]",
+                                                                    ""
+                                                                )
+                                                        }
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Branch Code set to: ${inputValues[component.id]}"
+                                                        )
+                                                    }
+
+                                                    "CR002" -> if (selectedValue == "BSA Lakupandai") {
+                                                        inputValues[component.id] = "36"
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Special case for CR002: Value set to 36"
+                                                        )
+                                                    }
+
+                                                    "CIF14" -> {
+                                                        val selectedCIF14Value =
+                                                            selectedCompValue ?: ""
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Selected CIF14 Value: $selectedCIF14Value"
+                                                        )
+
+                                                        // Ekstraksi nilai dari CIF14
+                                                        val extractedValueCIF14 =
+                                                            if (selectedCIF14Value.startsWith("[OI]") && selectedCIF14Value.length >= 6) {
+                                                                selectedCIF14Value.takeLast(2)
+                                                            } else {
+                                                                ""
+                                                            }
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Extracted Value from CIF14: $extractedValueCIF14"
+                                                        )
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "Extracted Value from CIF14: ${selectedPair.first}"
+                                                        )
+
+                                                        // Simpan nilai terpilih untuk CIF14
+                                                        inputValues[component.id] =
+                                                            selectedCIF14Value ?: ""
+                                                        inputRekening[component.label] =
+                                                            selectedPair.first ?: ""
+                                                        Log.d(
+                                                            "FormActivity",
+                                                            "CIF14 set to: ${inputValues[component.id]}"
+                                                        )
+
+                                                        // Cek jika inputValues untuk CIF14 sudah ada isinya
+                                                        if (!inputValues[component.id].isNullOrEmpty()) {
+                                                            val filteredValues =
+                                                                valuesKabKot.filter { option ->
+                                                                    option.contains("- [OI]") && option.substringAfter(
+                                                                        "- [OI]"
+                                                                    ).take(2) == extractedValueCIF14
+                                                                }.map { option ->
+                                                                    val label =
+                                                                        option.substringBefore(" - [OI]")
+                                                                    val code =
+                                                                        option.substringAfter("[OI]")
+                                                                            .trim()
+                                                                    Pair(label, code)
+                                                                }
+                                                            Log.d(
+                                                                "FormActivity",
+                                                                "Filtered Values: $filteredValues"
+                                                            )
+
+                                                            currentLabelCIF13?.let { existingLabel ->
+                                                                removeView(existingLabel)
+                                                            }
+                                                            currentSpinnerCIF13?.let { existingSpinner ->
+                                                                removeView(existingSpinner)
+                                                            }
+
+                                                            val labelTextView =
+                                                                TextView(this@FormActivity).apply {
+                                                                    text = "Kabupaten/Kota"
+                                                                    textSize = 16f
+                                                                    setTypeface(null, Typeface.BOLD)
+                                                                    setTextSize(18f)
+                                                                    setTextColor(Color.parseColor("#0A6E44"))
+
+                                                                    // Atur jarak antara label dan Spinner di bawahnya
+                                                                    val params =
+                                                                        LinearLayout.LayoutParams(
+                                                                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                                                                            LinearLayout.LayoutParams.WRAP_CONTENT
+                                                                        )
+                                                                    params.setMargins(
+                                                                        0,
+                                                                        0,
+                                                                        0,
+                                                                        18
+                                                                    ) // Margin bawah 18dp
+                                                                    layoutParams = params
+                                                                }
+                                                            addView(labelTextView)
+                                                            currentLabelCIF13 = labelTextView
+
+                                                            val spinnerCIF13 =
+                                                                Spinner(this@FormActivity).apply {
+                                                                    background =
+                                                                        getDrawable(R.drawable.combo_box)
+
+                                                                    // Menambahkan opsi pertama sebagai "Pilih Kabupaten/Kota"
+                                                                    val initialOptions =
+                                                                        mutableListOf("Pilih Kabupaten/Kota")
+                                                                    initialOptions.addAll(
+                                                                        filteredValues.map { it.first })
+
+                                                                    // Buat adapter dengan initialOptions yang berisi opsi awal dan filteredValues
+                                                                    val adapter = ArrayAdapter(
+                                                                        this@FormActivity,
+                                                                        android.R.layout.simple_spinner_item,
+                                                                        initialOptions
+                                                                    )
+                                                                    adapter.setDropDownViewResource(
+                                                                        android.R.layout.simple_spinner_dropdown_item
+                                                                    )
+                                                                    this.adapter = adapter
+
+                                                                    // Set margin untuk spinner
+                                                                    layoutParams =
+                                                                        LinearLayout.LayoutParams(
+                                                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                                                            LinearLayout.LayoutParams.WRAP_CONTENT
+                                                                        ).apply {
+                                                                            setMargins(
+                                                                                0,
+                                                                                0,
+                                                                                0,
+                                                                                20
+                                                                            ) // Margin bawah 20dp
+                                                                        }
+                                                                }
+
+
+                                                            addView(spinnerCIF13)
+                                                            currentSpinnerCIF13 = spinnerCIF13
+                                                            spinnerCIF13.onItemSelectedListener =
+                                                                object :
+                                                                    AdapterView.OnItemSelectedListener {
+                                                                    override fun onItemSelected(
+                                                                        parent: AdapterView<*>,
+                                                                        view: View,
+                                                                        position: Int,
+                                                                        id: Long
+                                                                    ) {
+                                                                        if (position > 0) { // Abaikan "Pilih Kabupaten/Kota"
+                                                                            val selectedItem =
+                                                                                filteredValues[position - 1]
+                                                                            val realValue =
+                                                                                selectedItem.first
+                                                                            val extractedCIF13Value =
+                                                                                selectedItem.second
+                                                                            inputRekening["Kabupaten/Kota"] =
+                                                                                realValue
+                                                                            Log.d(
+                                                                                "FormActivity",
+                                                                                "Selected item from new CIF14 ComboBox Real Value: $realValue"
+                                                                            )
+                                                                            Log.d(
+                                                                                "FormActivity",
+                                                                                "Selected item from new CIF14 ComboBox Code: $extractedCIF13Value"
+                                                                            )
+                                                                            Log.d(
+                                                                                "FormActivity",
+                                                                                "Selected item from new CIF14 ComboBox: $selectedItem"
+                                                                            )
+                                                                            inputValues["CIF13"] =
+                                                                                extractedCIF13Value
+                                                                            Log.d(
+                                                                                "FormActivity",
+                                                                                "Input Values $inputValues"
+                                                                            )
+                                                                        } else {
+                                                                            Log.d(
+                                                                                "FormActivity",
+                                                                                "No valid item selected in CIF14 ComboBox"
+                                                                            )
+                                                                        }
+                                                                    }
+
+                                                                    override fun onNothingSelected(
+                                                                        parent: AdapterView<*>
+                                                                    ) {
+                                                                        Log.d(
+                                                                            "FormActivity",
+                                                                            "Nothing selected for new CIF14 ComboBox"
+                                                                        )
+                                                                    }
+                                                                }
+
+                                                        }
+                                                    }
+
+                                                    else -> inputValues[component.id] =
+                                                        selectedCompValue ?: ""
+                                                }
                                             }
                                         }
-
                                         override fun onNothingSelected(parent: AdapterView<*>) {
                                             Log.d(
                                                 "FormActivity",
@@ -2428,13 +2610,27 @@ class FormActivity : AppCompatActivity() {
                             val radioButton = RadioButton(this@FormActivity).apply {
                                 text = value.first
                                 textSize = 16f // Ukuran teks untuk RadioButton
-                                id = View.generateViewId() // Assign a unique ID to each radio button
+                                id = View.generateViewId()
+                                buttonTintList = ColorStateList.valueOf(Color.parseColor("#D32F2F"))
+                                setTextColor(Color.parseColor("#D32F2F"))
                             }
 
                             radioButton.setOnCheckedChangeListener { _, isChecked ->
+                                // Loop untuk mengubah warna seluruh radio button dalam RadioGroup
+                                for (i in 0 until radioGroup.childCount) {
+                                    val rb = radioGroup.getChildAt(i) as RadioButton
+                                    if (isChecked) {
+                                        rb.buttonTintList = ColorStateList.valueOf(Color.BLACK) // Mengubah warna tombol radio button menjadi hitam
+                                        rb.setTextColor(Color.BLACK) // Mengubah warna teks menjadi hitam
+                                    } else {
+                                        rb.buttonTintList = ColorStateList.valueOf(Color.parseColor("#D32F2F")) // Warna tombol radio button merah
+                                        rb.setTextColor(Color.parseColor("#D32F2F")) // Warna teks merah
+                                    }
+                                }
+
+                                // Jika radio button dipilih, simpan nilai yang dipilih
                                 if (isChecked) {
                                     val selectedValue = value.first
-
                                     if (screen.id == "CCIF001") {
                                         inputRekening[component.label] = selectedValue
                                     }
@@ -2687,7 +2883,7 @@ class FormActivity : AppCompatActivity() {
                             } else if (formId == "LS00001") {
                                 val allErrors = mutableListOf<String>()
                                 screen?.comp?.forEach { comp ->
-                                    if (comp.type == 2) {
+                                    if (comp.type == 2 || comp.type == 3) {
                                         Log.d ("Validate", "Validate")
                                         allErrors.addAll(validateInput(comp))
                                     }
@@ -2701,7 +2897,7 @@ class FormActivity : AppCompatActivity() {
                             } else if (formId == "LS00002") {
                                 val allErrors = mutableListOf<String>()
                                 screen?.comp?.forEach { comp ->
-                                    if (comp.type == 2) {
+                                    if (comp.type == 2 || comp.type == 3) {
                                         Log.d ("Validate", "Validate")
                                         allErrors.addAll(validateInput(comp))
                                     }
@@ -2715,7 +2911,7 @@ class FormActivity : AppCompatActivity() {
                             } else if (formId == "CHD0001") {
                                 val allErrors = mutableListOf<String>()
                                 screen?.comp?.forEach { comp ->
-                                    if (comp.type == 2) {
+                                    if (comp.type == 2 || comp.type == 3) {
                                         Log.d ("Validate", "Validate")
                                         allErrors.addAll(validateInput(comp))
                                     }
@@ -2889,7 +3085,7 @@ class FormActivity : AppCompatActivity() {
                         // EditText untuk input tanggal
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
-                            background = getDrawable(R.drawable.date_input)
+                            background = getDrawable(R.drawable.date_input_error)
                             id = View.generateViewId()
                             tag = component.id
                             inputType = InputType.TYPE_NULL // Menonaktifkan input keyboard
@@ -2903,6 +3099,7 @@ class FormActivity : AppCompatActivity() {
                                     if (screen.id == "CCIF001") {
                                         inputRekening[component.label] = inputValues[component.id] ?: ""
                                     }
+                                    background = getDrawable(R.drawable.date_input)
                                 }
                             }
                         }
@@ -3773,78 +3970,77 @@ class FormActivity : AppCompatActivity() {
                         Log.e("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
 
                         // Ambil newPassword dari sharedPreferences
-                        val newPassword = sharedPreferences.getString("new_password", null)
+                        val usernameLogin = sharedPreferences.getString("username", null)
+                        val emailLogin = sharedPreferences.getString("email", null)
                         val uid = getUniqueID()
-                        val modified_uid = uid
-                            .replace("+", "%2B")
-                            .replace("=", "%3D")
 
-                        Log.d("FormActivity", "Saved New Password: $newPassword")
-                        Log.d("FormActivity", "Saved uid: $uid")
-
-                        // Periksa newPassword terlebih dahulu
-                        if (!newPassword.isNullOrEmpty()) {
-                            Log.e(
-                                "FormActivity",
-                                "New password is not null or empty, attempting to reset password."
-                            )
+                        if (!usernameLogin.isNullOrEmpty() && !emailLogin.isNullOrEmpty()) {
                             lifecycleScope.launch {
-                                val username = sharedPreferences.getString("username", null)
-                                if (!username.isNullOrEmpty()) {
-                                    try {
-                                        // Call forgotPassword asynchronously
-                                        WebCallerImpl().forgotPassword(
-                                            username,
-                                            newPassword,
-                                            modified_uid
-                                        ) { errorMessage ->
-                                            lifecycleScope.launch {
-                                                if (errorMessage == null) {
-                                                    hideLoading()
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "Forgot Password success"
-                                                    )
-                                                    sharedPreferences.edit().apply {
-                                                        remove("new_password")  // Remove the new_password
-                                                        remove("username")
-                                                        apply()                 // Save changes
-                                                    }
-                                                    Log.d(
-                                                        "FormActivity",
-                                                        "New password cleared from SharedPreferences"
-                                                    )
-                                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                                        putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
-                                                        putExtra("MESSAGE_BODY", "Password berhasil di ganti! Silahkan login kembali.")
-                                                        putExtra("RETURN_TO_ROOT", true)
-                                                        putExtra(Constants.KEY_FORM_ID, "AU00001")
-                                                    }
-                                                    startActivity(intentPopup)
-                                                } else {
-                                                    hideLoading()
-                                                    Log.e(
-                                                        "FormActivity",
-                                                        "Failed to reset password $errorMessage"
-                                                    )
-                                                    showPopupGagal("$errorMessage")
-                                                }
-                                            }
+                                try {
+                                    showLoading() // Tampilkan loading saat memproses
+
+                                    val responseBody = withContext(Dispatchers.IO) {
+                                        try {
+                                            webCallerImpl.forgotPassword(usernameLogin, emailLogin, uid)
+                                        } catch (e: Exception) {
+                                            Log.e("FormActivity", "Error during forgotPassword call", e)
+                                            null
                                         }
-                                    } catch (e: Exception) {
-                                        Log.e(
-                                            "FormActivity",
-                                            "Error during forgot password request",
-                                            e
-                                        )
                                     }
-                                } else {
-                                    Log.e(
-                                        "FormActivity",
-                                        "Username is null or empty, unable to reset password."
-                                    )
+
+                                    hideLoading() // Sembunyikan loading setelah respons diterima
+
+                                    if (responseBody != null) {
+                                        try {
+                                            val responseString = responseBody.string()
+                                            Log.d("FormActivity", "Full Response Body: $responseString")
+
+                                            val jsonObject = JSONObject(responseString)
+
+                                            // Parsing status dan message dari respons
+                                            val status = jsonObject.optBoolean("status", false)
+                                            val message = jsonObject.optString("message", "Terjadi kesalahan tidak diketahui.")
+
+                                            if (status) {
+                                                Log.d("FormActivity", "Forgot Password success: $message")
+
+                                                // Hapus data di SharedPreferences
+                                                sharedPreferences.edit().apply {
+                                                    remove("username")
+                                                    remove("email")
+                                                    remove("nik")
+                                                    remove("no_rek")
+                                                    apply()
+                                                }
+
+                                                // Tampilkan popup berhasil
+                                                val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                                    putExtra("LAYOUT_ID", R.layout.pop_up_berhasil)
+                                                    putExtra("MESSAGE_BODY", message)
+                                                    putExtra("RETURN_TO_ROOT", true)
+                                                    putExtra(Constants.KEY_FORM_ID, "AU00001")
+                                                }
+                                                startActivity(intentPopup)
+                                            } else {
+                                                Log.e("FormActivity", "Failed to reset password: $message")
+                                                showPopupGagal(message)
+                                            }
+                                        } catch (e: JSONException) {
+                                            Log.e("FormActivity", "Error parsing JSON response", e)
+                                            showPopupGagal("Terjadi kesalahan saat membaca data. Silakan coba lagi.")
+                                        }
+                                    } else {
+                                        Log.e("FormActivity", "No response received from server")
+                                        showPopupGagal("Gagal memproses permintaan. Silakan coba lagi.")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("FormActivity", "Unexpected error occurred", e)
+                                    showPopupGagal("Terjadi kesalahan: ${e.message}")
+                                } finally {
+                                    hideLoading() // Pastikan loading disembunyikan
                                 }
                             }
+
                         } else {
                             // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
                             lifecycleScope.launch {
@@ -3862,7 +4058,8 @@ class FormActivity : AppCompatActivity() {
                                 }
                             }
                         }
-                    }else if (screen.id == "P000003"){
+                    }
+                    else if (screen.id == "P000003"){
                         lifecycleScope.launch {
                             try {
                                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
@@ -6605,95 +6802,69 @@ class FormActivity : AppCompatActivity() {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
                 val usernameLogin = sharedPreferences.getString("username", "") ?: ""
-                val username = "lakupandai"
-                val newPassword = sharedPreferences.getString("new_password", null)
+                val emailLogin = sharedPreferences.getString("email", "") ?: ""
+                val nikLogin = sharedPreferences.getString("nik", "") ?: ""
+                val noRekLogin = sharedPreferences.getString("no_rek", "") ?: ""
+                val uid = getUniqueID()
+                val modifiedUid = uid.replace("+", "%2B").replace("=", "%3D")
 
-                Log.d("FormActivity", "Saved New Password: $newPassword")
-                Log.d("FormActivity", "Merchant OTP: $merchantPhone")
+                val responseBody = withContext(Dispatchers.IO) {
+                    webCallerImpl.getPhoneByUsername(usernameLogin, emailLogin, nikLogin, noRekLogin, uid)
+                }
 
-                if (!newPassword.isNullOrEmpty()) {
-                    // Make the network call to get the phone by username
-                    val response = withContext(Dispatchers.IO) {
-                        webCallerImpl.getPhoneByUsername(usernameLogin)
-                    }
+                Log.d("FormActivity", "Request Data: username=$usernameLogin, email=$emailLogin, nik=$nikLogin, no_rek=$noRekLogin, uid=$uid, modified uid:$modifiedUid")
 
-                    Log.d("FormActivity", "Forgot password RESPONSE: $response")
+                if (responseBody != null) {
+                    try {
+                        val responseString = responseBody.string()
+                        Log.d("FormActivity", "Response: $responseString")
 
-                    if (response != null) {
-                        try {
-                            val jsonResponse = JSONObject(response.toString())
-                            val status = jsonResponse.optString("status")
+                        val jsonResponse = JSONObject(responseString)
+                        val status = jsonResponse.optBoolean("status")
 
-                            if (status == "success") {
-                                // Replace merchantPhone with phone from the response
-                                merchantPhone = jsonResponse.optString("phone")
-                                Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+                        if (status) {
+                            merchantPhone = jsonResponse.optString("phone")
+                            Log.d("FormActivity", "Phone replaced with: $merchantPhone")
 
-                                // Save the updated phone to SharedPreferences
-                                sharedPreferences.edit().putString("merchant_phone", merchantPhone).apply()
+                            sharedPreferences.edit().putString("merchant_phone", merchantPhone).apply()
 
-                                // IMEI, timestamp, and message details
-                                val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
-                                Log.e("FormActivity", "Saved IMEI: $imei")
-                                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-                                val msgUi = imei
-                                val msgId = msgUi + timestamp
-                                val msgSi = "SV0001"
-                                val msgDt = "$username|$merchantPhone"
+                            val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI untuk sekarang
+                            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                            val msgUi = imei
+                            val msgId = msgUi + timestamp
+                            val msgSi = "SV0001"
+                            val msgDt = "lakupandai|$merchantPhone"
 
-                                val msgObject = JSONObject().apply {
-                                    put("msg_id", msgId)
-                                    put("msg_ui", msgUi)
-                                    put("msg_si", msgSi)
-                                    put("msg_dt", msgDt)
-                                }
-
-                                val msg = JSONObject().apply {
-                                    put("msg", msgObject)
-                                }
-
-                                callback(msg) // Return the message object via callback
-                            } else {
-                                val message = jsonResponse.optString("message")
-                                showPopupGagal(message)
-                                Log.e("FormActivity", "Error from server: $message")
-                                callback(null) // Return null on error
+                            // Buat JSON pesan
+                            val msgObject = JSONObject().apply {
+                                put("msg_id", msgId)
+                                put("msg_ui", msgUi)
+                                put("msg_si", msgSi)
+                                put("msg_dt", msgDt)
                             }
-                        } catch (e: Exception) {
-                            Log.e("FormActivity", "Failed to parse JSON response", e)
-                            callback(null) // Return null on exception
+
+                            val msg = JSONObject().apply {
+                                put("msg", msgObject)
+                            }
+                            callback(msg)
+                        } else {
+                            // Tampilkan pesan error jika status gagal
+                            val message = jsonResponse.optString("message", "Terjadi kesalahan")
+                            showPopupGagal(message)
+                            Log.e("FormActivity", "Error from server: $message")
+                            callback(null) // Return null on error
                         }
-                    }
-                    else {
-                        Log.e("FormActivity", "Forgot password request failed")
-                        callback(null) // Return null if response is null
+                    } catch (e: Exception) {
+                        Log.e("FormActivity", "Failed to parse JSON response", e)
+                        callback(null) // Return null on exception
                     }
                 } else {
-                    Log.e("FormActivity", "New password is null or empty.")
-                    // Handle the case where newPassword is null or empty
-                    val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
-                    Log.e("FormActivity", "Saved IMEI: $imei")
-                    val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-                    val msgUi = imei
-                    val msgId = msgUi + timestamp
-                    val msgSi = "SV0001"
-                    val msgDt = "$username|$merchantPhone"
-
-                    val msgObject = JSONObject().apply {
-                        put("msg_id", msgId)
-                        put("msg_ui", msgUi)
-                        put("msg_si", msgSi)
-                        put("msg_dt", msgDt)
-                    }
-
-                    val msg = JSONObject().apply {
-                        put("msg", msgObject)
-                    }
-                    callback(msg) // Return the message object
+                    Log.e("FormActivity", "Response body is null")
+                    callback(null) // Response body kosong
                 }
             } catch (e: Exception) {
-                Log.e("MenuActivity", "Failed to create message body", e)
-                callback(null) // Return null on any other exception
+                Log.e("FormActivity", "Failed to create message body", e)
+                callback(null) // Tangkap exception lain
             }
         }
     }

@@ -128,69 +128,52 @@ class WebCallerImpl(override val client: OkHttpClient = OkHttpClient()) : WebCal
         }
     }
 
-    override fun forgotPassword(username: String, newPassword: String, uid: String, callback: (String?) -> Unit) {
-        val url = "http://reportntbs.selada.id/api/reset/password?username=$username&new_password=$newPassword&uid=$uid"
-        val request = Request.Builder()
-            .url(url)
-            .post(RequestBody.create(null, ByteArray(0))) // Empty body for POST request
-            .build()
-
-        Log.d(TAG, "Forgot Password URL: $url")
-
-        client.newCall(request).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: IOException) {
-                Log.e(TAG, "Exception occurred while requesting forgot password", e)
-                callback("Request failed: ${e.message}")
-            }
-
-            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                if (response.isSuccessful) {
-                    Log.d(TAG, "Password reset successful for user: $username")
-                    callback(null) // Pass null to indicate success
-                } else {
-                    val errorBody = response.body?.string()
-                    Log.e(TAG, "Failed to reset password: ${response.code} - ${response.message}")
-
-                    // Try to extract message from error JSON if available
-                    val errorMessage = try {
-                        val jsonObject = JSONObject(errorBody)
-                        jsonObject.getString("message")
-                    } catch (e: Exception) {
-                        "Failed to reset password: ${response.message}"
-                    }
-                    callback(errorMessage)
-                }
-            }
-        })
-    }
-
-
-    override fun getPhoneByUsername(username: String): String? {
+    override fun getPhoneByUsername(username: String, email: String, nik: String, no_rek: String, uid: String): ResponseBody? {
         val formBody = FormBody.Builder()
             .add("username", username)
+            .add("email", email)
+            .add("nik", nik)
+            .add("no_rek", no_rek)
+            .add("uid", uid)
             .build()
 
         val request = Request.Builder()
-            .url("http://reportntbs.selada.id/api/get/phone") // Ensure the URL is correct
+            .url("http://reportntbs.selada.id/api/get/phone")
             .post(formBody)
             .build()
 
         return try {
-            Log.d(TAG, "Sending request to get phone by username: $username")
-
             client.newCall(request).execute().let { response ->
-                val responseBody = response.body
-                val responseString = responseBody?.string() // Convert body to string for easier handling
-
-                Log.d(TAG, "Response for username $username: $responseString")
-
-                responseString // Return the string instead of ResponseBody
+                response.body
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception occurred while requesting phone by username: $username", e)
+            Log.e(TAG, "Exception occurred while changing password", e)
             null
         }
     }
+
+    override fun forgotPassword(username: String, email: String, uid: String): ResponseBody? {
+        val formBody = FormBody.Builder()
+            .add("username", username)
+            .add("email", email)
+            .add("uid", uid)
+            .build()
+
+        val request = Request.Builder()
+            .url("http://reportntbs.selada.id/api/reset/password")
+            .post(formBody)
+            .build()
+
+        return try {
+            client.newCall(request).execute().let { response ->
+                response.body
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception occurred while changing password", e)
+            null
+        }
+    }
+
 
     override fun blockAgen(id: String, token: String): ResponseBody? {
         // Create form body with the parameters

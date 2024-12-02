@@ -6231,19 +6231,29 @@ class FormActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val formBodyBuilder = FormBody.Builder()
-                var newPassword: String? = null
                 var username: String? = null
+                var email: String? = null
+                var nik: String? = null
+                var no_rek: String? = null
 
                 // Mengumpulkan data dari inputValues
                 for ((key, value) in inputValues) {
                     when (key) {
-                        "LP001" -> {
-                            newPassword = value
-                            formBodyBuilder.add("new_password", value)
-                        }
                         "UN001" -> {
                             username = value
                             formBodyBuilder.add("username", value)
+                        }
+                        "UN005" -> {
+                            email = value
+                            formBodyBuilder.add("email", value)
+                        }
+                        "NIK01" -> {
+                            nik = value
+                            formBodyBuilder.add("nik", value)
+                        }
+                        "LP004" -> {
+                            no_rek = value
+                            formBodyBuilder.add("no_rek", value)
                         }
                         else -> formBodyBuilder.add(key, value)
                     }
@@ -6251,18 +6261,17 @@ class FormActivity : AppCompatActivity() {
 
                 val formBody = formBodyBuilder.build()
                 // Lanjutkan proses jika berhasil, simpan ke SharedPreferences
-                if (newPassword != null && username != null) {
+                if (nik != null && username != null && no_rek != null && email != null) {
                     val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
 
                     editor.putString("username", username)
-                    editor.putString("new_password", newPassword)
+                    editor.putString("email", email)
+                    editor.putString("nik", nik)
+                    editor.putString("no_rek", no_rek)
 
                     editor.apply() // Simpan data
                 }
-
-                // Log form body for debugging
-                Log.d(TAG, "Form body content: username=$username, newPassword=$newPassword")
 
                 // Cek apakah perlu mengirim OTP terlebih dahulu
                 val webCaller = WebCallerImpl()

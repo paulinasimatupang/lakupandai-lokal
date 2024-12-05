@@ -320,6 +320,14 @@ class MenuActivity : AppCompatActivity() {
             }
             startActivity(intent)
         }
+
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            navigateToLoginActivity()
+            throwable.printStackTrace()
+
+            android.os.Process.killProcess(android.os.Process.myPid())
+            System.exit(1)
+        }
     }
 
     private fun handleScreenTitle(screenTitle: String) {
@@ -330,7 +338,13 @@ class MenuActivity : AppCompatActivity() {
         }
     }
 
-
+    private fun navigateToLoginActivity() {
+        finish()
+        startActivity(Intent(this, FormActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_FORM_ID, "AU00001")
+        })
+    }
     private fun showError(message: String) {
         Log.e("MenuActivity", message)
         findViewById<TextView>(R.id.error_message)?.visibility = View.VISIBLE

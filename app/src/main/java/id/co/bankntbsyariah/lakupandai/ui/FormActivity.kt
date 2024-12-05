@@ -206,6 +206,13 @@ class FormActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            navigateToLoginActivity()
+            throwable.printStackTrace()
+
+            android.os.Process.killProcess(android.os.Process.myPid())
+            System.exit(1)
+        }
 //        val uri = intent?.data
 //
 //        uri?.let {
@@ -214,6 +221,14 @@ class FormActivity : AppCompatActivity() {
 //                Log.d("FormActivity", "Received parameter: $exampleParam")
 //            }
 //        }
+    }
+
+    private fun navigateToLoginActivity() {
+        finish()
+        startActivity(Intent(this, FormActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(Constants.KEY_FORM_ID, "AU00001")
+        })
     }
 
     private fun initLoginRegisterUI() {
@@ -1068,7 +1083,7 @@ class FormActivity : AppCompatActivity() {
                             val groupedData = dataList.groupBy {
                                 val requestTime = it.getString("request_time")
                                 requestTime.split(" ").getOrNull(0) ?: "Unknown Date"
-                            }
+                            }.toSortedMap(compareByDescending { it })
 
                             groupedData.forEach { (date, nasabahList) ->
                                 layout.addView(TextView(context).apply {
@@ -1079,7 +1094,9 @@ class FormActivity : AppCompatActivity() {
                                     setTextColor(Color.parseColor("#808080"))
                                 })
 
-                                nasabahList.forEach { nasabah ->
+                                nasabahList.sortedByDescending { nasabah ->
+                                    nasabah.getString("request_time")
+                                }.forEach { nasabah ->
                                     val itemView = LayoutInflater.from(context).inflate(R.layout.nasabah_item, null) as LinearLayout
                                     val namaLengkap = nasabah.getString("nama_lengkap")
                                     val noIdentitas = nasabah.getString("no_identitas")
@@ -1103,12 +1120,13 @@ class FormActivity : AppCompatActivity() {
                                         LinearLayout.LayoutParams.MATCH_PARENT,
                                         LinearLayout.LayoutParams.WRAP_CONTENT
                                     ).apply {
-                                        setMargins(0, 0, 0, 16.dpToPx()) // Add bottom margin (adjust as needed)
+                                        setMargins(0, 0, 0, 16.dpToPx())
                                     }
                                     itemView.layoutParams = layoutParams
                                     layout.addView(itemView)
                                 }
                             }
+
 
                             searchBar.addTextChangedListener(object : TextWatcher {
                                 override fun afterTextChanged(s: Editable?) {
@@ -1758,7 +1776,7 @@ class FormActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.WRAP_CONTENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            params.setMargins(10, 0, 0, 18) // Margin bawah 16dp
+                            params.setMargins(20, 0, 0, 18) // Margin bawah 16dp
                             layoutParams = params
                         }
                         addView(labelTextView)
@@ -1836,7 +1854,7 @@ class FormActivity : AppCompatActivity() {
                                 LinearLayout.LayoutParams.WRAP_CONTENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            params.setMargins(10, 0, 0, 18) // Margin bawah 18dp
+                            params.setMargins(20, 0, 0, 18) // Margin bawah 18dp
                             layoutParams = params
                         }
                         addView(labelTextView)
@@ -3085,7 +3103,7 @@ class FormActivity : AppCompatActivity() {
                         // EditText untuk input tanggal
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
-                            background = getDrawable(R.drawable.date_input_error)
+                            background = getDrawable(R.drawable.date_input)
                             id = View.generateViewId()
                             tag = component.id
                             inputType = InputType.TYPE_NULL // Menonaktifkan input keyboard
@@ -3093,25 +3111,54 @@ class FormActivity : AppCompatActivity() {
                             setTextColor(ContextCompat.getColor(this@FormActivity, R.color.black)) // Warna teks untuk input
 
                             setOnClickListener {
-                                Log.d("FormActivity", "EditText clicked: ${component.id}")
-                                showDatePickerDialog(this) { selectedDate ->
-                                    inputValues[component.id as String] = selectedDate
-                                    if (screen.id == "CCIF001") {
-                                        inputRekening[component.label] = inputValues[component.id] ?: ""
-                                    }
-                                    background = getDrawable(R.drawable.date_input)
+                                val calendar = Calendar.getInstance()
+                                val year = calendar.get(Calendar.YEAR)
+                                val month = calendar.get(Calendar.MONTH)
+                                val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+                                val datePickerDialog = DatePickerDialog(
+                                    this@FormActivity,
+                                    { _, selectedYear, selectedMonth, selectedDay ->
+                                        val selectedDate = String.format(
+                                            "%04d-%02d-%02d",
+                                            selectedYear,
+                                            selectedMonth + 1,
+                                            selectedDay
+                                        )
+                                        setText(selectedDate)
+                                        inputValues[component.id as String] = selectedDate
+
+                                        if (screen.id == "CCIF001") {
+                                            inputRekening[component.label] = inputValues[component.id] ?: ""
+                                        }
+                                    },
+                                    year, month, day
+                                )
+
+                                // Mengecek apakah component.id adalah CIF04
+                                if (component.id == "CIF04" || screen.id == "CC0000") {
+                                    // Set maksimal tanggal yang bisa dipilih adalah 4 tahun yang lalu
+                                    val maxDate = Calendar.getInstance().apply {
+                                        add(Calendar.YEAR, -4) // Kurangi 4 tahun dari hari ini
+                                    }.timeInMillis
+                                    datePickerDialog.datePicker.maxDate = maxDate // Tanggal yang lebih baru dari ini tidak bisa dipilih
                                 }
+
+                                // Menampilkan dialog pemilih tanggal
+                                datePickerDialog.show()
                             }
                         }
                         addView(editText)
                     }.let { view ->
-                        // Ensure view is added with proper layout parameters
-                        container.addView(view, LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            setMargins(20, 20, 20, 20) // Margin untuk seluruh view
-                        })
+                        // Tambahkan view dengan parameter tata letak yang sesuai
+                        container.addView(
+                            view, LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            ).apply {
+                                setMargins(20, 20, 20, 20) // Margin untuk seluruh view
+                            }
+                        )
                     }
                 }
 
@@ -5664,103 +5711,39 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-
-                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
-                                    withContext(Dispatchers.Main) {
-                                        hideLoading()
-                                    }
-                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
-                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-                                        putExtra("RETURN_TO_ROOT", false)
-                                    }
-                                    startActivity(intentPopup)
-                                }else{
-                                    fun retrieveAuthToken(): String {
-                                        // Return the stored auth token
-                                        return "auth_token" // Replace this with the actual logic to retrieve the token
-                                    }
-
-                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                        if (!task.isSuccessful) {
-                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                            return@addOnCompleteListener
-                                        }
-
-                                        val fcmToken = task.result
-                                        Log.d("FCM", "FCM Token: $fcmToken")
-
-                                        // Send FCM token and user_id to server
-                                        val authToken = sharedPreferences.getString("token", "") ?: ""
-                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-                                    }
-
-                                createCheckSaldo { messageBody ->
-                                    if (messageBody != null) {
-                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
-                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-                                            responseBody?.let {
-                                                lifecycleScope.launch {
-                                                    withContext(Dispatchers.Main) {
-                                                        Toast.makeText(
-                                                            this@FormActivity,
-                                                            "Login berhasil",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                        navigateToScreen()
-                                                        callback(true)
-                                                    }
-                                                }
-                                            } ?: run {
-                                                lifecycleScope.launch {
-                                                    withContext(Dispatchers.Main) {
-                                                        hideLoading()
-                                                    }
-                                                }
-                                                showPopupGagal(
-                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
-                                                )
-                                                Log.e("FormActivity", "Failed to fetch response body")
-                                            }
-                                        }
-                                    } else {
-                                        lifecycleScope.launch {
-                                            withContext(Dispatchers.Main) {
-                                                hideLoading()
-                                            }
-                                        }
-                                        showPopupGagal(
-                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
-                                        )
-                                        Log.e("FormActivity", "Failed to create message body, request not sent")
-                                    }
-                                }
-
-
-                                }
-
-                                //                                ini di comment nanti kalo mau berdasarkan perangkat
-//                                fun retrieveAuthToken(): String {
-//                                    // Return the stored auth token
-//                                    return "auth_token" // Replace this with the actual logic to retrieve the token
-//                                }
+//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 //
-//                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//                                    if (!task.isSuccessful) {
-//                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-//                                        return@addOnCompleteListener
+//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
+//                                    withContext(Dispatchers.Main) {
+//                                        hideLoading()
+//                                    }
+//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+//                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
+//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+//                                        putExtra("RETURN_TO_ROOT", false)
+//                                    }
+//                                    startActivity(intentPopup)
+//                                }else{
+//                                    fun retrieveAuthToken(): String {
+//                                        // Return the stored auth token
+//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
 //                                    }
 //
-//                                    val fcmToken = task.result
-//                                    Log.d("FCM", "FCM Token: $fcmToken")
+//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//                                        if (!task.isSuccessful) {
+//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                            return@addOnCompleteListener
+//                                        }
 //
-//                                    // Send FCM token and user_id to server
-//                                    val authToken = sharedPreferences.getString("token", "") ?: ""
-//                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-//                                }
+//                                        val fcmToken = task.result
+//                                        Log.d("FCM", "FCM Token: $fcmToken")
+//
+//                                        // Send FCM token and user_id to server
+//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+//                                    }
 //
 //                                createCheckSaldo { messageBody ->
 //                                    if (messageBody != null) {
@@ -5802,6 +5785,70 @@ class FormActivity : AppCompatActivity() {
 //                                        Log.e("FormActivity", "Failed to create message body, request not sent")
 //                                    }
 //                                }
+//
+//
+//                                }
+
+                                //                                ini di comment nanti kalo mau berdasarkan perangkat
+                                fun retrieveAuthToken(): String {
+                                    // Return the stored auth token
+                                    return "auth_token" // Replace this with the actual logic to retrieve the token
+                                }
+
+                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                    if (!task.isSuccessful) {
+                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                        return@addOnCompleteListener
+                                    }
+
+                                    val fcmToken = task.result
+                                    Log.d("FCM", "FCM Token: $fcmToken")
+
+                                    // Send FCM token and user_id to server
+                                    val authToken = sharedPreferences.getString("token", "") ?: ""
+                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                }
+
+                                createCheckSaldo { messageBody ->
+                                    if (messageBody != null) {
+                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+                                            responseBody?.let {
+                                                lifecycleScope.launch {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(
+                                                            this@FormActivity,
+                                                            "Login berhasil",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        navigateToScreen()
+                                                        callback(true)
+                                                    }
+                                                }
+                                            } ?: run {
+                                                lifecycleScope.launch {
+                                                    withContext(Dispatchers.Main) {
+                                                        hideLoading()
+                                                    }
+                                                }
+                                                showPopupGagal(
+                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+                                                )
+                                                Log.e("FormActivity", "Failed to fetch response body")
+                                            }
+                                        }
+                                    } else {
+                                        lifecycleScope.launch {
+                                            withContext(Dispatchers.Main) {
+                                                hideLoading()
+                                            }
+                                        }
+                                        showPopupGagal(
+                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+                                        )
+                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+                                    }
+                                }
 //                                comment sampai sini
                             }
                         }

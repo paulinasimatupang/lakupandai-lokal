@@ -1822,6 +1822,16 @@ class FormActivity : AppCompatActivity() {
                                     editText.addTextChangedListener(this)
                                 }
 
+                                if (screen.id == "CCIF001") {
+                                    inputRekening[component.label] = inputText
+                                    Log.d("FormActivity", "inputRekening[${component.id}] set to: $inputText")
+                                }
+
+                                if (component.label == "NIK") {
+                                    nikValue = inputText
+                                    Log.d("FormActivity", "NIK : $nikValue")
+                                }
+
                                 val errors = validateInput(component)
                                 if (errors.isNotEmpty()) {
                                     editText.error = errors.first()

@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
+import kotlinx.coroutines.*
 import android.text.TextWatcher
 import android.util.Base64
 import android.util.Log
@@ -4025,10 +4026,11 @@ class FormActivity : AppCompatActivity() {
                         Log.e("Imei Terminal", "Imei Terminal Handle : $storedImeiTerminal")
 
                         // Ambil newPassword dari sharedPreferences
-                        val usernameLogin = sharedPreferences.getString("username", null)
-                        val emailLogin = sharedPreferences.getString("email", null)
+                        val usernameLogin = sharedPreferences.getString("username", "")
+                        val emailLogin = sharedPreferences.getString("email", "")
                         val uid = getUniqueID()
 
+                        Log.e("FormActivity", "Emaillll : $emailLogin")
                         if (!usernameLogin.isNullOrEmpty() && !emailLogin.isNullOrEmpty()) {
                             lifecycleScope.launch {
                                 try {
@@ -4078,6 +4080,13 @@ class FormActivity : AppCompatActivity() {
                                                 startActivity(intentPopup)
                                             } else {
                                                 Log.e("FormActivity", "Failed to reset password: $message")
+                                                sharedPreferences.edit().apply {
+                                                    remove("username")
+                                                    remove("email")
+                                                    remove("nik")
+                                                    remove("no_rek")
+                                                    apply()
+                                                }
                                                 showPopupGagal(message)
                                             }
                                         } catch (e: JSONException) {
@@ -4096,7 +4105,8 @@ class FormActivity : AppCompatActivity() {
                                 }
                             }
 
-                        } else {
+                        }
+                        else {
                             // Lakukan pemeriksaan untuk storedImeiTerminal jika newPassword valid
                             lifecycleScope.launch {
                                 val sharedPreferences =
@@ -6856,7 +6866,6 @@ class FormActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun createOTP(callback: (JSONObject?) -> Unit) {
         lifecycleScope.launch {
             hideLoading()
@@ -6864,69 +6873,97 @@ class FormActivity : AppCompatActivity() {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
                 val usernameLogin = sharedPreferences.getString("username", "") ?: ""
+                val username = "lakupandai"
                 val emailLogin = sharedPreferences.getString("email", "") ?: ""
                 val nikLogin = sharedPreferences.getString("nik", "") ?: ""
                 val noRekLogin = sharedPreferences.getString("no_rek", "") ?: ""
                 val uid = getUniqueID()
                 val modifiedUid = uid.replace("+", "%2B").replace("=", "%3D")
 
-                val responseBody = withContext(Dispatchers.IO) {
-                    webCallerImpl.getPhoneByUsername(usernameLogin, emailLogin, nikLogin, noRekLogin, uid)
-                }
+                Log.d("FormActivity", "Merchant OTP: $merchantPhone")
 
-                Log.d("FormActivity", "Request Data: username=$usernameLogin, email=$emailLogin, nik=$nikLogin, no_rek=$noRekLogin, uid=$uid, modified uid:$modifiedUid")
+                // Ensure we don't proceed if email is empty
+                if (emailLogin.isNotEmpty()) {
+                    val responseBody = withContext(Dispatchers.IO) {
+                        webCallerImpl.getPhoneByUsername(usernameLogin, emailLogin, nikLogin, noRekLogin, uid)
+                    }
 
-                if (responseBody != null) {
-                    try {
-                        val responseString = responseBody.string()
-                        Log.d("FormActivity", "Response: $responseString")
+                    Log.d("FormActivity", "Request Data: username=$usernameLogin, email=$emailLogin, nik=$nikLogin, no_rek=$noRekLogin, uid=$uid, modified uid:$modifiedUid")
 
-                        val jsonResponse = JSONObject(responseString)
-                        val status = jsonResponse.optBoolean("status")
+                    if (responseBody != null) {
+                        try {
+                            val responseString = responseBody.string()
+                            Log.d("FormActivity", "Response: $responseString")
 
-                        if (status) {
-                            merchantPhone = jsonResponse.optString("phone")
-                            Log.d("FormActivity", "Phone replaced with: $merchantPhone")
+                            val jsonResponse = JSONObject(responseString)
+                            val status = jsonResponse.optBoolean("status")
 
-                            sharedPreferences.edit().putString("merchant_phone", merchantPhone).apply()
+                            if (status) {
+                                merchantPhone = jsonResponse.optString("phone")
+                                Log.d("FormActivity", "Phone replaced with: $merchantPhone")
 
-                            val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI untuk sekarang
-                            val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
-                            val msgUi = imei
-                            val msgId = msgUi + timestamp
-                            val msgSi = "SV0001"
-                            val msgDt = "lakupandai|$merchantPhone"
+                                sharedPreferences.edit().putString("merchant_phone", merchantPhone).apply()
 
-                            // Buat JSON pesan
-                            val msgObject = JSONObject().apply {
-                                put("msg_id", msgId)
-                                put("msg_ui", msgUi)
-                                put("msg_si", msgSi)
-                                put("msg_dt", msgDt)
+                                val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI untuk sekarang
+                                val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                                val msgUi = imei
+                                val msgId = msgUi + timestamp
+                                val msgSi = "SV0001"
+                                val msgDt = "lakupandai|$merchantPhone"
+
+                                // Buat JSON pesan
+                                val msgObject = JSONObject().apply {
+                                    put("msg_id", msgId)
+                                    put("msg_ui", msgUi)
+                                    put("msg_si", msgSi)
+                                    put("msg_dt", msgDt)
+                                }
+
+                                val msg = JSONObject().apply {
+                                    put("msg", msgObject)
+                                }
+                                callback(msg)
+                            } else {
+                                // Tampilkan pesan error jika status gagal
+                                val message = jsonResponse.optString("message", "Terjadi kesalahan")
+                                showPopupGagal(message)
+                                Log.e("FormActivity", "Error from server: $message")
+                                callback(null) // Return null on error
                             }
-
-                            val msg = JSONObject().apply {
-                                put("msg", msgObject)
-                            }
-                            callback(msg)
-                        } else {
-                            // Tampilkan pesan error jika status gagal
-                            val message = jsonResponse.optString("message", "Terjadi kesalahan")
-                            showPopupGagal(message)
-                            Log.e("FormActivity", "Error from server: $message")
-                            callback(null) // Return null on error
+                        } catch (e: Exception) {
+                            Log.e("FormActivity", "Failed to parse JSON response", e)
+                            callback(null) // Return null on exception
                         }
-                    } catch (e: Exception) {
-                        Log.e("FormActivity", "Failed to parse JSON response", e)
-                        callback(null) // Return null on exception
+                    } else {
+                        Log.e("FormActivity", "Response body is null")
+                        callback(null) // Response body kosong
                     }
                 } else {
-                    Log.e("FormActivity", "Response body is null")
-                    callback(null) // Response body kosong
+                    // Handle case where email is empty
+                    Log.e("FormActivity", "Email is null or empty")
+                    val imei = "89b2c0aa8e0ac7c2" // Hardcoded IMEI for now
+                    Log.e("FormActivity", "Saved IMEI: $imei")
+                    val timestamp = SimpleDateFormat("MMddHHmmssSSS", Locale.getDefault()).format(Date())
+                    val msgUi = imei
+                    val msgId = msgUi + timestamp
+                    val msgSi = "SV0001"
+                    val msgDt = "$username|$merchantPhone"
+
+                    val msgObject = JSONObject().apply {
+                        put("msg_id", msgId)
+                        put("msg_ui", msgUi)
+                        put("msg_si", msgSi)
+                        put("msg_dt", msgDt)
+                    }
+
+                    val msg = JSONObject().apply {
+                        put("msg", msgObject)
+                    }
+                    callback(msg) // Return the message object
                 }
             } catch (e: Exception) {
-                Log.e("FormActivity", "Failed to create message body", e)
-                callback(null) // Tangkap exception lain
+                Log.e("MenuActivity", "Failed to create message body", e)
+                callback(null) // Return null on any other exception
             }
         }
     }

@@ -2650,9 +2650,6 @@ class FormActivity : AppCompatActivity() {
                                     if (isChecked) {
                                         rb.buttonTintList = ColorStateList.valueOf(Color.BLACK) // Mengubah warna tombol radio button menjadi hitam
                                         rb.setTextColor(Color.BLACK) // Mengubah warna teks menjadi hitam
-                                    } else {
-                                        rb.buttonTintList = ColorStateList.valueOf(Color.parseColor("#D32F2F")) // Warna tombol radio button merah
-                                        rb.setTextColor(Color.parseColor("#D32F2F")) // Warna teks merah
                                     }
                                 }
 
@@ -3113,7 +3110,7 @@ class FormActivity : AppCompatActivity() {
                         // EditText untuk input tanggal
                         val editText = EditText(this@FormActivity).apply {
                             hint = component.label
-                            background = getDrawable(R.drawable.date_input)
+                            background = getDrawable(R.drawable.date_input_error)
                             id = View.generateViewId()
                             tag = component.id
                             inputType = InputType.TYPE_NULL // Menonaktifkan input keyboard
@@ -3141,6 +3138,7 @@ class FormActivity : AppCompatActivity() {
                                         if (screen.id == "CCIF001") {
                                             inputRekening[component.label] = inputValues[component.id] ?: ""
                                         }
+                                        background = getDrawable(R.drawable.date_input)
                                     },
                                     year, month, day
                                 )

@@ -3422,7 +3422,7 @@ class FormActivity : AppCompatActivity() {
                             val akadDescriptionValue = when (selectedAkad) {
                                 "Mudharabah Muthlaqah" -> "Mudharabah adalah akad kerja sama dimana Nasabah selaku pemilik dana (shahibul maal) dan Bank " +
                                         "sebagai mudharib (pengelola dana) dengan perjanjian nisbah bagi hasil yang disepakati di awal."
-                                "Wadiah yad Ad dhamanah" -> "Wadiah adalah akad titipan dimana Nasabah " +
+                                "Wadi’ah yad Ad Dhamanah" -> "Wadiah adalah akad titipan dimana Nasabah " +
                                         "selaku pemilik dana menitipkan dananya dan Bank selaku pihak yang menerima " +
                                         "amanah titipan dari nasabah untuk menjaga dana yang dititip nasabah tersebut"
                                 else -> "Description not available"

@@ -3,8 +3,8 @@ package id.co.bankntbsyariah.lakupandai.common
 class Constants {
 
     companion object {
-//        const val BASE_API= "http://16.78.84.90:8080/ARRest/"
-        const val BASE_API= "https://lakupandai.bankntbsyariah.co.id/ARRest/"
+        const val BASE_API= "http://16.78.84.90:8080/ARRest/"
+//        const val BASE_API= "https://lakupandai.bankntbsyariah.co.id/ARRest/"
 
         const val DEFAULT_VERSION = 1
         const val DEFAULT_ROOT_ID = "MN00000"

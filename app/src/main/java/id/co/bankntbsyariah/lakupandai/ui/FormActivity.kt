@@ -4196,10 +4196,10 @@ class FormActivity : AppCompatActivity() {
                                                     "Fetched formValue: $formValue"
                                                 )
                                             }
-//                                            val url =
-//                                                "http://16.78.84.90:8080/ARRest/fileupload"
                                             val url =
-                                                "https://lakupandai.bankntbsyariah.co.id/ARRest/fileupload"
+                                                "http://16.78.84.90:8080/ARRest/fileupload"
+//                                            val url =
+//                                                "https://lakupandai.bankntbsyariah.co.id/ARRest/fileupload"
                                             // Find instances of CameraFragment to access captured files
                                             val photoFragment = supportFragmentManager.findFragmentByTag("SIG02") as? CameraFragment
                                             val ktpFragment = supportFragmentManager.findFragmentByTag("SIG03") as? CameraFragment

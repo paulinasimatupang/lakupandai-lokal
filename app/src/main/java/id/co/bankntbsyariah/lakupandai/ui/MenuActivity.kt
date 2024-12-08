@@ -178,8 +178,8 @@ class MenuActivity : AppCompatActivity() {
         val imageSliderView: View? = findViewById(R.id.imageSlider)
         if (imageSliderView != null) {
             imageSlider = imageSliderView as ViewPager2
-//            val imageUrlBase = "http://16.78.84.90:8081/ARRest/static"
-            val imageUrlBase = "https://lakupandai.bankntbsyariah.co.id/static"
+            val imageUrlBase = "http://16.78.84.90:8081/ARRest/static"
+//            val imageUrlBase = "https://lakupandai.bankntbsyariah.co.id/static"
             val imageList = listOf(
                 BannerItem("banner1.png"),
                 BannerItem("banner2.png"),

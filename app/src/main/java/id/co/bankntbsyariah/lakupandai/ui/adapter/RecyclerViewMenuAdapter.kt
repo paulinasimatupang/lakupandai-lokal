@@ -72,8 +72,8 @@ class RecyclerViewMenuAdapter(
 
             holder.menuImage?.let {
                 Glide.with(context)
-//                    .load("http://16.78.84.90:8081/ARRest/static/$iconName")
-                    .load("https://lakupandai.bankntbsyariah.co.id/static/$iconName")
+                    .load("http://16.78.84.90:8081/ARRest/static/$iconName")
+//                    .load("https://lakupandai.bankntbsyariah.co.id/static/$iconName")
                     .apply(RequestOptions().placeholder(R.mipmap.logo_aja_ntbs))
                     .into(it)
             }

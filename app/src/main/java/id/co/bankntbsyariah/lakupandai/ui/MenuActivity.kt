@@ -178,7 +178,8 @@ class MenuActivity : AppCompatActivity() {
         val imageSliderView: View? = findViewById(R.id.imageSlider)
         if (imageSliderView != null) {
             imageSlider = imageSliderView as ViewPager2
-            val imageUrlBase = "http://16.78.84.90:8081/ARRest/static"
+//            val imageUrlBase = "http://16.78.84.90:8081/ARRest/static"
+            val imageUrlBase = "https://lakupandai.bankntbsyariah.co.id/static"
             val imageList = listOf(
                 BannerItem("banner1.png"),
                 BannerItem("banner2.png"),
@@ -963,7 +964,7 @@ class MenuActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-            val username = "lakupandai"
+            val username = sharedPreferences.getString("username_param", "") ?: ""
             val msg = JSONObject()
 
             val imei = sharedPreferences.getString("imei", "")?: ""

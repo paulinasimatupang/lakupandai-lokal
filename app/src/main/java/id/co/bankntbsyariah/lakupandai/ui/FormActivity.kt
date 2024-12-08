@@ -4196,8 +4196,10 @@ class FormActivity : AppCompatActivity() {
                                                     "Fetched formValue: $formValue"
                                                 )
                                             }
+//                                            val url =
+//                                                "http://16.78.84.90:8080/ARRest/fileupload"
                                             val url =
-                                                "http://16.78.84.90:8080/ARRest/fileupload"
+                                                "https://lakupandai.bankntbsyariah.co.id/ARRest/fileupload"
                                             // Find instances of CameraFragment to access captured files
                                             val photoFragment = supportFragmentManager.findFragmentByTag("SIG02") as? CameraFragment
                                             val ktpFragment = supportFragmentManager.findFragmentByTag("SIG03") as? CameraFragment
@@ -4995,7 +4997,7 @@ class FormActivity : AppCompatActivity() {
             val savedToken = sharedPreferences.getString("token", "") ?: ""
             val savedNoAgen = sharedPreferences.getString("merchant_phone", "") ?: ""
 //            val imei = sharedPreferences.getString("imei", "")?: ""
-            val username = "lakupandai"
+            val username = sharedPreferences.getString("username_param", "") ?: ""
             Log.e("FormActivity", "Saved Username: $username")
             Log.e("FormActivity", "Saved Norekening: $savedNorekening")
             Log.e("FormActivity", "Saved Agen: $savedKodeAgen")
@@ -5273,7 +5275,7 @@ class FormActivity : AppCompatActivity() {
             val savedKodeAgen = sharedPreferences.getString("kode_agen", "") ?: ""
             val savedKategori = sharedPreferences.getString("kategori", "") ?: ""
             Log.d("FormActivity", "saved kategori: $savedKategori")
-            val username = "lakupandai"
+            val username = sharedPreferences.getString("username_param", "") ?: ""
 
             val componentValues = mutableMapOf<String, String>()
             screen.comp.filter { it.type != 7 && it.type != 15 }.forEach { component ->
@@ -5389,6 +5391,7 @@ class FormActivity : AppCompatActivity() {
 
                     if (status) {
                         val token = jsonResponse.optString("token")
+                        val usernameParam = jsonResponse.optString("username_param")
                         val userData = jsonResponse.optJSONObject("data")
                         val fullname = userData?.optString("fullname")
                         val id = userData?.optString("id")
@@ -5441,6 +5444,7 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("fullname", fullname)
                             editor.putString("id", id)
                             editor.putString("branchid", branchid)
+                            editor.putString("username_param", usernameParam)
 
                             // Save merchant data
                             editor.putString("merchant_id", merchantData.optString("id"))
@@ -5456,12 +5460,23 @@ class FormActivity : AppCompatActivity() {
                             editor.putString("kode_agen", merchantData.optString("mid"))
                             editor.putString("pin", merchantData.optString("pin"))
                             editor.putString("mid", merchantData.optString("mid"))
+                            val terminalData = terminalArray?.getJSONObject(0)
+                            if (terminalData != null) {
+                                editor.putString("tid", terminalData.optString("tid"))
+                                editor.putString("imei", terminalData.optString("imei"))
+                            }
 
                             editor.apply()
 
                             val midTerminal = sharedPreferences.getString("mid", null)
+                            val tidTerminal = sharedPreferences.getString("tid", null)
+                            val tokenTerminal = sharedPreferences.getString("token", null)
+                            val usernameParamTerminal = sharedPreferences.getString("username_param", null)
                             Log.e ("MID TERMINAL", "MID TERMINAL : $midTerminal")
-                            Log.e ("USERNAME", "USERNAME : $username")
+                            Log.e ("TID TERMINAL", "TID TERMINAL : $tidTerminal")
+                            Log.e ("T0KENT TERMINAL", "TOKEN TERMINAL : $tokenTerminal")
+                            Log.e ("USERNAME TERMINAL", "USERNAME : $username")
+                            Log.e ("USERNAME PARAM TERMINAL", "USERNAME PARAM : $usernameParamTerminal")
 
 //                            val imei = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) // ambil IMEI dari perangkat
 
@@ -5729,103 +5744,39 @@ class FormActivity : AppCompatActivity() {
                                 editor.apply()
 
 //                                comment dulu biar bisa login
-//                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
-//                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
-//
-//                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
-//                                    withContext(Dispatchers.Main) {
-//                                        hideLoading()
-//                                    }
-//                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
-//                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
-//                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
-//                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
-//                                        putExtra("RETURN_TO_ROOT", false)
-//                                    }
-//                                    startActivity(intentPopup)
-//                                }else{
-//                                    fun retrieveAuthToken(): String {
-//                                        // Return the stored auth token
-//                                        return "auth_token" // Replace this with the actual logic to retrieve the token
-//                                    }
-//
-//                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//                                        if (!task.isSuccessful) {
-//                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-//                                            return@addOnCompleteListener
-//                                        }
-//
-//                                        val fcmToken = task.result
-//                                        Log.d("FCM", "FCM Token: $fcmToken")
-//
-//                                        // Send FCM token and user_id to server
-//                                        val authToken = sharedPreferences.getString("token", "") ?: ""
-//                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-//                                    }
-//
-//                                createCheckSaldo { messageBody ->
-//                                    if (messageBody != null) {
-//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
-//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
-//                                            responseBody?.let {
-//                                                lifecycleScope.launch {
-//                                                    withContext(Dispatchers.Main) {
-//                                                        Toast.makeText(
-//                                                            this@FormActivity,
-//                                                            "Login berhasil",
-//                                                            Toast.LENGTH_SHORT
-//                                                        ).show()
-//                                                        navigateToScreen()
-//                                                        callback(true)
-//                                                    }
-//                                                }
-//                                            } ?: run {
-//                                                lifecycleScope.launch {
-//                                                    withContext(Dispatchers.Main) {
-//                                                        hideLoading()
-//                                                    }
-//                                                }
-//                                                showPopupGagal(
-//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
-//                                                )
-//                                                Log.e("FormActivity", "Failed to fetch response body")
-//                                            }
-//                                        }
-//                                    } else {
-//                                        lifecycleScope.launch {
-//                                            withContext(Dispatchers.Main) {
-//                                                hideLoading()
-//                                            }
-//                                        }
-//                                        showPopupGagal(
-//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
-//                                        )
-//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
-//                                    }
-//                                }
-//
-//
-//                                }
+                                val storedImeiTerminal = sharedPreferences.getString("imei", null)
+                                Log.d(TAG, "Stored IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log IMEI yang tersimpan dan IMEI perangkat saat ini
 
-                                //                                ini di comment nanti kalo mau berdasarkan perangkat
-                                fun retrieveAuthToken(): String {
-                                    // Return the stored auth token
-                                    return "auth_token" // Replace this with the actual logic to retrieve the token
-                                }
-
-                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                                    if (!task.isSuccessful) {
-                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                                        return@addOnCompleteListener
+                                if ((imei != null || imei != "null") && imei != storedImeiTerminal) {
+                                    withContext(Dispatchers.Main) {
+                                        hideLoading()
+                                    }
+                                    Log.d(TAG, "IMEI mismatch detected. Registered IMEI: $storedImeiTerminal, Current IMEI: $imei") // Log jika IMEI tidak cocok
+                                    val intentPopup = Intent(this@FormActivity, PopupActivity::class.java).apply {
+                                        putExtra("LAYOUT_ID", R.layout.pop_up_change_device)
+                                        putExtra("MESSAGE_BODY", "Perangkat yang digunakan tidak sesuai dengan yang didaftarkan.")
+                                        putExtra("RETURN_TO_ROOT", false)
+                                    }
+                                    startActivity(intentPopup)
+                                }else{
+                                    fun retrieveAuthToken(): String {
+                                        // Return the stored auth token
+                                        return "auth_token" // Replace this with the actual logic to retrieve the token
                                     }
 
-                                    val fcmToken = task.result
-                                    Log.d("FCM", "FCM Token: $fcmToken")
+                                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                        if (!task.isSuccessful) {
+                                            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                                            return@addOnCompleteListener
+                                        }
 
-                                    // Send FCM token and user_id to server
-                                    val authToken = sharedPreferences.getString("token", "") ?: ""
-                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
-                                }
+                                        val fcmToken = task.result
+                                        Log.d("FCM", "FCM Token: $fcmToken")
+
+                                        // Send FCM token and user_id to server
+                                        val authToken = sharedPreferences.getString("token", "") ?: ""
+                                        MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+                                    }
 
                                 createCheckSaldo { messageBody ->
                                     if (messageBody != null) {
@@ -5867,6 +5818,70 @@ class FormActivity : AppCompatActivity() {
                                         Log.e("FormActivity", "Failed to create message body, request not sent")
                                     }
                                 }
+
+
+                                }
+
+                                //                                ini di comment nanti kalo mau berdasarkan perangkat
+//                                fun retrieveAuthToken(): String {
+//                                    // Return the stored auth token
+//                                    return "auth_token" // Replace this with the actual logic to retrieve the token
+//                                }
+//
+//                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//                                    if (!task.isSuccessful) {
+//                                        Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                        return@addOnCompleteListener
+//                                    }
+//
+//                                    val fcmToken = task.result
+//                                    Log.d("FCM", "FCM Token: $fcmToken")
+//
+//                                    // Send FCM token and user_id to server
+//                                    val authToken = sharedPreferences.getString("token", "") ?: ""
+//                                    MyFirebaseMessagingService.sendFCMTokenToServer(authToken, fcmToken, id ?: "")
+//                                }
+//
+//                                createCheckSaldo { messageBody ->
+//                                    if (messageBody != null) {
+//                                        Log.d("FormActivity", "Message Body Check Saldo: $messageBody")
+//                                        ArrestCallerImpl(OkHttpClient()).requestPost(messageBody) { responseBody ->
+//                                            responseBody?.let {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        Toast.makeText(
+//                                                            this@FormActivity,
+//                                                            "Login berhasil",
+//                                                            Toast.LENGTH_SHORT
+//                                                        ).show()
+//                                                        navigateToScreen()
+//                                                        callback(true)
+//                                                    }
+//                                                }
+//                                            } ?: run {
+//                                                lifecycleScope.launch {
+//                                                    withContext(Dispatchers.Main) {
+//                                                        hideLoading()
+//                                                    }
+//                                                }
+//                                                showPopupGagal(
+//                                                    "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                                )
+//                                                Log.e("FormActivity", "Failed to fetch response body")
+//                                            }
+//                                        }
+//                                    } else {
+//                                        lifecycleScope.launch {
+//                                            withContext(Dispatchers.Main) {
+//                                                hideLoading()
+//                                            }
+//                                        }
+//                                        showPopupGagal(
+//                                            "Mohon maaf, aplikasi sedang dalam perbaikan."
+//                                        )
+//                                        Log.e("FormActivity", "Failed to create message body, request not sent")
+//                                    }
+//                                }
 //                                comment sampai sini
                             }
                         }
@@ -6873,7 +6888,7 @@ class FormActivity : AppCompatActivity() {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", MODE_PRIVATE)
                 var merchantPhone = sharedPreferences.getString("merchant_phone", "") ?: ""
                 val usernameLogin = sharedPreferences.getString("username", "") ?: ""
-                val username = "lakupandai"
+                val username = sharedPreferences.getString("username_param", "") ?: ""
                 val emailLogin = sharedPreferences.getString("email", "") ?: ""
                 val nikLogin = sharedPreferences.getString("nik", "") ?: ""
                 val noRekLogin = sharedPreferences.getString("no_rek", "") ?: ""
@@ -6909,7 +6924,7 @@ class FormActivity : AppCompatActivity() {
                                 val msgUi = imei
                                 val msgId = msgUi + timestamp
                                 val msgSi = "SV0001"
-                                val msgDt = "lakupandai|$merchantPhone"
+                                val msgDt = "$username|$merchantPhone"
 
                                 // Buat JSON pesan
                                 val msgObject = JSONObject().apply {
@@ -7486,7 +7501,7 @@ class FormActivity : AppCompatActivity() {
             val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
             val norekening = sharedPreferences.getString("norekening", "") ?: ""
             val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-            val username = "lakupandai"
+            val username = sharedPreferences.getString("username_param", "") ?: ""
             val msg = JSONObject()
 
             val imei = sharedPreferences.getString("imei", "")?: ""
@@ -7530,7 +7545,7 @@ class FormActivity : AppCompatActivity() {
                 val sharedPreferences = getSharedPreferences("MyAppPreferences", Context.MODE_PRIVATE)
                 val norekening = sharedPreferences.getString("norekening", "") ?: ""
                 val merchant_name = sharedPreferences.getString("merchant_name", "") ?: ""
-                val username = "lakupandai"
+                val username = sharedPreferences.getString("username_param", "") ?: ""
 
                 val imei = sharedPreferences.getString("imei", "")?: ""
                 Log.e("FormActivity", "Saved Imei: $imei")
